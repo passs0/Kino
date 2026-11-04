@@ -116,6 +116,16 @@ public final class OptionsMenuPresenter: NSObject {
         statsItem.state = isInspectorOpen ? .on : .off
         menu.addItem(statsItem)
 
+        // 5. Media Engines & Codecs Setup
+        let enginesItem = NSMenuItem(
+            title: "Media Engines & Codecs...",
+            action: #selector(handleOpenEngines),
+            keyEquivalent: ","
+        )
+        enginesItem.target = self
+        enginesItem.keyEquivalentModifierMask = [.command]
+        menu.addItem(enginesItem)
+
         // Pop up the menu at the cursor event position
         if let ev = event ?? NSApp.currentEvent, let win = NSApp.keyWindow {
             let targetView = view ?? win.contentView ?? NSView()
@@ -154,6 +164,10 @@ public final class OptionsMenuPresenter: NSObject {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             MediaCoordinator.shared.isInspectorPresented.toggle()
         }
+    }
+
+    @objc private func handleOpenEngines() {
+        NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
     }
 
     private func formatRate(_ rate: Double) -> String {

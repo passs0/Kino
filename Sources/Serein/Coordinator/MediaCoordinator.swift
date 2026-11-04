@@ -203,6 +203,9 @@ public final class MediaCoordinator: ObservableObject {
                 self.state = .ready(strategy)
                 log("✨ Live remux stream connected to AVPlayer.", level: .success)
             } catch {
+                if case .ffmpegNotFound = (error as? FFmpegPipelineError) {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
                 state = .error("Remux pipeline failed: \(error.localizedDescription)")
                 log("❌ Remux failed: \(error.localizedDescription)", level: .error)
             }
@@ -306,6 +309,12 @@ public final class MediaCoordinator: ObservableObject {
                 }
                 return
             } catch {
+                if case .ytDlpNotFound = (error as? YtDlpError) {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
+                if case .ffmpegNotFound = (error as? FFmpegPipelineError) {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
                 log("⚠️ yt-dlp note: \(error.localizedDescription). Proceeding with direct stream fallback.", level: .warning)
             }
         }

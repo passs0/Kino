@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Status popover showing availability and versions of FFprobe, FFmpeg, and yt-dlp.
 public struct ToolStatusView: View {
+    @ObservedObject private var prerequisiteManager = PrerequisiteManager.shared
     @State private var tools: [ToolInfo] = []
 
     public var body: some View {
@@ -27,15 +28,45 @@ public struct ToolStatusView: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("INSTALLATION INSTRUCTIONS")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.secondary)
-                Text("brew install ffmpeg yt-dlp")
-                    .font(.system(size: 11, design: .monospaced))
-                    .padding(6)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(4)
+            if !prerequisiteManager.isAllInstalled {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("AUTOMATIC SETUP")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.secondary)
+
+                    Button {
+                        NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.down.circle.fill")
+                            Text("Download Missing Engines (~45 MB)")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Text("Or install via Homebrew: brew install ffmpeg yt-dlp")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("All media engines active.")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.green)
+                        Text("Zero-copy remuxing and online streaming enabled.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button("Check Updates") {
+                        Task {
+                            await prerequisiteManager.checkForUpdates()
+                            refresh()
+                        }
+                    }
+                    .disabled(prerequisiteManager.isCheckingUpdates)
+                }
             }
         }
         .padding(14)

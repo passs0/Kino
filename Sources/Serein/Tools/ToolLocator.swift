@@ -12,14 +12,18 @@ public struct ToolInfo: Identifiable, Hashable, Sendable {
 public final class ToolLocator: @unchecked Sendable {
     public static let shared = ToolLocator()
 
-    private let standardSearchPaths = [
-        "/opt/homebrew/bin",
-        "/usr/local/bin",
-        "/usr/bin",
-        "/bin",
-        "/opt/local/bin",
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin").path
-    ]
+    private var standardSearchPaths: [String] {
+        let paths: [String?] = [
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path,
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/opt/local/bin",
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin").path
+        ]
+        return paths.compactMap { $0 }
+    }
 
     private var cachedPaths: [String: String] = [:]
     private var cachedVersions: [String: String] = [:]

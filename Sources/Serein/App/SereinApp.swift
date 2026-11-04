@@ -13,6 +13,17 @@ public struct SereinApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Media Engines & Codecs...") {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+
+                Button("Check for Engine Updates...") {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
+            }
+
             CommandGroup(replacing: .newItem) {
                 Button("Open Media File...") {
                     openFileDialog()
@@ -81,4 +92,5 @@ public struct SereinApp: App {
 
 public extension Notification.Name {
     static let openURLSheetNotification = Notification.Name("SereinOpenURLSheetNotification")
+    static let openPrerequisitesSheetNotification = Notification.Name("SereinOpenPrerequisitesSheetNotification")
 }

@@ -8,6 +8,7 @@ public struct MainWindowView: View {
     @StateObject private var playerController = PlayerController.shared
 
     @State private var showURLSheet = false
+    @State private var showPrerequisitesSheet = false
 
     public init() {}
 
@@ -49,8 +50,14 @@ public struct MainWindowView: View {
         .sheet(isPresented: $showURLSheet) {
             URLInputSheet(coordinator: coordinator)
         }
+        .sheet(isPresented: $showPrerequisitesSheet) {
+            PrerequisiteInstallSheet()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openURLSheetNotification)) { _ in
             showURLSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
+            showPrerequisitesSheet = true
         }
     }
 
