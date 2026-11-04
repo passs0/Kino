@@ -1,0 +1,84 @@
+import SwiftUI
+import AppKit
+
+public struct SereinApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    public init() {}
+
+    public var body: some Scene {
+        WindowGroup {
+            MainWindowView()
+                .frame(minWidth: 720, minHeight: 460)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("Open Media File...") {
+                    openFileDialog()
+                }
+                .keyboardShortcut("o", modifiers: .command)
+
+                Button("Open Online URL...") {
+                    NotificationCenter.default.post(name: .openURLSheetNotification, object: nil)
+                }
+                .keyboardShortcut("u", modifiers: .command)
+            }
+
+            CommandMenu("Playback") {
+                Button(PlayerController.shared.isPlaying ? "Pause" : "Play") {
+                    PlayerController.shared.togglePlayPause()
+                }
+                .keyboardShortcut(.space, modifiers: [])
+
+                Button("Seek Forward 10s") {
+                    PlayerController.shared.seekRelative(seconds: 10)
+                }
+                .keyboardShortcut(.rightArrow, modifiers: .command)
+
+                Button("Seek Backward 10s") {
+                    PlayerController.shared.seekRelative(seconds: -10)
+                }
+                .keyboardShortcut(.leftArrow, modifiers: .command)
+
+                Divider()
+
+                Button(PlayerController.shared.isMuted ? "Unmute" : "Mute") {
+                    PlayerController.shared.toggleMute()
+                }
+                .keyboardShortcut("m", modifiers: .command)
+            }
+
+            CommandGroup(after: .toolbar) {
+                Button("Toggle Media Inspector") {
+                    withAnimation {
+                        MediaCoordinator.shared.isInspectorPresented.toggle()
+                    }
+                }
+                .keyboardShortcut("i", modifiers: .command)
+
+                Button("Toggle Diagnostics Console") {
+                    withAnimation {
+                        MediaCoordinator.shared.isLogDrawerPresented.toggle()
+                    }
+                }
+                .keyboardShortcut("l", modifiers: .command)
+            }
+        }
+    }
+
+    private func openFileDialog() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        if panel.runModal() == .OK, let url = panel.url {
+            Task { @MainActor in
+                MediaCoordinator.shared.openLocalFile(url: url)
+            }
+        }
+    }
+}
+
+public extension Notification.Name {
+    static let openURLSheetNotification = Notification.Name("SereinOpenURLSheetNotification")
+}
