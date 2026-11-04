@@ -72,6 +72,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 return nil
             }
 
+            // Z / z (keyCode 6 or char "z"): Toggle Letterbox / Fill Screen
+            if keyCode == 6 || chars == "z" {
+                Task { @MainActor in
+                    PlayerController.shared.toggleLetterbox()
+                }
+                return nil
+            }
+
             return event
         }
     }

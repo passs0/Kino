@@ -9,6 +9,7 @@ public final class SubtitleManager: ObservableObject {
     @Published public private(set) var availableTracks: [SubtitleTrack] = []
     @Published public private(set) var selectedTrack: SubtitleTrack? = nil
     @Published public private(set) var currentCueText: String? = nil
+    @Published public private(set) var currentCuePosition: SubtitlePosition = .bottom
 
     private var activeCues: [SubtitleCue] = []
     private var cuesCache: [String: [SubtitleCue]] = [:]
@@ -133,6 +134,7 @@ public final class SubtitleManager: ObservableObject {
         guard !activeCues.isEmpty else {
             if currentCueText != nil {
                 currentCueText = nil
+                currentCuePosition = .bottom
             }
             return
         }
@@ -143,8 +145,10 @@ public final class SubtitleManager: ObservableObject {
         }
 
         let newText = matching?.text
-        if currentCueText != newText {
+        let newPos = matching?.position ?? .bottom
+        if currentCueText != newText || currentCuePosition != newPos {
             currentCueText = newText
+            currentCuePosition = newPos
         }
     }
 
@@ -154,6 +158,7 @@ public final class SubtitleManager: ObservableObject {
         availableTracks.removeAll()
         selectedTrack = nil
         currentCueText = nil
+        currentCuePosition = .bottom
         activeCues.removeAll()
         cuesCache.removeAll()
     }

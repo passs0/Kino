@@ -1,16 +1,25 @@
 import Foundation
 
-/// Individual subtitle cue containing start time, end time, and plain text.
+/// Position placement of a subtitle cue on the video canvas.
+public enum SubtitlePosition: String, Sendable {
+    case bottom
+    case top
+    case center
+}
+
+/// Individual subtitle cue containing start time, end time, plain text, and layout position.
 public struct SubtitleCue: Identifiable, Sendable {
     public let id = UUID()
     public let startTime: Double
     public let endTime: Double
     public let text: String
+    public let position: SubtitlePosition
 
-    public init(startTime: Double, endTime: Double, text: String) {
+    public init(startTime: Double, endTime: Double, text: String, position: SubtitlePosition = .bottom) {
         self.startTime = startTime
         self.endTime = endTime
         self.text = text
+        self.position = position
     }
 }
 
@@ -46,7 +55,7 @@ public struct SubtitleTrack: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Fast WebVTT and SRT parser converting raw subtitle text into timestamped cues.
+/// Fast WebVTT and SRT parser converting raw subtitle text into timestamped cues with semantic positioning.
 public enum SubtitleParser {
     public static func parseWebVTT(_ raw: String) -> [SubtitleCue] {
         var cues: [SubtitleCue] = []
@@ -54,6 +63,7 @@ public enum SubtitleParser {
 
         var currentStart: Double?
         var currentEnd: Double?
+        var currentPosition: SubtitlePosition = .bottom
         var currentTextLines: [String] = []
 
         let timestampRegex = try? NSRegularExpression(
@@ -63,13 +73,14 @@ public enum SubtitleParser {
         func commitCue() {
             if let start = currentStart, let end = currentEnd, !currentTextLines.isEmpty {
                 let joined = currentTextLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-                let cleaned = cleanSubtitleFormatting(joined)
+                let (detectedPos, cleaned) = cleanSubtitleFormattingAndExtractPosition(joined, fallbackPosition: currentPosition)
                 if !cleaned.isEmpty {
-                    cues.append(SubtitleCue(startTime: start, endTime: end, text: cleaned))
+                    cues.append(SubtitleCue(startTime: start, endTime: end, text: cleaned, position: detectedPos))
                 }
             }
             currentStart = nil
             currentEnd = nil
+            currentPosition = .bottom
             currentTextLines.removeAll()
         }
 
@@ -94,6 +105,15 @@ public enum SubtitleParser {
                 let end = parseTimestampMatch(trimmed, match: match, isEnd: true)
                 currentStart = start
                 currentEnd = end
+
+                // Detect WebVTT cue settings on the timestamp line
+                if trimmed.contains("line:0%") || trimmed.contains("line:10%") || trimmed.contains("line:15%") || trimmed.contains("line:20%") {
+                    currentPosition = .top
+                } else if trimmed.contains("line:40%") || trimmed.contains("line:50%") || trimmed.contains("line:60%") {
+                    currentPosition = .center
+                } else {
+                    currentPosition = .bottom
+                }
                 continue
             }
 
@@ -134,10 +154,42 @@ public enum SubtitleParser {
         return (hours * 3600.0) + (minutes * 60.0) + seconds + (ms / 1000.0)
     }
 
-    /// Strips inline WebVTT/ASS formatting tags (<c>, <v>, <b>, <i>, {\an8}, etc.) and HTML entities.
-    private static func cleanSubtitleFormatting(_ text: String) -> String {
+    /// Strips non-position ASS styles (font, size, color, borders, effects) and HTML entities,
+    /// while preserving semantic positioning (top, bottom, center).
+    public static func cleanSubtitleFormattingAndExtractPosition(_ text: String, fallbackPosition: SubtitlePosition) -> (SubtitlePosition, String) {
+        var position = fallbackPosition
         var result = text
-        // Strip ASS/SSA style override tags like {\an8}, {\b1}, etc.
+
+        // 1. Check ASS position tags before stripping styles:
+        // \an7, \an8, \an9 (or legacy \a5, \a6, \a7) = Top
+        if result.contains("\\an7") || result.contains("\\an8") || result.contains("\\an9") ||
+           result.contains("\\a5") || result.contains("\\a6") || result.contains("\\a7") {
+            position = .top
+        } else if result.contains("\\an4") || result.contains("\\an5") || result.contains("\\an6") ||
+                  result.contains("\\a9") || result.contains("\\a10") || result.contains("\\a11") {
+            position = .center
+        } else if result.contains("\\an1") || result.contains("\\an2") || result.contains("\\an3") ||
+                  result.contains("\\a1") || result.contains("\\a2") || result.contains("\\a3") {
+            position = .bottom
+        }
+
+        // Check explicit \pos(x, y) if present
+        if let posRegex = try? NSRegularExpression(pattern: #"\\pos\(\s*\d+\s*,\s*(\d+)\s*\)"#) {
+            if let match = posRegex.firstMatch(in: result, range: NSRange(location: 0, length: result.utf16.count)),
+               match.numberOfRanges > 1,
+               let r = Range(match.range(at: 1), in: result),
+               let y = Double(result[r]) {
+                if y < 280 {
+                    position = .top
+                } else if y > 680 {
+                    position = .bottom
+                } else {
+                    position = .center
+                }
+            }
+        }
+
+        // 2. Strip all ASS style override tags ({...}): font, size, color, alpha, karaoke, bold, italic, borders, etc.
         if let assRegex = try? NSRegularExpression(pattern: #"\{[^}]+\}"#) {
             result = assRegex.stringByReplacingMatches(
                 in: result,
@@ -147,8 +199,10 @@ public enum SubtitleParser {
             )
         }
         result = result.replacingOccurrences(of: "\\N", with: "\n")
+        result = result.replacingOccurrences(of: "\\n", with: "\n")
+        result = result.replacingOccurrences(of: "\\h", with: " ")
 
-        // Strip XML/HTML tags
+        // 3. Strip XML/HTML tags
         if let tagRegex = try? NSRegularExpression(pattern: #"<[^>]+>"#) {
             result = tagRegex.stringByReplacingMatches(
                 in: result,
@@ -157,7 +211,8 @@ public enum SubtitleParser {
                 withTemplate: ""
             )
         }
-        // Decode common entities
+
+        // 4. Decode common HTML entities
         result = result
             .replacingOccurrences(of: "&amp;", with: "&")
             .replacingOccurrences(of: "&lt;", with: "<")
@@ -166,6 +221,6 @@ public enum SubtitleParser {
             .replacingOccurrences(of: "&#39;", with: "'")
             .replacingOccurrences(of: "&nbsp;", with: " ")
 
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (position, result.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }

@@ -82,9 +82,29 @@ public final class OptionsMenuPresenter: NSObject {
         speedItem.submenu = speedMenu
         menu.addItem(speedItem)
 
+        // 3. Aspect Ratio / Letterbox Submenu
+        let aspectItem = NSMenuItem(title: "Aspect Ratio", action: nil, keyEquivalent: "")
+        let aspectMenu = NSMenu(title: "Aspect Ratio")
+        aspectMenu.autoenablesItems = false
+
+        let isLetterboxed = PlayerController.shared.isLetterboxed
+
+        let fitItem = NSMenuItem(title: "Fit to Screen (Letterbox)", action: #selector(handleSetLetterboxFit), keyEquivalent: "")
+        fitItem.target = self
+        fitItem.state = isLetterboxed ? .on : .off
+        aspectMenu.addItem(fitItem)
+
+        let fillItem = NSMenuItem(title: "Fill Screen (No Letterbox)", action: #selector(handleSetLetterboxFill), keyEquivalent: "")
+        fillItem.target = self
+        fillItem.state = (!isLetterboxed) ? .on : .off
+        aspectMenu.addItem(fillItem)
+
+        aspectItem.submenu = aspectMenu
+        menu.addItem(aspectItem)
+
         menu.addItem(NSMenuItem.separator())
 
-        // 3. Media Statistics (Canonical access point for media information & technical inspector)
+        // 4. Media Statistics (Canonical access point for media information & technical inspector)
         let isInspectorOpen = MediaCoordinator.shared.isInspectorPresented
         let statsItem = NSMenuItem(
             title: isInspectorOpen ? "Hide Media Statistics" : "Show Media Statistics",
@@ -120,6 +140,14 @@ public final class OptionsMenuPresenter: NSObject {
         if let rate = sender.representedObject as? Float {
             PlayerController.shared.playbackRate = rate
         }
+    }
+
+    @objc private func handleSetLetterboxFit() {
+        PlayerController.shared.isLetterboxed = true
+    }
+
+    @objc private func handleSetLetterboxFill() {
+        PlayerController.shared.isLetterboxed = false
     }
 
     @objc private func handleToggleStats() {

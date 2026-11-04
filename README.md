@@ -45,6 +45,7 @@ To build and run Serein on macOS, ensure the following prerequisites are install
 - **`+` / `=`**: Increase volume ($+10\%$)
 - **`-`**: Decrease volume ($-10\%$)
 - **`M`**: Mute / Unmute
+- **`Z`**: Toggle Aspect Ratio (Letterbox Fit vs. Fill Screen)
 - **`⌘I`**: Toggle Media Statistics & Technical Inspector
 - **`⌘O`**: Open Local File
 - **`⌘⇧O`**: Open Online Stream URL

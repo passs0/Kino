@@ -84,55 +84,67 @@ public struct VideoPlayerView: View {
     // MARK: - Player Canvas
 
     private var playerCanvas: some View {
-        ZStack {
-            // Layer 1: Hardware-Accelerated Video Surface
-            NativePlayerView(player: playerController.player) { droppedURL in
-                coordinator.openLocalFile(url: droppedURL)
+        GeometryReader { geo in
+            ZStack {
+                // Layer 1: Hardware-Accelerated Video Surface
+                NativePlayerView(player: playerController.player) { droppedURL in
+                    coordinator.openLocalFile(url: droppedURL)
+                }
+                .ignoresSafeArea()
+
+                // Layer 2: Background Tap Catch (only for empty canvas clicks, beneath interactive controls)
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        toggleFullscreen()
+                    }
+                    .onTapGesture(count: 1) {
+                        playerController.togglePlayPause()
+                        registerUserActivity()
+                    }
+
+                // Layer 3: Subtitles / Captions (scales dynamically with screen/window size and follows ASS semantic position)
+                subtitlesOverlay(viewportSize: geo.size)
+
+                // Layer 4: Floating Liquid Glass Controls Overlay
+                controlsOverlay
+                    .allowsHitTesting(showControls || !playerController.isPlaying)
+                    .opacity(showControls || !playerController.isPlaying ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.22), value: showControls || !playerController.isPlaying)
             }
-            .ignoresSafeArea()
-
-            // Layer 2: Background Tap Catch (only for empty canvas clicks, beneath interactive controls)
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    toggleFullscreen()
-                }
-                .onTapGesture(count: 1) {
-                    playerController.togglePlayPause()
+            .contentShape(Rectangle())
+            .onContinuousHover { phase in
+                switch phase {
+                case .active:
                     registerUserActivity()
-                }
-
-            // Layer 3: Subtitles / Captions (renders non-interactively over video)
-            subtitlesOverlay
-
-            // Layer 4: Floating Liquid Glass Controls Overlay
-            controlsOverlay
-                .allowsHitTesting(showControls || !playerController.isPlaying)
-                .opacity(showControls || !playerController.isPlaying ? 1 : 0)
-                .animation(.easeInOut(duration: 0.22), value: showControls || !playerController.isPlaying)
-        }
-        .contentShape(Rectangle())
-        .onContinuousHover { phase in
-            switch phase {
-            case .active:
-                registerUserActivity()
-            case .ended:
-                if playerController.isPlaying {
-                    scheduleControlsFade(afterSeconds: 1.0)
+                case .ended:
+                    if playerController.isPlaying {
+                        scheduleControlsFade(afterSeconds: 1.0)
+                    }
                 }
             }
         }
     }
 
-    // MARK: - Subtitles Overlay (System Settings Accessibility Captions)
+    // MARK: - Subtitles Overlay (Scales with Screen Size & Accessibility Settings)
 
-    private var subtitlesOverlay: some View {
+    private func subtitlesOverlay(viewportSize: CGSize) -> some View {
         Group {
             if let cueText = subtitleManager.currentCueText, !cueText.isEmpty {
+                let h = viewportSize.height > 0 ? viewportSize.height : 720
+                // In full screen, subtitles scale proportionally with the display height (18pt min to 48pt max)
+                let dynamicBaseSize = max(18.0, min(h * 0.036, 48.0))
+                let effectiveFontSize = dynamicBaseSize * captionAppearance.fontScale
+                let padH = max(12.0, dynamicBaseSize * 0.55)
+                let padV = max(5.0, dynamicBaseSize * 0.25)
+
                 VStack {
-                    Spacer()
+                    if subtitleManager.currentCuePosition != .top {
+                        Spacer()
+                    }
+
                     Text(cueText)
-                        .font(.system(size: 20 * captionAppearance.fontScale, weight: .medium, design: .default))
+                        .font(.system(size: effectiveFontSize, weight: .medium, design: .default))
                         .foregroundColor(captionAppearance.textColor)
                         .shadow(
                             color: captionAppearance.hasShadow ? captionAppearance.shadowColor : Color.clear,
@@ -141,16 +153,21 @@ public struct VideoPlayerView: View {
                             y: 1.5
                         )
                         .multilineTextAlignment(.center)
-                        .lineSpacing(4)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
+                        .lineSpacing(max(3.0, dynamicBaseSize * 0.16))
+                        .padding(.horizontal, padH)
+                        .padding(.vertical, padV)
                         .background(
                             RoundedRectangle(cornerRadius: captionAppearance.cornerRadius, style: .continuous)
                                 .fill(captionAppearance.backgroundColor)
                         )
                         .padding(.horizontal, 48)
-                        .padding(.bottom, (showControls || !playerController.isPlaying) ? 104 : 36)
+                        .padding(.top, subtitleManager.currentCuePosition == .top ? ((showControls || !playerController.isPlaying) ? 84 : 36) : 0)
+                        .padding(.bottom, subtitleManager.currentCuePosition == .bottom ? ((showControls || !playerController.isPlaying) ? 104 : 36) : 0)
                         .animation(.easeInOut(duration: 0.18), value: showControls || !playerController.isPlaying)
+
+                    if subtitleManager.currentCuePosition != .bottom {
+                        Spacer()
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .allowsHitTesting(false)

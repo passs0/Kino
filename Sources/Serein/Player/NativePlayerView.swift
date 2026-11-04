@@ -23,7 +23,7 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
 
-        playerLayer.videoGravity = .resizeAspect
+        playerLayer.videoGravity = PlayerController.shared.isLetterboxed ? .resizeAspect : .resizeAspectFill
         layer?.addSublayer(playerLayer)
 
         if AVPictureInPictureController.isPictureInPictureSupported() {
@@ -135,6 +135,10 @@ public struct NativePlayerView: NSViewRepresentable {
     public func updateNSView(_ nsView: SereinPlayerNSView, context: Context) {
         if nsView.playerLayer.player !== player {
             nsView.playerLayer.player = player
+        }
+        let targetGravity: AVLayerVideoGravity = PlayerController.shared.isLetterboxed ? .resizeAspect : .resizeAspectFill
+        if nsView.playerLayer.videoGravity != targetGravity {
+            nsView.playerLayer.videoGravity = targetGravity
         }
         nsView.onFileDropped = onFileDropped
         PlayerController.shared.activePlayerNSView = nsView

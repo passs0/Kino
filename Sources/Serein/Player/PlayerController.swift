@@ -40,6 +40,15 @@ public final class PlayerController: ObservableObject {
             }
         }
     }
+    @Published public var isLetterboxed: Bool = true {
+        didSet {
+            activePlayerNSView?.playerLayer.videoGravity = isLetterboxed ? .resizeAspect : .resizeAspectFill
+        }
+    }
+
+    public func toggleLetterbox() {
+        isLetterboxed.toggle()
+    }
 
     private var timeObserverToken: Any?
     private var itemStatusObserver: NSKeyValueObservation?
