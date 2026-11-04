@@ -13,6 +13,7 @@ public final class PlayerController: ObservableObject {
 
     @Published public private(set) var isPlaying: Bool = false
     @Published public private(set) var isBuffering: Bool = false
+    @Published public var isPictureInPictureActive: Bool = false
 
     public var currentTime: Double {
         get { PlayerTimeState.shared.currentTime }
@@ -69,6 +70,8 @@ public final class PlayerController: ObservableObject {
 
     public func load(url: URL, expectedDuration: Double? = nil) {
         cleanupItemObservers()
+        player.volume = 0
+        player.pause()
 
         PlayerTimeState.shared.reset()
         if let exp = expectedDuration, exp > 0 {
@@ -80,6 +83,8 @@ public final class PlayerController: ObservableObject {
 
         player.replaceCurrentItem(with: item)
         player.actionAtItemEnd = .pause
+        player.volume = isMuted ? 0 : volume
+        player.isMuted = isMuted
         player.rate = playbackRate
         player.play()
         isPlaying = true
@@ -145,9 +150,31 @@ public final class PlayerController: ObservableObject {
 
     public func reset() {
         cleanupItemObservers()
+        player.volume = 0
+        player.pause()
         player.replaceCurrentItem(with: nil)
         SubtitleManager.shared.reset()
         PlayerTimeState.shared.reset()
+        isPlaying = false
+    }
+
+    /// Smoothly fades out audio to zero before pausing and tearing down the player item to prevent CoreAudio clicks/pops on quit.
+    public func shutdownAudioCleanly() async {
+        let startVol = player.volume
+        if isPlaying && !isMuted && startVol > 0 {
+            let steps = 5
+            for step in 1...steps {
+                let fraction = Float(steps - step) / Float(steps)
+                player.volume = startVol * fraction
+                try? await Task.sleep(nanoseconds: 12_000_000) // 12ms per step (~60ms total ramp)
+            }
+        }
+        player.volume = 0
+        player.isMuted = true
+        player.pause()
+        try? await Task.sleep(nanoseconds: 25_000_000) // Allow CoreAudio hardware output buffer to drain zero-crossing samples
+        cleanupItemObservers()
+        player.replaceCurrentItem(with: nil)
         isPlaying = false
     }
 

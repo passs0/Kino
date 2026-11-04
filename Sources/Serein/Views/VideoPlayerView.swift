@@ -205,7 +205,7 @@ public struct VideoPlayerView: View {
 
     private var controlsOverlay: some View {
         VStack(spacing: 0) {
-            // TOP BAR: Left has traffic lights (windowed) / far-left (fullscreen) + PiP & AirPlay; Right has Volume
+            // TOP BAR: Left has traffic lights (windowed) / far-left (fullscreen) + PiP & AirPlay; Middle has Title; Right has Volume
             HStack(spacing: 12) {
                 // Inset clearance for standard macOS traffic lights (only when in windowed mode!)
                 if !isFullScreen {
@@ -221,7 +221,7 @@ public struct VideoPlayerView: View {
                         playerController.togglePictureInPicture()
                         registerUserActivity()
                     }) {
-                        Image(systemName: "pip.enter")
+                        Image(systemName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 22, height: 22)
@@ -241,7 +241,21 @@ public struct VideoPlayerView: View {
                 .frame(height: 34)
                 .glassEffect(Glass.regular, in: Capsule())
 
-                Spacer()
+                Spacer(minLength: 12)
+
+                // Top-Middle: Clean Media Title Pill (Non-interactive)
+                Text(cleanMediaTitle)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .glassEffect(Glass.regular, in: Capsule())
+                    .frame(maxWidth: 420)
+                    .allowsHitTesting(false)
+
+                Spacer(minLength: 12)
 
                 // Top-Right: Volume Slider Capsule
                 volumeCapsule
@@ -281,18 +295,8 @@ public struct VideoPlayerView: View {
 
             Spacer()
 
-            // BOTTOM INFO ROW: [Title] ... [WebKit Options Menu]
+            // BOTTOM OPTIONS ROW: [WebKit Options Menu]
             HStack(alignment: .bottom) {
-                // Clean Media Title Pill (Non-interactive)
-                Text(cleanMediaTitle)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .glassEffect(Glass.regular, in: Capsule())
-
                 Spacer()
 
                 // WebKit HTML5 Options Capsule (Subtitles, Speed, Media Statistics)

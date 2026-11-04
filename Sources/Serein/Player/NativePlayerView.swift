@@ -3,11 +3,72 @@ import AppKit
 import AVKit
 import AVFoundation
 
+/// Click-through NSHostingView so Picture-in-Picture native controls and window dragging remain fully interactive.
+private final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+}
+
+/// Subtitle overlay rendered directly inside the floating macOS Picture-in-Picture window.
+private struct PiPSubtitleOverlayView: View {
+    @ObservedObject private var subtitleManager = SubtitleManager.shared
+    @ObservedObject private var captionAppearance = CaptionAppearanceManager.shared
+
+    var body: some View {
+        GeometryReader { geo in
+            if let cueText = subtitleManager.currentCueText, !cueText.isEmpty {
+                let h = geo.size.height > 0 ? geo.size.height : 240
+                let dynamicBaseSize = max(10.0, min(h * 0.056, 24.0))
+                let effectiveFontSize = dynamicBaseSize * captionAppearance.fontScale
+                let padH = max(6.0, dynamicBaseSize * 0.45)
+                let padV = max(3.0, dynamicBaseSize * 0.22)
+                let edgeMargin = max(8.0, h * 0.06)
+
+                VStack {
+                    if subtitleManager.currentCuePosition != .top {
+                        Spacer()
+                    }
+
+                    Text(cueText)
+                        .font(.system(size: effectiveFontSize, weight: .medium, design: .default))
+                        .foregroundColor(captionAppearance.textColor)
+                        .shadow(
+                            color: captionAppearance.hasShadow ? captionAppearance.shadowColor : Color.clear,
+                            radius: captionAppearance.hasShadow ? 1.5 : 0,
+                            x: 0,
+                            y: 1.0
+                        )
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(max(1.5, dynamicBaseSize * 0.14))
+                        .padding(.horizontal, padH)
+                        .padding(.vertical, padV)
+                        .background(
+                            RoundedRectangle(cornerRadius: max(4, captionAppearance.cornerRadius * 0.7), style: .continuous)
+                                .fill(captionAppearance.backgroundColor)
+                        )
+                        .padding(.horizontal, 12)
+                        .padding(.top, subtitleManager.currentCuePosition == .top ? edgeMargin : 0)
+                        .padding(.bottom, subtitleManager.currentCuePosition == .bottom ? edgeMargin : 0)
+
+                    if subtitleManager.currentCuePosition != .bottom {
+                        Spacer()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// Custom AppKit view combining AVPlayerLayer with macOS drag-and-drop support and native PiP.
 public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDelegate {
     public let playerLayer = AVPlayerLayer()
     public var pipController: AVPictureInPictureController?
     public var onFileDropped: ((URL) -> Void)?
+    private var pipSubtitleHostingView: NSView?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -74,6 +135,69 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
         } else {
             pip.startPictureInPicture()
         }
+    }
+
+    // MARK: - AVPictureInPictureControllerDelegate (PiP Subtitle Injection)
+
+    public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor [weak self] in
+            PlayerController.shared.isPictureInPictureActive = true
+            self?.attachPiPSubtitleOverlay(to: pictureInPictureController)
+        }
+    }
+
+    public func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor [weak self] in
+            PlayerController.shared.isPictureInPictureActive = true
+            self?.attachPiPSubtitleOverlay(to: pictureInPictureController)
+        }
+    }
+
+    public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor [weak self] in
+            PlayerController.shared.isPictureInPictureActive = false
+            self?.detachPiPSubtitleOverlay()
+        }
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
+        Task { @MainActor [weak self] in
+            PlayerController.shared.isPictureInPictureActive = false
+            self?.detachPiPSubtitleOverlay()
+        }
+    }
+
+    @MainActor
+    private func attachPiPSubtitleOverlay(to controller: AVPictureInPictureController) {
+        guard let pipVC = controller.value(forKey: "pictureInPictureViewController") as? NSViewController else {
+            return
+        }
+        let containerView = pipVC.view
+        if let existing = pipSubtitleHostingView, existing.superview === containerView {
+            return
+        }
+        pipSubtitleHostingView?.removeFromSuperview()
+
+        let overlay = PassthroughHostingView(rootView: PiPSubtitleOverlayView())
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.wantsLayer = true
+        overlay.layer?.backgroundColor = NSColor.clear.cgColor
+        overlay.layer?.zPosition = 999
+
+        containerView.addSubview(overlay, positioned: .above, relativeTo: nil)
+        NSLayoutConstraint.activate([
+            overlay.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: containerView.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+        ])
+        pipSubtitleHostingView = overlay
+    }
+
+    @MainActor
+    private func detachPiPSubtitleOverlay() {
+        pipSubtitleHostingView?.removeFromSuperview()
+        pipSubtitleHostingView = nil
     }
 
     public func repositionTrafficLights() {

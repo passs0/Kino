@@ -96,9 +96,19 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 
-    public func applicationWillTerminate(_ notification: Notification) {
+    public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         Task { @MainActor in
+            await PlayerController.shared.shutdownAudioCleanly()
             MediaCoordinator.shared.stop()
+            sender.reply(toApplicationShouldTerminate: true)
         }
+        return .terminateLater
+    }
+
+    public func applicationWillTerminate(_ notification: Notification) {
+        PlayerController.shared.player.volume = 0
+        PlayerController.shared.player.isMuted = true
+        PlayerController.shared.player.pause()
+        MediaCoordinator.shared.stop()
     }
 }
