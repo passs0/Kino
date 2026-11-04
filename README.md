@@ -60,7 +60,7 @@ To build and run Serein on macOS, ensure the following prerequisites are install
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/Serein.git
+git clone https://github.com/passs0/Serein.git
 cd Serein
 
 # Build and sign Serein.app
