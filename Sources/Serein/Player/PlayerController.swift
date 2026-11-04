@@ -57,6 +57,13 @@ public final class PlayerController: ObservableObject {
     private var itemLoadedRangesObserver: NSKeyValueObservation?
     private var itemBufferObserver: NSKeyValueObservation?
     private var itemKeepUpObserver: NSKeyValueObservation?
+    private var legibleOutput: AVPlayerItemLegibleOutput?
+    private lazy var legibleDelegateBridge = LegibleOutputBridge { [weak self] text in
+        Task { @MainActor [weak self] in
+            guard self != nil else { return }
+            SubtitleManager.shared.updateNativeLegibleText(text)
+        }
+    }
 
     public init() {
         setupTimeObserver()
@@ -131,6 +138,7 @@ public final class PlayerController: ObservableObject {
         let maxD = PlayerTimeState.shared.duration
         let targetSec = max(0, min(seconds, maxD > 0 ? maxD : seconds))
         let cmTime = CMTime(seconds: targetSec, preferredTimescale: 600)
+        SubtitleManager.shared.handleUserSeek(to: targetSec)
         player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard self != nil else { return }
@@ -195,6 +203,12 @@ public final class PlayerController: ObservableObject {
     }
 
     private func setupItemObservers(for item: AVPlayerItem) {
+        let output = AVPlayerItemLegibleOutput(mediaSubtypesForNativeRepresentation: [])
+        output.suppressesPlayerRendering = true
+        output.setDelegate(legibleDelegateBridge, queue: .main)
+        item.add(output)
+        self.legibleOutput = output
+
         itemStatusObserver = item.observe(\.status, options: [.initial, .new]) { [weak self] observedItem, _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
@@ -205,6 +219,7 @@ public final class PlayerController: ObservableObject {
                         PlayerTimeState.shared.duration = d
                     }
                     self.isBuffering = false
+                    self.syncNativeSubtitleSelection(for: SubtitleManager.shared.selectedTrack)
                     if self.isPlaying {
                         self.player.play()
                         self.player.rate = self.playbackRate
@@ -264,6 +279,10 @@ public final class PlayerController: ObservableObject {
     }
 
     private func cleanupItemObservers() {
+        if let output = legibleOutput, let currentItem = player.currentItem {
+            currentItem.remove(output)
+        }
+        legibleOutput = nil
         itemStatusObserver?.invalidate()
         itemStatusObserver = nil
         itemDurationObserver?.invalidate()
@@ -274,6 +293,44 @@ public final class PlayerController: ObservableObject {
         itemBufferObserver = nil
         itemKeepUpObserver?.invalidate()
         itemKeepUpObserver = nil
+    }
+
+    /// Synchronizes AVPlayerItem's native legible media selection group with SubtitleManager's selected track.
+    public func syncNativeSubtitleSelection(for track: SubtitleTrack?) {
+        guard let item = player.currentItem else { return }
+        Task { @MainActor in
+            guard let group = try? await item.asset.loadMediaSelectionGroup(for: .legible) else { return }
+            guard let track = track else {
+                item.select(nil, in: group)
+                SubtitleManager.shared.updateNativeLegibleText(nil)
+                return
+            }
+
+            let options = group.options
+            guard !options.isEmpty else { return }
+
+            if let lang = track.languageCode?.lowercased() {
+                if let matched = options.first(where: {
+                    let optLang = $0.extendedLanguageTag?.lowercased() ?? $0.locale?.language.languageCode?.identifier.lowercased() ?? ""
+                    return optLang == lang || optLang.hasPrefix(lang) || lang.hasPrefix(optLang)
+                }) {
+                    item.select(matched, in: group)
+                    return
+                }
+            }
+
+            if let matchedByName = options.first(where: {
+                $0.displayName.localizedCaseInsensitiveContains(track.name) ||
+                track.name.localizedCaseInsensitiveContains($0.displayName)
+            }) {
+                item.select(matchedByName, in: group)
+                return
+            }
+
+            if let def = group.defaultOption ?? options.first {
+                item.select(def, in: group)
+            }
+        }
     }
 
     // MARK: - Formatted Strings
@@ -302,5 +359,28 @@ public final class PlayerController: ObservableObject {
         } else {
             return String(format: "%02d:%02d", m, s)
         }
+    }
+}
+
+/// Delegate bridge receiving real-time legible subtitle cues directly from AVPlayerItem.
+private final class LegibleOutputBridge: NSObject, AVPlayerItemLegibleOutputPushDelegate {
+    private let onText: (String?) -> Void
+
+    init(onText: @escaping (String?) -> Void) {
+        self.onText = onText
+    }
+
+    func legibleOutput(
+        _ output: AVPlayerItemLegibleOutput,
+        didOutputAttributedStrings strings: [NSAttributedString],
+        nativeSampleBuffers nativeSamples: [Any],
+        forItemTime itemTime: CMTime
+    ) {
+        let combined = strings.map { $0.string }.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        onText(combined.isEmpty ? nil : combined)
+    }
+
+    func outputSequenceWasFlushed(_ output: AVPlayerItemOutput) {
+        onText(nil)
     }
 }

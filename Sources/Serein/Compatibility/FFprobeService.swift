@@ -111,6 +111,9 @@ public final class FFprobeService: Sendable {
         var parsedStreams: [MediaStream] = []
 
         for raw in (root.streams ?? []) {
+            if (raw.disposition?["attached_pic"] ?? 0) == 1 {
+                continue
+            }
             let kind = StreamKind(rawString: raw.codec_type ?? "unknown")
             let cName = raw.codec_name ?? "unknown"
             let cLong = raw.codec_long_name ?? cName
@@ -137,7 +140,7 @@ public final class FFprobeService: Sendable {
 
             let isDefault = (raw.disposition?["default"] ?? 0) == 1
             let lang = raw.tags?["language"] ?? raw.tags?["LANGUAGE"]
-            let title = raw.tags?["title"] ?? raw.tags?["TITLE"]
+            let title = raw.tags?["title"] ?? raw.tags?["TITLE"] ?? raw.tags?["name"] ?? raw.tags?["NAME"]
 
             let stream = MediaStream(
                 index: raw.index,

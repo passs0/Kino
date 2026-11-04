@@ -252,7 +252,7 @@ public final class MediaCoordinator: ObservableObject {
         let query = url.query?.lowercased() ?? ""
 
         // Cloud storage and CDN direct download patterns
-        let knownDirectHosts = ["drive.google.com", "dropbox.com", "115.com", "alist", "mediafire.com", "mega.nz", "box.com", "onedrive.live.com"]
+        let knownDirectHosts = ["mypikpak.com", "pikpak", "drive.google.com", "dropbox.com", "115.com", "alist", "mediafire.com", "mega.nz", "box.com", "onedrive.live.com"]
         if knownDirectHosts.contains(where: { host.contains($0) }) {
             return true
         }
