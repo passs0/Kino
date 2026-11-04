@@ -55,9 +55,136 @@ public struct SubtitleTrack: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Fast WebVTT and SRT parser converting raw subtitle text into timestamped cues with semantic positioning.
+/// Fast WebVTT, SRT, and ASS/SSA parser converting raw subtitle text into timestamped cues with semantic positioning.
 public enum SubtitleParser {
+    public static func parse(_ raw: String) -> [SubtitleCue] {
+        if raw.contains("[Events]") || raw.contains("\nDialogue:") || raw.hasPrefix("Dialogue:") {
+            return parseASS(raw)
+        }
+        return parseWebVTT(raw)
+    }
+
+    public static func parseASS(_ raw: String) -> [SubtitleCue] {
+        var cues: [SubtitleCue] = []
+        let lines = raw.components(separatedBy: .newlines)
+
+        var playResY: Double = 288.0
+        var styleAlignments: [String: SubtitlePosition] = [:]
+        var styleFormatColumns: [String] = []
+        var eventFormatColumns: [String] = []
+        var currentSection = ""
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed.hasPrefix(";") { continue }
+
+            if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
+                currentSection = trimmed.lowercased()
+                continue
+            }
+
+            if currentSection == "[script info]" {
+                if trimmed.lowercased().hasPrefix("playresy:") {
+                    let valStr = trimmed.dropFirst("playresy:".count).trimmingCharacters(in: .whitespaces)
+                    if let val = Double(valStr), val > 0 {
+                        playResY = val
+                    }
+                }
+            } else if currentSection.contains("styles") {
+                if trimmed.lowercased().hasPrefix("format:") {
+                    let cols = trimmed.dropFirst("format:".count)
+                    styleFormatColumns = cols.split(separator: ",").map {
+                        $0.trimmingCharacters(in: .whitespaces).lowercased()
+                    }
+                } else if trimmed.lowercased().hasPrefix("style:") {
+                    let body = trimmed.dropFirst("style:".count)
+                    let parts = body.split(separator: ",", omittingEmptySubsequences: false).map {
+                        $0.trimmingCharacters(in: .whitespaces)
+                    }
+                    let nameIdx = styleFormatColumns.firstIndex(of: "name") ?? 0
+                    let alignIdx = styleFormatColumns.firstIndex(of: "alignment") ?? 18
+                    if parts.count > max(nameIdx, alignIdx) {
+                        let styleName = parts[nameIdx]
+                        if let alignInt = Int(parts[alignIdx]) {
+                            if [7, 8, 9].contains(alignInt) {
+                                styleAlignments[styleName] = .top
+                            } else if [4, 5, 6].contains(alignInt) {
+                                styleAlignments[styleName] = .center
+                            } else {
+                                styleAlignments[styleName] = .bottom
+                            }
+                        }
+                    }
+                }
+            } else if currentSection == "[events]" {
+                if trimmed.lowercased().hasPrefix("format:") {
+                    let cols = trimmed.dropFirst("format:".count)
+                    eventFormatColumns = cols.split(separator: ",").map {
+                        $0.trimmingCharacters(in: .whitespaces).lowercased()
+                    }
+                } else if trimmed.lowercased().hasPrefix("dialogue:") {
+                    let body = String(trimmed.dropFirst("dialogue:".count)).trimmingCharacters(in: .whitespaces)
+                    let expectedCols = max(eventFormatColumns.count, 10)
+                    let parts = splitASSText(body, maxSplits: expectedCols - 1)
+                    let startIdx = eventFormatColumns.firstIndex(of: "start") ?? 1
+                    let endIdx = eventFormatColumns.firstIndex(of: "end") ?? 2
+                    let styleIdx = eventFormatColumns.firstIndex(of: "style") ?? 3
+                    let textIdx = eventFormatColumns.firstIndex(of: "text") ?? (expectedCols - 1)
+
+                    guard parts.count > max(startIdx, endIdx, textIdx) else { continue }
+                    guard let start = parseASSTimestamp(parts[startIdx]),
+                          let end = parseASSTimestamp(parts[endIdx]) else { continue }
+
+                    let styleName = parts.count > styleIdx ? parts[styleIdx] : "Default"
+                    let fallbackPos = styleAlignments[styleName] ?? .bottom
+                    let rawText = parts[textIdx]
+
+                    let (detectedPos, cleaned) = cleanSubtitleFormattingAndExtractPosition(
+                        rawText,
+                        fallbackPosition: fallbackPos,
+                        playResY: playResY
+                    )
+                    if !cleaned.isEmpty {
+                        cues.append(SubtitleCue(startTime: start, endTime: end, text: cleaned, position: detectedPos))
+                    }
+                }
+            }
+        }
+
+        return cues.sorted { $0.startTime < $1.startTime }
+    }
+
+    private static func splitASSText(_ str: String, maxSplits: Int) -> [String] {
+        var result: [String] = []
+        var currentStart = str.startIndex
+        var splits = 0
+
+        for idx in str.indices {
+            if str[idx] == "," && splits < maxSplits {
+                result.append(String(str[currentStart..<idx]).trimmingCharacters(in: .whitespaces))
+                currentStart = str.index(after: idx)
+                splits += 1
+            }
+        }
+        result.append(String(str[currentStart...]))
+        return result
+    }
+
+    private static func parseASSTimestamp(_ str: String) -> Double? {
+        // Format: H:MM:SS.cc or HH:MM:SS.cc
+        let parts = str.trimmingCharacters(in: .whitespaces).split(separator: ":")
+        guard parts.count == 3,
+              let h = Double(parts[0]),
+              let m = Double(parts[1]),
+              let s = Double(parts[2]) else { return nil }
+        return (h * 3600.0) + (m * 60.0) + s
+    }
+
     public static func parseWebVTT(_ raw: String) -> [SubtitleCue] {
+        if raw.contains("[Events]") || raw.contains("\nDialogue:") {
+            return parseASS(raw)
+        }
+
         var cues: [SubtitleCue] = []
         let lines = raw.components(separatedBy: .newlines)
 
@@ -156,7 +283,11 @@ public enum SubtitleParser {
 
     /// Strips non-position ASS styles (font, size, color, borders, effects) and HTML entities,
     /// while preserving semantic positioning (top, bottom, center).
-    public static func cleanSubtitleFormattingAndExtractPosition(_ text: String, fallbackPosition: SubtitlePosition) -> (SubtitlePosition, String) {
+    public static func cleanSubtitleFormattingAndExtractPosition(
+        _ text: String,
+        fallbackPosition: SubtitlePosition,
+        playResY: Double = 1080.0
+    ) -> (SubtitlePosition, String) {
         var position = fallbackPosition
         var result = text
 
@@ -173,20 +304,27 @@ public enum SubtitleParser {
             position = .bottom
         }
 
-        // Check explicit \pos(x, y) if present
-        if let posRegex = try? NSRegularExpression(pattern: #"\\pos\(\s*\d+\s*,\s*(\d+)\s*\)"#) {
+        // Check explicit \pos(x, y) if present (supports integer and decimal coordinates)
+        if let posRegex = try? NSRegularExpression(pattern: #"\\pos\(\s*[\d.]+\s*,\s*([\d.]+)\s*\)"#) {
             if let match = posRegex.firstMatch(in: result, range: NSRange(location: 0, length: result.utf16.count)),
                match.numberOfRanges > 1,
                let r = Range(match.range(at: 1), in: result),
                let y = Double(result[r]) {
-                if y < 280 {
+                let effectiveResY = playResY > 0 ? playResY : 1080.0
+                let normalizedY = y > effectiveResY ? (y / 1080.0) : (y / effectiveResY)
+                if normalizedY < 0.30 {
                     position = .top
-                } else if y > 680 {
+                } else if normalizedY > 0.65 {
                     position = .bottom
                 } else {
                     position = .center
                 }
             }
+        }
+
+        // Ignore ASS vector drawing commands (\p1 ... \p0)
+        if result.contains("\\p1") || result.contains("\\p2") || result.contains("\\p4") {
+            return (position, "")
         }
 
         // 2. Strip all ASS style override tags ({...}): font, size, color, alpha, karaoke, bold, italic, borders, etc.

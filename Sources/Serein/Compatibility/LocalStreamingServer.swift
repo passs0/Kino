@@ -22,6 +22,7 @@ public final class LocalStreamingServer: @unchecked Sendable {
         self.baseDirectory = directory
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = true
+        parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: .any)
 
         let newListener = try NWListener(using: parameters)
         self.listener = newListener
@@ -108,7 +109,7 @@ public final class LocalStreamingServer: @unchecked Sendable {
         if let queryIndex = path.firstIndex(of: "?") {
             path = String(path[..<queryIndex])
         }
-        let cleanRelative = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let cleanRelative = (path.trimmingCharacters(in: CharacterSet(charactersIn: "/")) as NSString).lastPathComponent
         let fileURL = cleanRelative.isEmpty ? base.appendingPathComponent("playlist.m3u8") : base.appendingPathComponent(cleanRelative)
 
         guard FileManager.default.fileExists(atPath: fileURL.path) else {

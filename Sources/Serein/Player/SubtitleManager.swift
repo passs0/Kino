@@ -63,7 +63,7 @@ public final class SubtitleManager: ObservableObject {
                     }
 
                     if let text = vttString {
-                        let parsed = SubtitleParser.parseWebVTT(text)
+                        let parsed = SubtitleParser.parse(text)
                         await MainActor.run {
                             self?.cuesCache[track.id] = parsed
                             self?.activeCues = parsed
@@ -85,11 +85,11 @@ public final class SubtitleManager: ObservableObject {
                     return
                 }
 
-                let tempVtt = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("serein_sub_\(UUID().uuidString).vtt")
-                var args: [String] = ["-nostdin", "-y"]
+                let tempSub = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("serein_sub_\(UUID().uuidString).ass")
+                var baseArgs: [String] = ["-nostdin", "-y"]
 
                 if !sourceURL.isFileURL {
-                    args.append(contentsOf: [
+                    baseArgs.append(contentsOf: [
                         "-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
                         "-reconnect", "1",
                         "-reconnect_streamed", "1",
@@ -97,25 +97,29 @@ public final class SubtitleManager: ObservableObject {
                     ])
                 }
 
-                args.append(contentsOf: [
+                baseArgs.append(contentsOf: [
                     "-i", sourceURL.isFileURL ? sourceURL.path : sourceURL.absoluteString,
-                    "-map", "0:\(streamIndex)",
-                    "-c:s", "webvtt",
-                    "-f", "webvtt",
-                    tempVtt.path
+                    "-map", "0:\(streamIndex)"
                 ])
 
+                let assArgs = baseArgs + ["-c:s", "ass", "-f", "ass", tempSub.path]
+
                 do {
-                    _ = try await ProcessRunner.run(executablePath: ffmpegPath, arguments: args, timeout: 30)
+                    var result = try await ProcessRunner.run(executablePath: ffmpegPath, arguments: assArgs, timeout: 30)
+                    if !result.isSuccess || !FileManager.default.fileExists(atPath: tempSub.path) {
+                        let vttArgs = baseArgs + ["-c:s", "webvtt", "-f", "webvtt", tempSub.path]
+                        result = try await ProcessRunner.run(executablePath: ffmpegPath, arguments: vttArgs, timeout: 30)
+                    }
+
                     guard !Task.isCancelled else {
-                        try? FileManager.default.removeItem(at: tempVtt)
+                        try? FileManager.default.removeItem(at: tempSub)
                         return
                     }
 
-                    if FileManager.default.fileExists(atPath: tempVtt.path),
-                       let content = try? String(contentsOf: tempVtt, encoding: .utf8) {
-                        try? FileManager.default.removeItem(at: tempVtt)
-                        let parsed = SubtitleParser.parseWebVTT(content)
+                    if FileManager.default.fileExists(atPath: tempSub.path),
+                       let content = try? String(contentsOf: tempSub, encoding: .utf8) {
+                        try? FileManager.default.removeItem(at: tempSub)
+                        let parsed = SubtitleParser.parse(content)
                         await MainActor.run {
                             self?.cuesCache[track.id] = parsed
                             self?.activeCues = parsed
@@ -123,6 +127,7 @@ public final class SubtitleManager: ObservableObject {
                         }
                     }
                 } catch {
+                    try? FileManager.default.removeItem(at: tempSub)
                     print("[SubtitleManager] FFmpeg subtitle extraction failed: \(error.localizedDescription)")
                 }
             }

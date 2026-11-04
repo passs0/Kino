@@ -37,16 +37,16 @@ Serein actively evaluates container formats, audio streams, and video codecs bef
 
 | Strategy | When Applied | Impact & Performance |
 | :--- | :--- | :--- |
-| **Direct Native** | Supported container (`.mp4`, `.mov`, `.m4v`) + native codecs (H.264, HEVC, ProRes, AAC) | **0% CPU Overhead**, instant hardware decode via AVPlayer (< 5ms startup). |
-| **Zero-Copy Stream Remux** | Incompatible container (`.mkv`, `.webm`) with native video streams | Repackages container on-the-fly to local HLS in **< 100ms** with **zero video re-encoding**. |
-| **Audio Transcode** | Native video (H.264/HEVC) paired with incompatible audio (DTS, Opus, TrueHD) | Bit-for-bit passthrough for video; audio transcoded in real time (>30× speed) to high-fidelity AAC. |
+| **Direct Native** | Supported container (`.mp4`, `.mov`, `.m4v`) + native codecs (H.264, HEVC, ProRes, AAC) | **0% CPU Overhead**, instant hardware decode via AVPlayer (`< 5ms` startup). |
+| **Zero-Copy Stream Remux** | Incompatible container (`.mkv`, `.webm`) with native video streams | Repackages container on-the-fly to local HLS in **`< 100ms`** with **zero video re-encoding**. |
+| **Audio Transcode** | Native video (H.264/HEVC) paired with incompatible audio (DTS, Opus, TrueHD) | Bit-for-bit passthrough for video; audio transcoded in real time (`>30×` speed) to high-fidelity AAC. |
 | **Hardware VideoToolbox** | Incompatible video codecs (VP9, VP8, AV1, MPEG-2) | Real-time Apple Silicon VideoToolbox GPU encoding with 0% dropped frames. |
-| **Online Stream Bridge** | Web streaming links & video platforms | Authenticated piped yt-dlp ➔ FFmpeg pipeline bypassing 403 Forbidden CDN blocks while preserving original audio. |
+| **Online Stream Bridge** | Web streaming links & video platforms | Authenticated piped `yt-dlp` ➔ `FFmpeg` pipeline bypassing 403 Forbidden CDN blocks while preserving original audio. |
 
 ### 2. macOS System Settings Accessibility Captions
 Serein treats subtitles as a first-class citizen using Apple's official `MediaAccessibility` framework (`MACaptionAppearance`):
 - **System-Wide Consistency:** Subtitles dynamically adapt to your preferences in **System Settings ➔ Accessibility ➔ Captions** (e.g. *Transparent Background*, *Classic*, *Outline Text*, or *Large Text*).
-- **Responsive Subtitle Scaling:** Caption font size, padding, and line height dynamically scale with the viewport height ($18\text{pt}$ to $48\text{pt}$) when entering full screen.
+- **Responsive Subtitle Scaling:** Caption font size, padding, and line height dynamically scale with the viewport height (`18 pt` to `48 pt`) when entering full screen.
 - **Smart ASS/SSA Sanitization:** Automatically strips cluttered custom font/color overrides from anime and community subtitles while preserving semantic screen positioning (top, bottom, and center placement).
 - **Embedded Subtitle Extraction:** Automatically extracts container-embedded tracks (`mov_text`, `srt`, `ass`, `webvtt`) on-the-fly.
 
@@ -67,10 +67,10 @@ Unlike traditional players that demand manual command-line installations, Serein
 | Shortcut | Action |
 | :--- | :--- |
 | **`Space`** | Play / Pause |
-| **`←` (Left Arrow)** | Step Backward ($5\text{s}$) |
-| **`→` (Right Arrow)** | Step Forward ($5\text{s}$) |
-| **`+` / `=`** | Volume Up ($+10\%$) |
-| **`-`** | Volume Down ($-10\%$) |
+| **`←` (Left Arrow)** | Step Backward (`5s`) |
+| **`→` (Right Arrow)** | Step Forward (`5s`) |
+| **`+` / `=`** | Volume Up (`+10%`) |
+| **`-`** | Volume Down (`-10%`) |
 | **`M`** | Mute / Unmute |
 | **`Z`** | Toggle Aspect Ratio: **Fit to Screen (Letterbox)** vs. **Fill Screen** |
 | **`⌘I`** | Toggle Media Statistics & Technical Inspector HUD |
@@ -107,7 +107,7 @@ cp -R build/Serein.app /Applications/
 - [ ] **v0.2.0**: Playlist Queue with drag-and-drop & continuous playback
 - [ ] **v0.2.0**: macOS Control Center (`MPNowPlayingInfoCenter`) & media key support
 - [ ] **v0.3.0**: Native Picture-in-Picture (`AVPictureInPictureController`)
-- [ ] **v0.3.0**: Variable speed with CoreAudio pitch correction ($0.5\times$–$3.0\times$)
+- [ ] **v0.3.0**: Variable speed with CoreAudio pitch correction (`0.5×`–`3.0×`)
 
 ---
 

@@ -130,6 +130,9 @@ public struct PrerequisiteInstallSheet: View {
         .padding(20)
         .frame(width: 480)
         .background(VisualEffectBackground())
+        .onAppear {
+            manager.refreshStatus()
+        }
     }
 
     private func componentCard(title: String, description: String, isInstalled: Bool, toolName: String) -> some View {

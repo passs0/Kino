@@ -23,7 +23,7 @@ public enum FFmpegPipelineError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .ffmpegNotFound:
-            return "FFmpeg was not found. Please install it via Homebrew ('brew install ffmpeg')."
+            return "FFmpeg was not found. Use Media Engines & Codecs (⌘,) to install automatically."
         case .sessionDirectoryCreationFailed:
             return "Could not create temporary session directory for streaming."
         case .pipelineLaunchFailed(let msg):
@@ -197,13 +197,15 @@ public final class FFmpegPipeline: @unchecked Sendable {
         let segmentPattern = tempDir.appendingPathComponent("segment_%03d.ts").path
 
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
+        let managedBin = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path ?? ""
+        env["PATH"] = "\(managedBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
 
         // yt-dlp extraction process outputting to pipe:
         let ytProc = Process()
         ytProc.executableURL = URL(fileURLWithPath: ytPath)
         ytProc.arguments = [
             "-o", "-",
+            "--ffmpeg-location", ffmpegPath,
             "--format-sort", "lang,quality",
             "-f", "bestvideo[vcodec^=avc]+(bestaudio[format_id!*=dub][format_note!*=dub]/bestaudio[format_id!*=dub]/bestaudio)/bestvideo+(bestaudio[format_id!*=dub]/bestaudio)/best",
             "--merge-output-format", "mkv",

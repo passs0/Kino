@@ -46,7 +46,6 @@ public final class MediaCoordinator: ObservableObject {
     @Published public private(set) var logs: [CoordinatorLogItem] = []
 
     @Published public var isInspectorPresented: Bool = false
-    @Published public var isLogDrawerPresented: Bool = false
 
     public var knownDuration: Double? {
         if let p = probeResult, p.duration > 0 {
@@ -219,6 +218,9 @@ public final class MediaCoordinator: ObservableObject {
                 self.state = .ready(strategy)
                 log("✨ Audio transcode stream connected to AVPlayer.", level: .success)
             } catch {
+                if case .ffmpegNotFound = (error as? FFmpegPipelineError) {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
                 state = .error("Audio transcode pipeline failed: \(error.localizedDescription)")
                 log("❌ Audio transcode failed: \(error.localizedDescription)", level: .error)
             }
@@ -232,6 +234,9 @@ public final class MediaCoordinator: ObservableObject {
                 self.state = .ready(strategy)
                 log("✨ Hardware transcode stream connected to AVPlayer.", level: .success)
             } catch {
+                if case .ffmpegNotFound = (error as? FFmpegPipelineError) {
+                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                }
                 state = .error("Transcode pipeline failed: \(error.localizedDescription)")
                 log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
             }

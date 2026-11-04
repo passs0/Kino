@@ -70,7 +70,7 @@ public enum YtDlpError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .ytDlpNotFound:
-            return "yt-dlp was not found on this system. Please install it via Homebrew ('brew install yt-dlp')."
+            return "yt-dlp was not found. Use Media Engines & Codecs (⌘,) to install automatically."
         case .extractionFailed(let message):
             return "Failed to extract online media: \(message)"
         case .unparseableResponse:

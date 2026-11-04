@@ -61,7 +61,7 @@ public final class CaptionAppearanceManager: ObservableObject {
         } else if bgOpacity > 0, let nsBg = NSColor(cgColor: bgColorRef) {
             backgroundColor = Color(nsBg.withAlphaComponent(bgOpacity))
         } else {
-            backgroundColor = Color.black.opacity(0.5)
+            backgroundColor = Color.clear
         }
 
         // Window rounded corner radius

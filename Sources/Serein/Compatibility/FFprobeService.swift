@@ -43,7 +43,7 @@ public enum FFprobeError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .ffprobeNotFound:
-            return "FFprobe was not found on this system. Please install via Homebrew ('brew install ffmpeg')."
+            return "FFprobe was not found. Use Media Engines & Codecs (⌘,) to install automatically."
         case .analysisFailed(let detail):
             return "Failed to probe media: \(detail)"
         case .invalidOutput:

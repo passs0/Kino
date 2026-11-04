@@ -20,22 +20,22 @@ public final class PrerequisiteManager: ObservableObject {
     @Published public private(set) var lastError: String? = nil
     @Published public private(set) var isCheckingUpdates: Bool = false
     @Published public private(set) var updateStatusMessage: String? = nil
+    @Published public private(set) var isFFmpegInstalled: Bool = false
+    @Published public private(set) var isYtDlpInstalled: Bool = false
 
     public var isAllInstalled: Bool {
-        ToolLocator.shared.isAvailable("ffmpeg") && ToolLocator.shared.isAvailable("yt-dlp")
-    }
-
-    public var isFFmpegInstalled: Bool {
-        ToolLocator.shared.isAvailable("ffmpeg")
-    }
-
-    public var isYtDlpInstalled: Bool {
-        ToolLocator.shared.isAvailable("yt-dlp")
+        isFFmpegInstalled && isYtDlpInstalled
     }
 
     private init() {
-        // Ensure bin directory exists
         try? FileManager.default.createDirectory(at: Self.managedBinDirectory, withIntermediateDirectories: true)
+        refreshStatus()
+    }
+
+    public func refreshStatus() {
+        ToolLocator.shared.refresh()
+        isFFmpegInstalled = ToolLocator.shared.isAvailable("ffmpeg") && ToolLocator.shared.isAvailable("ffprobe")
+        isYtDlpInstalled = ToolLocator.shared.isAvailable("yt-dlp")
     }
 
     // MARK: - Download & Installation
@@ -54,94 +54,87 @@ public final class PrerequisiteManager: ObservableObject {
 
         do {
             try fm.createDirectory(at: binDir, withIntermediateDirectories: true)
+            refreshStatus()
 
             // Step 1: yt-dlp
-            if !ToolLocator.shared.isAvailable("yt-dlp") {
+            if !isYtDlpInstalled {
                 currentStepText = "Downloading online stream extractor (yt-dlp)..."
                 downloadProgress = 0.15
 
                 let ytDlpURL = URL(string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos")!
                 let localYtDlp = binDir.appendingPathComponent("yt-dlp")
-
-                let (tempURL, _) = try await URLSession.shared.download(from: ytDlpURL)
-                if fm.fileExists(atPath: localYtDlp.path) {
-                    try fm.removeItem(at: localYtDlp)
-                }
-                try fm.moveItem(at: tempURL, to: localYtDlp)
-
-                // Permissions: rwxr-xr-x (0o755)
-                try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: localYtDlp.path)
-                stripQuarantine(path: localYtDlp.path)
+                try await downloadBinary(from: ytDlpURL, to: localYtDlp)
                 downloadProgress = 0.40
             }
 
             // Step 2: FFmpeg & FFprobe
-            if !ToolLocator.shared.isAvailable("ffmpeg") || !ToolLocator.shared.isAvailable("ffprobe") {
-                currentStepText = "Downloading FFmpeg engine & codecs (~35 MB)..."
+            let arch = getSystemArchitecture() == "arm64" ? "arm64" : "x64"
+
+            if !ToolLocator.shared.isAvailable("ffmpeg") {
+                currentStepText = "Downloading FFmpeg hardware engine..."
                 downloadProgress = 0.50
 
-                let arch = getSystemArchitecture()
-                let ffmpegURLString: String
-                if arch == "arm64" {
-                    ffmpegURLString = "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-macos-arm64-gpl.zip"
-                } else {
-                    ffmpegURLString = "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-macos-x86_64-gpl.zip"
-                }
+                let ffmpegURL = URL(string: "https://github.com/eugeneware/ffmpeg-static/releases/latest/download/ffmpeg-darwin-\(arch)")!
+                let localFFmpeg = binDir.appendingPathComponent("ffmpeg")
+                try await downloadBinary(from: ffmpegURL, to: localFFmpeg)
+                downloadProgress = 0.75
+            }
 
-                guard let ffmpegURL = URL(string: ffmpegURLString) else {
-                    throw NSError(domain: "Serein", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid FFmpeg URL"])
-                }
+            if !ToolLocator.shared.isAvailable("ffprobe") {
+                currentStepText = "Downloading FFprobe stream analyzer..."
+                downloadProgress = 0.80
 
-                let (tempZipURL, _) = try await URLSession.shared.download(from: ffmpegURL)
-                currentStepText = "Extracting FFmpeg & FFprobe..."
-                downloadProgress = 0.85
+                let ffprobeURL = URL(string: "https://github.com/eugeneware/ffmpeg-static/releases/latest/download/ffprobe-darwin-\(arch)")!
+                let localFFprobe = binDir.appendingPathComponent("ffprobe")
+                try await downloadBinary(from: ffprobeURL, to: localFFprobe)
+                downloadProgress = 0.95
+            }
 
-                let extractDir = fm.temporaryDirectory.appendingPathComponent("serein_ffmpeg_\(UUID().uuidString)")
-                try fm.createDirectory(at: extractDir, withIntermediateDirectories: true)
+            currentStepText = "Verifying helper engines..."
+            refreshStatus()
 
-                // Unpack with macOS built-in /usr/bin/ditto
-                let ditto = Process()
-                ditto.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-                ditto.arguments = ["-xk", tempZipURL.path, extractDir.path]
-                try ditto.run()
-                ditto.waitUntilExit()
-
-                // Locate ffmpeg and ffprobe inside extracted directory
-                let subpaths = fm.subpaths(atPath: extractDir.path) ?? []
-                for subpath in subpaths {
-                    let name = (subpath as NSString).lastPathComponent
-                    if name == "ffmpeg" || name == "ffprobe" {
-                        let fileURL = extractDir.appendingPathComponent(subpath)
-                        let target = binDir.appendingPathComponent(name)
-                        if fm.fileExists(atPath: target.path) {
-                            try? fm.removeItem(at: target)
-                        }
-                        try? fm.copyItem(at: fileURL, to: target)
-                        try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: target.path)
-                        stripQuarantine(path: target.path)
-                    }
-                }
-
-                try? fm.removeItem(at: extractDir)
-                try? fm.removeItem(at: tempZipURL)
+            guard isAllInstalled else {
+                throw NSError(
+                    domain: "Serein",
+                    code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "Engine verification failed after download."]
+                )
             }
 
             downloadProgress = 1.0
-            currentStepText = "Verifying helper engines..."
-
-            // Refresh ToolLocator
-            ToolLocator.shared.refresh()
             currentStepText = "All media engines successfully configured!"
-            try await Task.sleep(nanoseconds: 800_000_000)
+            try? await Task.sleep(nanoseconds: 600_000_000)
 
             isDownloading = false
             MediaCoordinator.shared.log("🚀 Helper media engines successfully installed and verified in \(binDir.path).", level: .success)
         } catch {
+            refreshStatus()
             lastError = error.localizedDescription
             isDownloading = false
             currentStepText = "Installation failed: \(error.localizedDescription)"
             MediaCoordinator.shared.log("❌ Failed to install helper engines: \(error.localizedDescription)", level: .error)
         }
+    }
+
+    private func downloadBinary(from url: URL, to destination: URL) async throws {
+        let fm = FileManager.default
+        let (tempURL, response) = try await URLSession.shared.download(from: url)
+
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            try? fm.removeItem(at: tempURL)
+            throw NSError(
+                domain: "Serein",
+                code: http.statusCode,
+                userInfo: [NSLocalizedDescriptionKey: "Download failed with HTTP \(http.statusCode) for \(url.lastPathComponent)"]
+            )
+        }
+
+        if fm.fileExists(atPath: destination.path) {
+            try fm.removeItem(at: destination)
+        }
+        try fm.moveItem(at: tempURL, to: destination)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destination.path)
+        stripQuarantine(path: destination.path)
     }
 
     // MARK: - Check for Updates
@@ -166,13 +159,13 @@ public final class PrerequisiteManager: ObservableObject {
                 proc.waitUntilExit()
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                ToolLocator.shared.refresh()
+                refreshStatus()
                 updateStatusMessage = output.contains("Updated") ? "yt-dlp was updated successfully!" : "All engines are up to date."
             } catch {
                 updateStatusMessage = "Check finished: \(error.localizedDescription)"
             }
         } else {
-            ToolLocator.shared.refresh()
+            refreshStatus()
             updateStatusMessage = "Using system installed engines."
         }
 

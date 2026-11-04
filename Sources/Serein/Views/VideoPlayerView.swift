@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import AVFoundation
 import AVKit
+import UniformTypeIdentifiers
 
 /// Cinematic Apple QuickTime Video Player Canvas (macOS 26+ Liquid Glass Era)
 /// Features decoupled timeline rendering, native NSMenu options, subtitles overlay, and dynamic fullscreen layout.
@@ -45,6 +46,30 @@ public struct VideoPlayerView: View {
             case .error(let errMsg):
                 errorView(message: errMsg)
             }
+        }
+        .onDrop(of: [.fileURL, .url], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+            let typeId = provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
+                ? UTType.fileURL.identifier
+                : UTType.url.identifier
+            provider.loadItem(forTypeIdentifier: typeId, options: nil) { item, _ in
+                var resolvedURL: URL?
+                if let url = item as? URL {
+                    resolvedURL = url
+                } else if let data = item as? Data {
+                    resolvedURL = URL(dataRepresentation: data, relativeTo: nil)
+                }
+                if let url = resolvedURL {
+                    Task { @MainActor in
+                        if url.isFileURL {
+                            coordinator.openLocalFile(url: url)
+                        } else {
+                            coordinator.openOnlineURL(string: url.absoluteString)
+                        }
+                    }
+                }
+            }
+            return true
         }
         .onAppear {
             if let win = NSApp.keyWindow {

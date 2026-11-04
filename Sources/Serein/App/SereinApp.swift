@@ -67,13 +67,6 @@ public struct SereinApp: App {
                     }
                 }
                 .keyboardShortcut("i", modifiers: .command)
-
-                Button("Toggle Diagnostics Console") {
-                    withAnimation {
-                        MediaCoordinator.shared.isLogDrawerPresented.toggle()
-                    }
-                }
-                .keyboardShortcut("l", modifiers: .command)
             }
         }
     }

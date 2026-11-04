@@ -46,47 +46,56 @@ This document serves as the technical reference for future maintenance, enhancem
 
 ```
 Serein/
-├── Package.swift                 # SPM manifest (CLI / Library mode)
+├── LICENSE                       # MIT License
+├── Package.swift                 # SPM manifest
 ├── Makefile                      # Make targets for build, clean, test
 ├── build_app.sh                  # Native compilation script via swiftc & codesign
+├── assets/
+│   └── icon.png                  # 512x512 README application icon
 ├── Resources/
-│   ├── Info.plist                # App bundle metadata, CFBundleURLTypes, UTI bindings
+│   ├── Info.plist                # App bundle metadata & UTI document bindings
 │   └── AppIcon.icns              # Multi-resolution macOS squircle application icon
 ├── Sources/
 │   └── Serein/
+│       ├── main.swift                  # Application entry point
 │       ├── App/
 │       │   ├── AppDelegate.swift       # Global key event monitors, file open handlers
 │       │   └── SereinApp.swift         # SwiftUI App lifecycle, commands, menus
 │       ├── Compatibility/
-│       │   ├── CompatibilityMatrix.swift # Evaluates format, container & codecs
 │       │   ├── FFmpegPipeline.swift    # Subprocess coordinator for local HLS server
 │       │   ├── FFprobeService.swift    # JSON probe parsing for media streams
+│       │   ├── LocalStreamingServer.swift # Loopback (127.0.0.1) HTTP 1.1 HLS server
 │       │   └── YtDlpService.swift      # Resolves online platforms & formats
 │       ├── Coordinator/
-│       │   ├── MediaCoordinator.swift  # Master state machine & log recorder
-│       │   └── PlaybackStrategy.swift  # Playback modes and diagnostic labels
+│       │   ├── CompatibilityMatrix.swift # Evaluates format, container & codecs
+│       │   └── MediaCoordinator.swift  # Master state machine & log recorder
 │       ├── Models/
+│       │   ├── CodecTypes.swift        # Video and audio codec descriptors
+│       │   ├── ContainerFormat.swift   # Media container classification
+│       │   ├── MediaProbeResult.swift  # Video/audio/subtitle stream descriptors
 │       │   ├── MediaSource.swift       # Enums for local vs. online sources
-│       │   ├── PipelineStats.swift     # Real-time transcode FPS, speed, bitrate
-│       │   ├── ProbeResult.swift       # Video/audio stream technical descriptors
-│       │   └── SubtitleTrack.swift     # Cue parsing, position preservation & sanitization
+│       │   ├── PlaybackStrategy.swift  # Playback modes and diagnostic labels
+│       │   └── SubtitleTrack.swift     # ASS/WebVTT/SRT cue parsing & position extraction
 │       ├── Player/
 │       │   ├── CaptionAppearanceManager.swift # MediaAccessibility live system binding
-│       │   ├── NativePlayerView.swift  # NSViewRepresentable wrapping AVPlayerLayer
+│       │   ├── NativePlayerView.swift  # NSViewRepresentable wrapping AVPlayerLayer & PiP
 │       │   ├── PlayerController.swift  # AVPlayer playback, seeking, volume, rate
-│       │   └── SubtitleManager.swift   # Live cue matching & embedded VTT extraction
+│       │   ├── PlayerTimeState.swift   # Decoupled high-frequency timeline state
+│       │   └── SubtitleManager.swift   # Live cue matching & embedded ASS/VTT extraction
 │       ├── Tools/
 │       │   ├── PrerequisiteManager.swift # Automated 1-click engine downloader & updater
-│       │   ├── ProcessRunner.swift     # Async Process execution with timeout
+│       │   ├── ProcessRunner.swift     # Async Process execution with streaming pipes
 │       │   └── ToolLocator.swift       # Multi-path search for ffmpeg, ffprobe, yt-dlp
 │       └── Views/
-│           ├── MainWindowView.swift    # Liquid glass window wrapper & sheets
+│           ├── LiquidGlass.swift       # macOS Liquid Glass transport & button primitives
+│           ├── MainWindowView.swift    # Main window wrapper & modal sheets
 │           ├── MediaInspectorView.swift# Technical HUD (⌘I) for stream metrics
 │           ├── OptionsMenuPresenter.swift # Native AppKit options popup menu (...)
 │           ├── PrerequisiteInstallSheet.swift # 1-click helper engine downloader sheet
-│           ├── ToolStatusView.swift    # Dependency inspector popover
 │           ├── URLInputSheet.swift     # Online URL input sheet (⌘U)
 │           └── VideoPlayerView.swift   # Canvas, controls overlay, responsive subtitles
+└── Tests/
+    └── RunTests.swift            # Engine & compatibility matrix test suite
 ```
 
 ---
@@ -105,18 +114,18 @@ Serein/
 ### B. Subtitles & MediaAccessibility
 - Subtitle visual appearance adheres strictly to macOS system accessibility settings via `MediaAccessibility` framework (`MACaptionAppearanceCopy*`).
 - Non-position styling (custom fonts, colors, borders) from ASS/SSA is stripped to maintain system consistency.
-- Semantic vertical positioning (`\an8`, `\an7`, `\pos`, `line:10%`) is preserved to prevent top/middle title subtitles from overlapping bottom dialogue.
-- Subtitle sizing dynamically scales with window height ($18\text{pt}$ to $48\text{pt}$) in full screen.
+- Semantic vertical positioning (`Style:` alignment, `\an8`, `\an7`, `\pos`, `line:10%`) is preserved to prevent top/middle title subtitles from overlapping bottom dialogue.
+- Subtitle sizing dynamically scales with window height (`18 pt` to `48 pt`) in full screen.
 
 ### C. Playback Pipeline & Zero-Copy Remux
-- When playing `.mkv` or `.webm` files containing native H.264/HEVC video, `FFmpegPipeline` uses `-c:v copy` to repackage streams into fragmented HLS on a local loopback HTTP server. This achieves `< 100ms` startup latency with **0% video re-encoding CPU load**.
+- When playing `.mkv` or `.webm` files containing native H.264/HEVC video, `FFmpegPipeline` uses `-c:v copy` to repackage streams into fragmented HLS on a local loopback (`127.0.0.1`) HTTP server. This achieves `< 100ms` startup latency with **0% video re-encoding CPU load**.
 - When online CDN links reject direct AVPlayer requests with HTTP 403 Forbidden, Serein pipes `yt-dlp` output directly into `ffmpeg` stdin to authenticate and stream simultaneously.
 
 ---
 
 ## 4. Maintenance Commands
 
-```bash
+```zsh
 # Build Serein.app
 ./build_app.sh
 
@@ -128,7 +137,4 @@ cp -R build/Serein.app /Applications/
 xattr -cr /Applications/Serein.app
 codesign --force --deep --sign - /Applications/Serein.app
 touch /Applications/Serein.app
-
-# Package release archive
-cd build && zip -r -y -9 ../Serein-v0.1.1-macOS.zip Serein.app && cd ..
 ```

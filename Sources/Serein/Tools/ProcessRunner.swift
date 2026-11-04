@@ -46,8 +46,9 @@ public final class ProcessRunner: @unchecked Sendable {
             process.arguments = arguments
 
             var env = ProcessInfo.processInfo.environment
-            // Ensure homebrew and local bin are always in PATH for sub-commands
-            let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+            // Ensure managed Serein/bin, homebrew, and local bin are always in PATH for sub-commands
+            let managedBin = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path ?? ""
+            let extraPaths = "\(managedBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
             env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "")"
             if let customEnv = environment {
                 for (k, v) in customEnv { env[k] = v }
@@ -117,7 +118,8 @@ public final class ProcessRunner: @unchecked Sendable {
         process.arguments = arguments
 
         var env = ProcessInfo.processInfo.environment
-        let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        let managedBin = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path ?? ""
+        let extraPaths = "\(managedBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
         env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "")"
         if let customEnv = environment {
             for (k, v) in customEnv { env[k] = v }
