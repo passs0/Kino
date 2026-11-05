@@ -231,9 +231,11 @@ public enum SubtitleParser {
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // Skip WebVTT header or metadata lines
+            // Skip WebVTT header or metadata lines, and commit cue when encountering blank line after text
             if trimmed.isEmpty {
-                commitCue()
+                if !currentTextLines.isEmpty {
+                    commitCue()
+                }
                 continue
             }
             if trimmed.hasPrefix("WEBVTT") || trimmed.hasPrefix("Kind:") || trimmed.hasPrefix("Language:") || trimmed.hasPrefix("NOTE") {

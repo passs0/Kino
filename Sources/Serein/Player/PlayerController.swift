@@ -252,15 +252,19 @@ public final class PlayerController: ObservableObject {
             return
         }
 
-        // Seeking within buffered data or direct native stream
-        player.seek(to: cmTime, toleranceBefore: CMTime(seconds: 1.0, preferredTimescale: 600), toleranceAfter: CMTime(seconds: 1.0, preferredTimescale: 600)) { [weak self] completed in
+        // Seeking within buffered data or direct native stream with sample-accurate tolerance
+        let exactTolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
+        player.seek(to: cmTime, toleranceBefore: exactTolerance, toleranceAfter: exactTolerance) { [weak self] completed in
             Task { @MainActor [weak self] in
                 guard let self = self, completed else { return }
                 self.isSeeking = false
                 self.seekTargetTime = nil
                 self.seekTimeoutTask?.cancel()
-                PlayerTimeState.shared.currentTime = targetSec
-                SubtitleManager.shared.updateTime(targetSec)
+
+                let actualSec = CMTimeGetSeconds(self.player.currentTime())
+                let settledEffective = (actualSec.isFinite && !actualSec.isNaN) ? (self.streamTimeOffset + actualSec) : targetSec
+                PlayerTimeState.shared.currentTime = settledEffective
+                SubtitleManager.shared.updateTime(settledEffective)
             }
         }
     }
@@ -356,7 +360,7 @@ public final class PlayerController: ObservableObject {
 
                 // If user is actively seeking or awaiting stream repositioning:
                 if self.isSeeking, let target = self.seekTargetTime {
-                    if abs(effectiveTime - target) <= 1.2 {
+                    if abs(effectiveTime - target) <= 2.0 || self.player.rate > 0 {
                         self.isSeeking = false
                         self.seekTargetTime = nil
                         self.seekTimeoutTask?.cancel()

@@ -341,7 +341,8 @@ public final class SubtitleManager: ObservableObject {
             return
         }
 
-        if let matching = activeCues.first(where: { currentTime >= $0.startTime && currentTime <= $0.endTime }) {
+        // Match the latest active cue, allowing a tiny 50ms tolerance bridge to eliminate micro-gaps and tick jitter
+        if let matching = activeCues.last(where: { currentTime >= ($0.startTime - 0.05) && currentTime <= ($0.endTime + 0.05) }) {
             if currentCueText != matching.text || currentCuePosition != matching.position {
                 currentCueText = matching.text
                 currentCuePosition = matching.position

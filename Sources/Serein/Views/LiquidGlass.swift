@@ -96,17 +96,18 @@ public final class LiquidGlassSettings: ObservableObject {
 /// Apple macOS / visionOS Liquid Glass Pill Slider
 /// True Apple Liquid Glass implementation matching the official design specification:
 /// - Oblong 3D Liquid Glass pill thumb with real-time optical refraction (`Glass.regular`) and specular crescent highlight.
-/// - The continuous background rail runs across the slider width.
-/// - The active track enters the glass thumb and terminates smoothly at the thumb's center with a rounded capsule cap,
-///   allowing the inactive track to pass through the right half of the glass lens.
-/// - Solid white when idle/hovered on; morphs into Liquid Glass with real-time refraction when interacted with.
+/// - The inactive background rail runs between trackInset endpoints cleanly within the thumb bounds.
+/// - The active track enters the glass thumb and extends proportionally with value.
+///   At value 1.0, it extends all the way into the right half of the glass thumb and terminates with a rounded capsule cap near the right rim,
+///   matching Apple's native Control Center Sound slider.
+/// - Solid white when idle/hovered on; morphs fluidly into Liquid Glass with real-time refraction when interacted with.
 public struct PillSlider: View {
     @Binding var value: Double // Range 0.0 ... 1.0
     var trackHeight: CGFloat = 4.5
-    var idleThumbWidth: CGFloat = 18
-    var idleThumbHeight: CGFloat = 12
-    var activeThumbWidth: CGFloat = 34
-    var activeThumbHeight: CGFloat = 18
+    var idleThumbWidth: CGFloat = 16
+    var idleThumbHeight: CGFloat = 14
+    var activeThumbWidth: CGFloat = 26
+    var activeThumbHeight: CGFloat = 22
     var onActivity: (() -> Void)?
 
     @ObservedObject private var settings = LiquidGlassSettings.shared
@@ -116,10 +117,10 @@ public struct PillSlider: View {
     public init(
         value: Binding<Double>,
         trackHeight: CGFloat = 4.5,
-        idleThumbWidth: CGFloat = 18,
-        idleThumbHeight: CGFloat = 12,
-        activeThumbWidth: CGFloat = 34,
-        activeThumbHeight: CGFloat = 18,
+        idleThumbWidth: CGFloat = 16,
+        idleThumbHeight: CGFloat = 14,
+        activeThumbWidth: CGFloat = 26,
+        activeThumbHeight: CGFloat = 22,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
@@ -134,14 +135,14 @@ public struct PillSlider: View {
     public init(
         value: Binding<Double>,
         trackHeight: CGFloat = 4.5,
-        thumbWidth: CGFloat = 34,
-        thumbHeight: CGFloat = 18,
+        thumbWidth: CGFloat = 26,
+        thumbHeight: CGFloat = 22,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = 18
-        self.idleThumbHeight = 12
+        self.idleThumbWidth = 16
+        self.idleThumbHeight = 14
         self.activeThumbWidth = thumbWidth
         self.activeThumbHeight = thumbHeight
         self.onActivity = onActivity
@@ -154,22 +155,35 @@ public struct PillSlider: View {
 
             let currentThumbWidth: CGFloat = isDragging ? activeThumbWidth : idleThumbWidth
             let currentThumbHeight: CGFloat = isDragging ? activeThumbHeight : idleThumbHeight
-            let thumbCenterX = currentThumbWidth / 2 + clampedVal * (width - currentThumbWidth)
+            let thumbCenterX = (currentThumbWidth / 2) + clampedVal * (width - currentThumbWidth)
+
+            // Track endpoints inset within thumb margins at limits (3.5pt inside thumb rim)
+            let trackInset: CGFloat = 3.5
+            let trackStart = trackInset
+            let trackEnd = max(trackStart, width - trackInset)
+
+            // Active track end moves smoothly with value from trackStart to trackEnd
+            let activeTrackEnd = trackStart + clampedVal * (trackEnd - trackStart)
+            let activeTrackWidth = max(0, activeTrackEnd - trackStart)
 
             GlassEffectContainer {
                 ZStack(alignment: .leading) {
-                    // 1. Continuous Inactive Background Rail (full width)
+                    // 1. Continuous Inactive Background Rail (inside endpoints)
                     Capsule()
-                        .fill(Color.white.opacity(0.22))
-                        .frame(width: width, height: trackHeight)
+                        .fill(Color.white.opacity(0.20))
+                        .frame(width: max(0, trackEnd - trackStart), height: trackHeight)
+                        .offset(x: trackStart)
 
-                    // 2. Active Filled Track (extends seamlessly to thumb center)
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
+                    // 2. Active Filled Track (extends through thumb proportionally, ending near right rim at 1.0)
+                    if activeTrackWidth > 0 {
+                        Capsule()
+                            .fill(Color.white)
+                            .frame(width: max(trackHeight, activeTrackWidth), height: trackHeight)
+                            .offset(x: trackStart)
+                    }
 
                     // 3. Apple Liquid Glass Pill Thumb:
-                    // Solid when idle or hovered on!
+                    // Solid white when idle or hovered on!
                     // Melts and transforms seamlessly into Liquid Glass with real-time optical refraction when interacted with.
                     ZStack {
                         // Volumetric Glass Body with Native Optical Refraction (Adjustable via System Settings)
@@ -184,7 +198,7 @@ public struct PillSlider: View {
                                 LinearGradient(
                                     stops: [
                                         .init(color: Color.white.opacity(0.85), location: 0.0),
-                                        .init(color: Color.white.opacity(0.25), location: 0.35),
+                                        .init(color: Color.white.opacity(0.20), location: 0.35),
                                         .init(color: Color.black.opacity(0.35), location: 0.70),
                                         .init(color: Color.white.opacity(0.20), location: 1.0)
                                     ],
@@ -200,7 +214,7 @@ public struct PillSlider: View {
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color.white.opacity(0.45),
+                                        Color.white.opacity(0.40),
                                         Color.white.opacity(0.0)
                                     ],
                                     startPoint: .top,
@@ -208,9 +222,9 @@ public struct PillSlider: View {
                                 )
                             )
                             .frame(width: max(4, currentThumbWidth - 3), height: currentThumbHeight * 0.45)
-                            .offset(y: -currentThumbHeight * 0.24)
+                            .offset(y: -currentThumbHeight * 0.22)
                             .blur(radius: 0.5)
-                            .mask(Capsule().stroke(lineWidth: 1.5))
+                            .mask(Capsule().stroke(lineWidth: 1.2))
                             .opacity(isDragging ? 1.0 : 0.0)
 
                         // Completely solid opaque white skin (melts away fluidly when interaction begins)
@@ -220,13 +234,13 @@ public struct PillSlider: View {
                     }
                     .frame(width: currentThumbWidth, height: currentThumbHeight)
                     .shadow(
-                        color: Color.black.opacity(isDragging ? 0.40 : 0.28),
-                        radius: isDragging ? 6.0 : (isHovering ? 3.5 : 2.5),
+                        color: Color.black.opacity(isDragging ? 0.38 : 0.25),
+                        radius: isDragging ? 5.5 : (isHovering ? 3.0 : 2.0),
                         x: 0,
-                        y: isDragging ? 2.5 : 1.0
+                        y: isDragging ? 2.0 : 1.0
                     )
                     .scaleEffect(isHovering && !isDragging ? 1.04 : 1.0)
-                    .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isDragging)
+                    .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isDragging)
                     .animation(.spring(response: 0.20, dampingFraction: 0.75), value: isHovering)
                     .position(x: thumbCenterX, y: geo.size.height / 2)
                 }
@@ -237,19 +251,21 @@ public struct PillSlider: View {
                 DragGesture(minimumDistance: 0)
                     .onChanged { gesture in
                         if !isDragging {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
                                 isDragging = true
                             }
                         }
-                        let fraction = max(0.0, min(1.0, gesture.location.x / width))
+                        let trackSpan = width - currentThumbWidth
+                        let fraction = trackSpan > 0 ? max(0.0, min(1.0, (gesture.location.x - currentThumbWidth / 2) / trackSpan)) : 0.0
                         value = fraction
                         onActivity?()
                     }
                     .onEnded { gesture in
-                        withAnimation(.spring(response: 0.34, dampingFraction: 0.74)) {
+                        withAnimation(.spring(response: 0.30, dampingFraction: 0.82)) {
                             isDragging = false
                         }
-                        let fraction = max(0.0, min(1.0, gesture.location.x / width))
+                        let trackSpan = width - currentThumbWidth
+                        let fraction = trackSpan > 0 ? max(0.0, min(1.0, (gesture.location.x - currentThumbWidth / 2) / trackSpan)) : 0.0
                         value = fraction
                         onActivity?()
                     }
