@@ -93,8 +93,11 @@ public struct VideoPlayerView: View {
         }
         .onChange(of: coordinator.activePlayableURL) { _, newURL in
             if let url = newURL {
-                let expDuration = coordinator.knownDuration
-                playerController.load(url: url, expectedDuration: expDuration)
+                // If the player is actively seeking a pipeline, it is loaded directly via loadStreamFromSeek
+                if !playerController.isSeeking {
+                    let expDuration = coordinator.knownDuration
+                    playerController.load(url: url, expectedDuration: expDuration)
+                }
             } else {
                 playerController.reset()
             }
@@ -853,42 +856,62 @@ struct TimelineScrubberShelf: View {
                 let playedFraction = max(0.0, min(1.0, currentVal / maxDuration))
                 let bufferFraction = max(0.0, min(1.0, timeState.loadedDuration / maxDuration))
 
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.22))
-                        .frame(height: 4.5)
+                let isInteracting = isScrubberHovered || isDraggingScrubber
+                let thumbW: CGFloat = isInteracting ? 22 : 14
+                let thumbH: CGFloat = isInteracting ? 15 : 9
 
-                    Capsule()
-                        .fill(Color.white.opacity(0.40))
-                        .frame(width: width * bufferFraction, height: 4.5)
+                GlassEffectContainer {
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.22))
+                            .frame(height: 4.5)
 
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: width * playedFraction, height: 4.5)
+                        Capsule()
+                            .fill(Color.white.opacity(0.40))
+                            .frame(width: width * bufferFraction, height: 4.5)
 
-                    // Scrubber Thumb: True Liquid Glass on hover/drag, solid white pill when idle
-                    LiquidGlassThumb(
-                        isInteracting: isScrubberHovered || isDraggingScrubber,
-                        isDragging: isDraggingScrubber,
-                        thumbWidth: 15,
-                        thumbHeight: 10
-                    )
-                    .offset(x: max(0, min(width - 15, width * playedFraction - 7.5)))
+                        Capsule()
+                            .fill(Color.white)
+                            .frame(width: width * playedFraction, height: 4.5)
 
-                    // Floating Hover Tooltip
-                    if isScrubberHovered && !isDraggingScrubber && width > 0 {
-                        let hoverFraction = max(0.0, min(1.0, hoverLocationX / width))
-                        let hoverSec = hoverFraction * maxDuration
+                        // Scrubber Thumb: Solid white pill when idle, bigger native Liquid Glass pill when interacting
+                        Group {
+                            if isInteracting {
+                                Capsule()
+                                    .fill(Color.clear)
+                                    .frame(width: thumbW, height: thumbH)
+                                    .glassEffect(Glass.regular, in: Capsule())
+                                    .overlay(
+                                        Capsule()
+                                            .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+                                    )
+                                    .shadow(color: Color.black.opacity(0.35), radius: 5, x: 0, y: 1.5)
+                            } else {
+                                Capsule()
+                                    .fill(Color.white)
+                                    .frame(width: thumbW, height: thumbH)
+                                    .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
+                            }
+                        }
+                        .offset(x: max(0, min(width - thumbW, width * playedFraction - (thumbW / 2))))
+                        .animation(.spring(response: 0.28, dampingFraction: 0.70), value: isInteracting)
 
-                        Text(formatTime(hoverSec))
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .monospacedDigit()
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .glassEffect(Glass.regular, in: Capsule())
-                            .offset(x: max(0, min(width - 45, hoverLocationX - 22)), y: -24)
+                        // Floating Hover Tooltip
+                        if isScrubberHovered && !isDraggingScrubber && width > 0 {
+                            let hoverFraction = max(0.0, min(1.0, hoverLocationX / width))
+                            let hoverSec = hoverFraction * maxDuration
+
+                            Text(formatTime(hoverSec))
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .monospacedDigit()
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2.5)
+                                .glassEffect(Glass.regular, in: Capsule())
+                                .offset(x: max(0, min(width - 45, hoverLocationX - 22)), y: -24)
+                        }
                     }
+                    .frame(maxHeight: .infinity, alignment: .center)
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
                 .contentShape(Rectangle())

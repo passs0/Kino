@@ -86,8 +86,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         if let sTime = seekTime, sTime > 0.5 {
             args.append(contentsOf: [
-                "-ss", String(format: "%.2f", sTime),
-                "-output_ts_offset", String(format: "%.2f", sTime)
+                "-ss", String(format: "%.2f", sTime)
             ])
         }
 
@@ -153,13 +152,6 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-hls_time", "2",
             "-hls_list_size", "0"
         ])
-
-        if let sTime = seekTime, sTime > 0.5 {
-            let startNum = Int(sTime / 2.0)
-            args.append(contentsOf: [
-                "-start_number", String(startNum)
-            ])
-        }
 
         args.append(contentsOf: [
             "-hls_segment_filename", segmentPattern,
@@ -248,47 +240,26 @@ public final class FFmpegPipeline: @unchecked Sendable {
         ytProc.environment = env
 
         // ffmpeg process receiving from pipe:0
-        // Transcodes video via real-time Apple Silicon VideoToolbox hardware encoder.
-        // -realtime 1 guarantees >5x encoding speed on Apple Silicon, eliminating stream buffering stalls.
+        // Stream copies video (already AVC H.264) and transcodes audio to stereo AAC for immediate startup
         let ffmpegProc = Process()
         ffmpegProc.executableURL = URL(fileURLWithPath: ffmpegPath)
-        var ffmpegArgs = [
+        let ffmpegArgs = [
             "-nostdin",
             "-y",
             "-i", "pipe:0",
             "-map", "0:v:0?",
             "-map", "0:a:0?",
-            "-c:v", "h264_videotoolbox",
-            "-realtime", "1",
-            "-pix_fmt", "yuv420p",
-            "-b:v", "4500k",
-            "-maxrate", "6500k",
-            "-bufsize", "8000k",
+            "-c:v", "copy",
             "-c:a", "aac",
             "-ac", "2",
             "-b:a", "256k",
-            "-ar", "48000"
-        ]
-
-        if let sTime = seekTime, sTime > 0.5 {
-            ffmpegArgs.append(contentsOf: ["-output_ts_offset", String(format: "%.2f", sTime)])
-        }
-
-        ffmpegArgs.append(contentsOf: [
+            "-ar", "48000",
             "-f", "hls",
             "-hls_time", "2",
-            "-hls_list_size", "0"
-        ])
-
-        if let sTime = seekTime, sTime > 0.5 {
-            let startNum = Int(sTime / 2.0)
-            ffmpegArgs.append(contentsOf: ["-start_number", String(startNum)])
-        }
-
-        ffmpegArgs.append(contentsOf: [
+            "-hls_list_size", "0",
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
-        ])
+        ]
         ffmpegProc.arguments = ffmpegArgs
         ffmpegProc.environment = env
 
@@ -338,7 +309,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         // Wait for first segment to be written
-        let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: 22.0)
+        let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: 30.0)
         guard ready else {
             stop()
             throw FFmpegPipelineError.timedOutWaitingForPlaylist

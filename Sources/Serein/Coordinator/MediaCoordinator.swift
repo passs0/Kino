@@ -586,7 +586,7 @@ public final class MediaCoordinator: ObservableObject {
                     seekTime: targetSeconds
                 )
                 self.activePlayableURL = streamURL
-                PlayerController.shared.load(url: streamURL, expectedDuration: knownD, initialTime: targetSeconds)
+                PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
                 log("✨ Pipeline fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
             } catch {
                 log("❌ Seek pipeline failed: \(error.localizedDescription)", level: .error)
@@ -598,7 +598,7 @@ public final class MediaCoordinator: ObservableObject {
                     // Video platform stream (YouTube, Vimeo, etc.)
                     let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: targetSeconds)
                     self.activePlayableURL = streamURL
-                    PlayerController.shared.load(url: streamURL, expectedDuration: knownD, initialTime: targetSeconds)
+                    PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
                     log("✨ Online stream fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
                 } else {
                     let mode: PipelineMode
@@ -617,7 +617,7 @@ public final class MediaCoordinator: ObservableObject {
                         seekTime: targetSeconds
                     )
                     self.activePlayableURL = streamURL
-                    PlayerController.shared.load(url: streamURL, expectedDuration: knownD, initialTime: targetSeconds)
+                    PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
                     log("✨ Stream fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
                 }
             } catch {

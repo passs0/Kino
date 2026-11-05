@@ -20,6 +20,15 @@ public final class PlayerController: ObservableObject {
     @Published public var hudIconName: String? = nil
     private var hudDismissTask: Task<Void, Never>?
 
+    /// Current base time offset for active transcode / HLS streaming pipelines.
+    @Published public private(set) var streamTimeOffset: Double = 0
+
+    /// State indicating an active seek/scrub operation is in progress, preventing periodic time observer snapback.
+    @Published public private(set) var isSeeking: Bool = false
+    private var seekTargetTime: Double? = nil
+    private var seekTimeoutTask: Task<Void, Never>?
+    private var streamSeekTask: Task<Void, Never>?
+
     private var pendingResumeTime: Double? = nil
     private var lastSavedResumeTime: Double = 0
     private var resumeToastTask: Task<Void, Never>?
@@ -103,6 +112,11 @@ public final class PlayerController: ObservableObject {
 
     public func load(url: URL, expectedDuration: Double? = nil, initialTime: Double? = nil) {
         cleanupItemObservers()
+        seekTimeoutTask?.cancel()
+        streamSeekTask?.cancel()
+        isSeeking = false
+        seekTargetTime = nil
+        streamTimeOffset = 0
         resumeToastTask?.cancel()
         resumeNotificationText = nil
         player.volume = 0
@@ -203,39 +217,79 @@ public final class PlayerController: ObservableObject {
         return false
     }
 
-    private var streamSeekTask: Task<Void, Never>?
-
     public func seek(to seconds: Double) {
         let maxD = PlayerTimeState.shared.duration
         let targetSec = max(0, min(seconds, maxD > 0 ? maxD : seconds))
-        let cmTime = CMTime(seconds: targetSec, preferredTimescale: 600)
+        let relativeSec = max(0, targetSec - streamTimeOffset)
+        let cmTime = CMTime(seconds: relativeSec, preferredTimescale: 600)
         SubtitleManager.shared.handleUserSeek(to: targetSec)
 
+        // Prevent periodic time observer snapback during user seeking
+        isSeeking = true
+        seekTargetTime = targetSec
+        PlayerTimeState.shared.currentTime = targetSec
+
+        seekTimeoutTask?.cancel()
+        seekTimeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 3_500_000_000)
+            guard !Task.isCancelled else { return }
+            self?.isSeeking = false
+            self?.seekTargetTime = nil
+        }
+
         // Check if the target timestamp is already buffered in AVPlayer
-        let isLoaded = isTimestampBuffered(targetSec)
+        let isLoaded = isTimestampBuffered(relativeSec)
 
         if !isLoaded && MediaCoordinator.shared.isPipelineActive {
             // Seeking to an unloaded timestamp in an active transcoding / HLS stream:
-            PlayerTimeState.shared.currentTime = targetSec
-            SubtitleManager.shared.updateTime(targetSec)
             streamSeekTask?.cancel()
             streamSeekTask = Task { @MainActor in
-                // 120ms debounce to coalesce rapid clicks (e.g. hitting forward 10s multiple times)
-                try? await Task.sleep(nanoseconds: 120_000_000)
+                // 100ms debounce to coalesce rapid seek interactions
+                try? await Task.sleep(nanoseconds: 100_000_000)
                 guard !Task.isCancelled else { return }
                 await MediaCoordinator.shared.seekPipeline(to: targetSec)
             }
             return
         }
 
-        // Seeking within buffered data or direct native stream (with 1.5s tolerance for fast keyframe response)
-        player.seek(to: cmTime, toleranceBefore: CMTime(seconds: 1.5, preferredTimescale: 600), toleranceAfter: CMTime(seconds: 1.5, preferredTimescale: 600)) { [weak self] _ in
+        // Seeking within buffered data or direct native stream
+        player.seek(to: cmTime, toleranceBefore: CMTime(seconds: 1.0, preferredTimescale: 600), toleranceAfter: CMTime(seconds: 1.0, preferredTimescale: 600)) { [weak self] completed in
             Task { @MainActor [weak self] in
-                guard self != nil else { return }
+                guard let self = self, completed else { return }
+                self.isSeeking = false
+                self.seekTargetTime = nil
+                self.seekTimeoutTask?.cancel()
                 PlayerTimeState.shared.currentTime = targetSec
                 SubtitleManager.shared.updateTime(targetSec)
             }
         }
+    }
+
+    /// Seamlessly connects the player to a newly re-aligned stream segment pipeline without resetting duration or timeline state.
+    public func loadStreamFromSeek(url: URL, expectedDuration: Double? = nil, timeOffset: Double) {
+        cleanupItemObservers()
+        resumeToastTask?.cancel()
+        resumeNotificationText = nil
+
+        self.streamTimeOffset = timeOffset
+        self.isSeeking = true
+        self.seekTargetTime = timeOffset
+        PlayerTimeState.shared.currentTime = timeOffset
+
+        if let exp = expectedDuration, exp > 0 {
+            PlayerTimeState.shared.duration = exp
+        }
+
+        let item = AVPlayerItem(url: url)
+        setupItemObservers(for: item, autoResumePlayback: true)
+
+        player.replaceCurrentItem(with: item)
+        player.actionAtItemEnd = .pause
+        player.volume = isMuted ? 0 : volume
+        player.isMuted = isMuted
+        player.rate = playbackRate
+        player.play()
+        isPlaying = true
     }
 
     public func seekRelative(seconds: Double) {
@@ -248,6 +302,11 @@ public final class PlayerController: ObservableObject {
 
     public func reset() {
         cleanupItemObservers()
+        seekTimeoutTask?.cancel()
+        streamSeekTask?.cancel()
+        isSeeking = false
+        seekTargetTime = nil
+        streamTimeOffset = 0
         player.volume = 0
         player.pause()
         player.replaceCurrentItem(with: nil)
@@ -291,20 +350,34 @@ public final class PlayerController: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 let sec = CMTimeGetSeconds(time)
-                if sec.isFinite && !sec.isNaN {
-                    PlayerTimeState.shared.currentTime = sec
-                    SubtitleManager.shared.updateTime(sec)
+                guard sec.isFinite && !sec.isNaN else { return }
 
-                    // Throttle saving playback position every 2.5 seconds
-                    if abs(sec - self.lastSavedResumeTime) >= 2.5,
-                       let src = MediaCoordinator.shared.currentSource {
-                        self.lastSavedResumeTime = sec
-                        PlaybackResumeManager.shared.savePosition(
-                            sec,
-                            duration: PlayerTimeState.shared.duration,
-                            for: src
-                        )
+                let effectiveTime = self.streamTimeOffset + sec
+
+                // If user is actively seeking or awaiting stream repositioning:
+                if self.isSeeking, let target = self.seekTargetTime {
+                    if abs(effectiveTime - target) <= 1.2 {
+                        self.isSeeking = false
+                        self.seekTargetTime = nil
+                        self.seekTimeoutTask?.cancel()
+                    } else {
+                        // Hold intended seek target so the scrubber does not snap back while buffering
+                        return
                     }
+                }
+
+                PlayerTimeState.shared.currentTime = effectiveTime
+                SubtitleManager.shared.updateTime(effectiveTime)
+
+                // Throttle saving playback position every 2.5 seconds
+                if abs(effectiveTime - self.lastSavedResumeTime) >= 2.5,
+                   let src = MediaCoordinator.shared.currentSource {
+                    self.lastSavedResumeTime = effectiveTime
+                    PlaybackResumeManager.shared.savePosition(
+                        effectiveTime,
+                        duration: PlayerTimeState.shared.duration,
+                        for: src
+                    )
                 }
             }
         }
@@ -385,12 +458,12 @@ public final class PlayerController: ObservableObject {
 
         itemLoadedRangesObserver = item.observe(\.loadedTimeRanges, options: [.new]) { [weak self] observedItem, _ in
             Task { @MainActor [weak self] in
-                guard self != nil else { return }
+                guard let self = self else { return }
                 if let range = observedItem.loadedTimeRanges.first?.timeRangeValue {
                     let start = CMTimeGetSeconds(range.start)
                     let dur = CMTimeGetSeconds(range.duration)
                     if start.isFinite && dur.isFinite && !start.isNaN && !dur.isNaN {
-                        PlayerTimeState.shared.loadedDuration = max(PlayerTimeState.shared.loadedDuration, start + dur)
+                        PlayerTimeState.shared.loadedDuration = max(PlayerTimeState.shared.loadedDuration, self.streamTimeOffset + start + dur)
                     }
                 }
             }
