@@ -269,18 +269,27 @@ public struct NativePlayerView: NSViewRepresentable {
     }
 }
 
-/// Native macOS AirPlay Route Picker wrapped for SwiftUI.
+/// Native macOS AirPlay Route Picker wrapped for SwiftUI supporting both Video and Audio targeting.
 public struct AirPlayRoutePicker: NSViewRepresentable {
-    public let player: AVPlayer
+    public enum Mode {
+        case video
+        case audio
+    }
 
-    public init(player: AVPlayer) {
+    public let player: AVPlayer
+    public var mode: Mode
+
+    public init(player: AVPlayer, mode: Mode = .video) {
         self.player = player
+        self.mode = mode
     }
 
     public func makeNSView(context: Context) -> AVRoutePickerView {
         let picker = AVRoutePickerView()
         picker.player = player
         picker.isRoutePickerButtonBordered = false
+        picker.setValue(mode == .video, forKey: "prioritizesVideoDevices")
+        picker.appearance = NSAppearance(named: .darkAqua)
         picker.setRoutePickerButtonColor(.white, for: .normal)
         picker.setRoutePickerButtonColor(NSColor.controlAccentColor, for: .activeHighlighted)
         return picker
@@ -290,5 +299,12 @@ public struct AirPlayRoutePicker: NSViewRepresentable {
         if nsView.player !== player {
             nsView.player = player
         }
+        let shouldPrioritize = (mode == .video)
+        if (nsView.value(forKey: "prioritizesVideoDevices") as? Bool) != shouldPrioritize {
+            nsView.setValue(shouldPrioritize, forKey: "prioritizesVideoDevices")
+        }
+        nsView.appearance = NSAppearance(named: .darkAqua)
+        nsView.setRoutePickerButtonColor(.white, for: .normal)
+        nsView.setRoutePickerButtonColor(NSColor.controlAccentColor, for: .activeHighlighted)
     }
 }

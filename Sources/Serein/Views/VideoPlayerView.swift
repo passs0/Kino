@@ -214,7 +214,7 @@ public struct VideoPlayerView: View {
                         .transition(.opacity)
                 }
 
-                // Top-Left: PiP & AirPlay Capsule
+                // Top-Left: PiP & AirPlay Capsule (Supporting Video & Audio Routing)
                 HStack(spacing: 8) {
                     // Native Picture in Picture Button
                     Button(action: {
@@ -232,10 +232,17 @@ public struct VideoPlayerView: View {
 
                     GlassDivider(height: 14)
 
-                    // Native macOS AirPlay Route Picker
-                    AirPlayRoutePicker(player: playerController.player)
-                        .frame(width: 26, height: 26)
-                        .help("AirPlay")
+                    // Native macOS AirPlay Video Route Picker (Apple TV / AirPlay Display)
+                    AirPlayRoutePicker(player: playerController.player, mode: .video)
+                        .frame(width: 24, height: 24)
+                        .help("AirPlay Video (Apple TV / External Display)")
+
+                    GlassDivider(height: 14)
+
+                    // Native macOS AirPlay Audio Route Picker (HomePod / Speakers)
+                    AirPlayRoutePicker(player: playerController.player, mode: .audio)
+                        .frame(width: 24, height: 24)
+                        .help("AirPlay Audio (HomePod / Speakers)")
                 }
                 .padding(.horizontal, 10)
                 .frame(height: 34)
@@ -317,6 +324,7 @@ public struct VideoPlayerView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
         }
+        .environment(\.colorScheme, .dark)
     }
 
     // MARK: - WebKit HTML5 Style Options Capsule (Single Source for Options & Stats)
