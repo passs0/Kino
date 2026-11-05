@@ -864,15 +864,14 @@ struct TimelineScrubberShelf: View {
                         .fill(Color.white)
                         .frame(width: width * playedFraction, height: 4.5)
 
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(
-                            width: isScrubberHovered || isDraggingScrubber ? 16 : 14,
-                            height: isScrubberHovered || isDraggingScrubber ? 11 : 9
-                        )
-                        .shadow(color: .black.opacity(0.35), radius: 2, x: 0, y: 1)
-                        .offset(x: max(0, min(width - 14, width * playedFraction - (isScrubberHovered || isDraggingScrubber ? 8 : 7))))
-                        .opacity(isScrubberHovered || isDraggingScrubber ? 1 : 0.88)
+                    // Scrubber Thumb: True Liquid Glass on hover/drag, solid white pill when idle
+                    LiquidGlassThumb(
+                        isInteracting: isScrubberHovered || isDraggingScrubber,
+                        isDragging: isDraggingScrubber,
+                        thumbWidth: 15,
+                        thumbHeight: 10
+                    )
+                    .offset(x: max(0, min(width - 15, width * playedFraction - 7.5)))
 
                     // Floating Hover Tooltip
                     if isScrubberHovered && !isDraggingScrubber && width > 0 {
