@@ -21,7 +21,7 @@
 
 For decades, **QuickTime Player** has set the standard for macOS media playback: instant startup, ultra-efficient hardware decoding with near-zero battery drain, smooth timeline scrubbing, and pure Apple Human Interface design.
 
-**The catch?** QuickTime refuses to open `.mkv`, `.webm`, `.opus`, or web streams, and rejects modern subtitles (`.ass`, `.srt`, web captions). To watch these files, Mac users have traditionally turned to bloated third-party players (like VLC or legacy wrappers) that drain MacBook batteries with CPU-heavy software decoders, feature complex multi-window interfaces, and ignore macOS design standards.
+**The catch?** QuickTime refuses to open `.mkv`, `.webm`, `.opus`, or web streams, and rejects modern subtitles (`.ass`, `.srt`, web captions). To watch these files, Mac users often have to rely on external tools that may not integrate natively with macOS design standards, rely on heavier software decoders, or feature complex multi-window interfaces.
 
 **Serein is the modern successor:**
 - **QuickTime Aesthetics & Efficiency:** Native Cocoa chrome, fluid animations, and 0% CPU consumption on standard formats.
