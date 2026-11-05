@@ -104,10 +104,10 @@ public final class LiquidGlassSettings: ObservableObject {
 public struct PillSlider: View {
     @Binding var value: Double // Range 0.0 ... 1.0
     var trackHeight: CGFloat = 4.5
-    var idleThumbWidth: CGFloat = 16
-    var idleThumbHeight: CGFloat = 14
-    var activeThumbWidth: CGFloat = 26
-    var activeThumbHeight: CGFloat = 22
+    var idleThumbWidth: CGFloat = 18
+    var idleThumbHeight: CGFloat = 12
+    var activeThumbWidth: CGFloat = 34
+    var activeThumbHeight: CGFloat = 18
     var onActivity: (() -> Void)?
 
     @ObservedObject private var settings = LiquidGlassSettings.shared
@@ -117,10 +117,10 @@ public struct PillSlider: View {
     public init(
         value: Binding<Double>,
         trackHeight: CGFloat = 4.5,
-        idleThumbWidth: CGFloat = 16,
-        idleThumbHeight: CGFloat = 14,
-        activeThumbWidth: CGFloat = 26,
-        activeThumbHeight: CGFloat = 22,
+        idleThumbWidth: CGFloat = 18,
+        idleThumbHeight: CGFloat = 12,
+        activeThumbWidth: CGFloat = 34,
+        activeThumbHeight: CGFloat = 18,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
@@ -135,14 +135,14 @@ public struct PillSlider: View {
     public init(
         value: Binding<Double>,
         trackHeight: CGFloat = 4.5,
-        thumbWidth: CGFloat = 26,
-        thumbHeight: CGFloat = 22,
+        thumbWidth: CGFloat = 34,
+        thumbHeight: CGFloat = 18,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = 16
-        self.idleThumbHeight = 14
+        self.idleThumbWidth = 18
+        self.idleThumbHeight = 12
         self.activeThumbWidth = thumbWidth
         self.activeThumbHeight = thumbHeight
         self.onActivity = onActivity
