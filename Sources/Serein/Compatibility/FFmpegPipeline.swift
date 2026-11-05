@@ -172,7 +172,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         // Wait until playlist.m3u8 exists and has at least one segment
-        let timeoutSec: Double = inputURL.isFileURL ? 8.0 : 16.0
+        let timeoutSec: Double = inputURL.isFileURL ? 8.0 : 22.0
         let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: timeoutSec)
         guard ready else {
             stop()
@@ -303,7 +303,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         // Wait for first segment to be written
-        let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: 15.0)
+        let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: 22.0)
         guard ready else {
             stop()
             throw FFmpegPipelineError.timedOutWaitingForPlaylist

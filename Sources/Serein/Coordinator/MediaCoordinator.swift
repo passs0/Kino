@@ -281,24 +281,29 @@ public final class MediaCoordinator: ObservableObject {
         let path = url.path.lowercased()
         let query = url.query?.lowercased() ?? ""
 
-        // Cloud storage and CDN direct download patterns
-        let knownDirectHosts = ["mypikpak.com", "pikpak", "drive.google.com", "dropbox.com", "115.com", "alist", "mediafire.com", "mega.nz", "box.com", "onedrive.live.com"]
-        if knownDirectHosts.contains(where: { host.contains($0) }) {
-            return true
+        // Known video and streaming platforms MUST always be extracted via yt-dlp:
+        let videoPlatforms = [
+            "youtube.com", "youtu.be", "vimeo.com", "bilibili.com", "twitch.tv",
+            "tiktok.com", "twitter.com", "x.com", "dailymotion.com", "facebook.com",
+            "instagram.com", "reddit.com", "soundcloud.com", "nicovideo.jp"
+        ]
+        if videoPlatforms.contains(where: { host.contains($0) }) {
+            return false
         }
 
-        // Direct media extensions or download paths
+        // Direct media extensions (e.g. .mp4, .mkv, .m3u8, .mov, etc.)
         let mediaExts = ["mp4", "mkv", "mov", "webm", "m3u8", "ts", "avi", "flv", "m4v"]
         if mediaExts.contains(url.pathExtension.lowercased()) {
             return true
         }
 
-        if path.contains("/download") || path.contains("/file/") || path.contains("/stream") || path.contains("/raw") || query.contains("download") {
+        // Cloud storage and CDN direct download patterns (e.g. PikPak, Google Drive, Alist)
+        let knownDirectHosts = ["mypikpak.com", "pikpak", "drive.google.com", "dropbox.com", "115.com", "alist", "mediafire.com", "mega.nz", "box.com", "onedrive.live.com"]
+        if knownDirectHosts.contains(where: { host.contains($0) }) {
             return true
         }
 
-        // Online streams without a file extension should be routed directly to the media engine pipeline
-        if url.pathExtension.isEmpty {
+        if path.contains("/download") || path.contains("/file/") || path.contains("/stream") || path.contains("/raw") || query.contains("download") || query.contains("fid=") {
             return true
         }
 
