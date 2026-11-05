@@ -11,6 +11,18 @@ public final class SubtitleManager: ObservableObject {
     @Published public private(set) var currentCueText: String? = nil
     @Published public private(set) var currentCuePosition: SubtitlePosition = .bottom
 
+    private static let placementDefaultsKey = "SereinSubtitlePlacement"
+
+    /// Subtitle layout positioning: .letterbox (sits according to display height in black bar)
+    /// vs .mediaFrame (sits according to media height inside the video picture).
+    @Published public private(set) var placement: SubtitlePlacement = {
+        if let saved = UserDefaults.standard.string(forKey: placementDefaultsKey),
+           let p = SubtitlePlacement(rawValue: saved) {
+            return p
+        }
+        return .letterbox
+    }()
+
     private var activeCues: [SubtitleCue] = []
     private var cuesCache: [String: [SubtitleCue]] = [:]
     private var nativeLegibleText: String? = nil
@@ -19,6 +31,21 @@ public final class SubtitleManager: ObservableObject {
     private var activeFFmpegProcess: Process?
 
     private init() {}
+
+    /// Sets the subtitle placement mode (Display Height vs Media Height) and persists user preference.
+    public func setPlacement(_ newPlacement: SubtitlePlacement) {
+        guard placement != newPlacement else { return }
+        placement = newPlacement
+        UserDefaults.standard.set(newPlacement.rawValue, forKey: Self.placementDefaultsKey)
+        let name = (newPlacement == .letterbox) ? "Display Height (In Letterbox)" : "Media Height (Inside Video)"
+        PlayerController.shared.showHUD(message: "Subtitles: \(name)", iconName: "captions.bubble")
+    }
+
+    /// Toggles subtitle placement between Display Height and Media Height.
+    public func togglePlacement() {
+        let next: SubtitlePlacement = (placement == .letterbox) ? .mediaFrame : .letterbox
+        setPlacement(next)
+    }
 
     /// Sets the list of available subtitle tracks (from local probe or stream metadata).
     public func setAvailableTracks(_ tracks: [SubtitleTrack]) {

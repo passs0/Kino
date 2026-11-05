@@ -72,8 +72,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 return nil
             }
 
-            // Z / z (keyCode 6 or char "z"): Toggle Letterbox / Fill Screen
+            // Z / z (keyCode 6 or char "z"): Toggle Subtitle Placement (Display Height vs Media Height)
             if keyCode == 6 || chars == "z" {
+                Task { @MainActor in
+                    SubtitleManager.shared.togglePlacement()
+                }
+                return nil
+            }
+
+            // C / c (keyCode 8 or char "c"): Toggle Video Aspect Ratio (Fit vs Fill Screen)
+            if keyCode == 8 || chars == "c" {
                 Task { @MainActor in
                     PlayerController.shared.toggleLetterbox()
                 }

@@ -60,6 +60,36 @@ public final class OptionsMenuPresenter: NSObject {
             subsMenu.addItem(noneItem)
         }
 
+        subsMenu.addItem(NSMenuItem.separator())
+
+        // Subtitle Placement Submenu (Display Height vs Media Height)
+        let placementItem = NSMenuItem(title: "Placement", action: nil, keyEquivalent: "")
+        let placementMenu = NSMenu(title: "Placement")
+        placementMenu.autoenablesItems = false
+
+        let curPlacement = SubtitleManager.shared.placement
+
+        let letterboxItem = NSMenuItem(
+            title: "In Letterbox Bar (Display Height)",
+            action: #selector(handleSetPlacementLetterbox),
+            keyEquivalent: ""
+        )
+        letterboxItem.target = self
+        letterboxItem.state = (curPlacement == .letterbox) ? .on : .off
+        placementMenu.addItem(letterboxItem)
+
+        let mediaItem = NSMenuItem(
+            title: "Inside Video (Media Height)",
+            action: #selector(handleSetPlacementMediaFrame),
+            keyEquivalent: ""
+        )
+        mediaItem.target = self
+        mediaItem.state = (curPlacement == .mediaFrame) ? .on : .off
+        placementMenu.addItem(mediaItem)
+
+        placementItem.submenu = placementMenu
+        subsMenu.addItem(placementItem)
+
         subsItem.submenu = subsMenu
         menu.addItem(subsItem)
 
@@ -108,19 +138,19 @@ public final class OptionsMenuPresenter: NSObject {
         speedItem.submenu = speedMenu
         menu.addItem(speedItem)
 
-        // 3. Aspect Ratio / Letterbox Submenu
+        // 4. Aspect Ratio Submenu
         let aspectItem = NSMenuItem(title: "Aspect Ratio", action: nil, keyEquivalent: "")
         let aspectMenu = NSMenu(title: "Aspect Ratio")
         aspectMenu.autoenablesItems = false
 
         let isLetterboxed = PlayerController.shared.isLetterboxed
 
-        let fitItem = NSMenuItem(title: "Fit to Screen (Letterbox)", action: #selector(handleSetLetterboxFit), keyEquivalent: "")
+        let fitItem = NSMenuItem(title: "Fit to Screen (Preserve Aspect)", action: #selector(handleSetLetterboxFit), keyEquivalent: "")
         fitItem.target = self
         fitItem.state = isLetterboxed ? .on : .off
         aspectMenu.addItem(fitItem)
 
-        let fillItem = NSMenuItem(title: "Fill Screen (No Letterbox)", action: #selector(handleSetLetterboxFill), keyEquivalent: "")
+        let fillItem = NSMenuItem(title: "Fill Screen (Crop)", action: #selector(handleSetLetterboxFill), keyEquivalent: "")
         fillItem.target = self
         fillItem.state = (!isLetterboxed) ? .on : .off
         aspectMenu.addItem(fillItem)
@@ -164,6 +194,14 @@ public final class OptionsMenuPresenter: NSObject {
 
     @objc private func handleSelectSubOff() {
         SubtitleManager.shared.selectTrack(nil)
+    }
+
+    @objc private func handleSetPlacementLetterbox() {
+        SubtitleManager.shared.setPlacement(.letterbox)
+    }
+
+    @objc private func handleSetPlacementMediaFrame() {
+        SubtitleManager.shared.setPlacement(.mediaFrame)
     }
 
     @objc private func handleSelectTrack(_ sender: NSMenuItem) {

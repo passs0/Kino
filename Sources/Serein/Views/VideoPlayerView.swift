@@ -144,6 +144,9 @@ public struct VideoPlayerView: View {
 
                 // Layer 5: Resume From Timestamp Toast Banner
                 resumeToastView
+
+                // Layer 6: On-Screen HUD Notification Banner
+                generalHUDView
             }
             .contentShape(Rectangle())
             .onContinuousHover { phase in
@@ -165,11 +168,24 @@ public struct VideoPlayerView: View {
         Group {
             if let cueText = subtitleManager.currentCueText, !cueText.isEmpty {
                 let h = viewportSize.height > 0 ? viewportSize.height : 720
+                let w = viewportSize.width > 0 ? viewportSize.width : 1280
+
                 // In full screen, subtitles scale proportionally with the display height (18pt min to 48pt max)
                 let dynamicBaseSize = max(18.0, min(h * 0.036, 48.0))
                 let effectiveFontSize = dynamicBaseSize * captionAppearance.fontScale
                 let padH = max(12.0, dynamicBaseSize * 0.55)
                 let padV = max(5.0, dynamicBaseSize * 0.25)
+
+                let letterboxBarHeight = calculateLetterboxBarHeight(viewportSize: CGSize(width: w, height: h))
+                let baseBottomPadding: CGFloat = (showControls || !playerController.isPlaying) ? 104 : 36
+                let effectiveBottomPadding = (subtitleManager.placement == .mediaFrame)
+                    ? max(letterboxBarHeight + 36, baseBottomPadding)
+                    : baseBottomPadding
+
+                let baseTopPadding: CGFloat = (showControls || !playerController.isPlaying) ? 84 : 36
+                let effectiveTopPadding = (subtitleManager.placement == .mediaFrame)
+                    ? max(letterboxBarHeight + 36, baseTopPadding)
+                    : baseTopPadding
 
                 VStack {
                     if subtitleManager.currentCuePosition != .top {
@@ -194,8 +210,9 @@ public struct VideoPlayerView: View {
                                 .fill(captionAppearance.backgroundColor)
                         )
                         .padding(.horizontal, 48)
-                        .padding(.top, subtitleManager.currentCuePosition == .top ? ((showControls || !playerController.isPlaying) ? 84 : 36) : 0)
-                        .padding(.bottom, subtitleManager.currentCuePosition == .bottom ? ((showControls || !playerController.isPlaying) ? 104 : 36) : 0)
+                        .padding(.top, subtitleManager.currentCuePosition == .top ? effectiveTopPadding : 0)
+                        .padding(.bottom, subtitleManager.currentCuePosition == .bottom ? effectiveBottomPadding : 0)
+                        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: subtitleManager.placement)
                         .animation(.easeInOut(duration: 0.18), value: showControls || !playerController.isPlaying)
 
                     if subtitleManager.currentCuePosition != .bottom {
@@ -207,6 +224,46 @@ public struct VideoPlayerView: View {
                 .transition(.opacity.animation(.easeInOut(duration: 0.15)))
             }
         }
+    }
+
+    /// Calculates the black letterbox bar height when video aspect does not match viewport aspect.
+    private func calculateLetterboxBarHeight(viewportSize: CGSize) -> CGFloat {
+        guard playerController.isLetterboxed else { return 0 }
+
+        if let playerNSView = playerController.activePlayerNSView {
+            let vr = playerNSView.playerLayer.videoRect
+            if vr.height > 0 && vr.width > 0 && vr.height < viewportSize.height {
+                let bar = (viewportSize.height - vr.height) / 2.0
+                if bar > 0 {
+                    return bar
+                }
+            }
+        }
+
+        let videoWidth: CGFloat
+        let videoHeight: CGFloat
+        if let probeW = coordinator.probeResult?.primaryVideo?.width,
+           let probeH = coordinator.probeResult?.primaryVideo?.height,
+           probeW > 0, probeH > 0 {
+            videoWidth = CGFloat(probeW)
+            videoHeight = CGFloat(probeH)
+        } else if let presSize = playerController.player.currentItem?.presentationSize,
+                  presSize.width > 0, presSize.height > 0 {
+            videoWidth = presSize.width
+            videoHeight = presSize.height
+        } else {
+            return 0
+        }
+
+        let videoAspect = videoWidth / max(1.0, videoHeight)
+        let viewportAspect = viewportSize.width / max(1.0, viewportSize.height)
+
+        if viewportAspect < videoAspect {
+            let renderedVideoHeight = viewportSize.width / videoAspect
+            return max(0, (viewportSize.height - renderedVideoHeight) / 2.0)
+        }
+
+        return 0
     }
 
     // MARK: - Floating Controls Overlay (Native Liquid Glass)
@@ -576,6 +633,44 @@ public struct VideoPlayerView: View {
 
                 Spacer()
             }
+        }
+    }
+
+    // MARK: - General On-Screen Notification HUD View
+
+    @ViewBuilder
+    private var generalHUDView: some View {
+        if let msg = playerController.hudMessage {
+            VStack {
+                HStack(spacing: 8) {
+                    if let icon = playerController.hudIconName {
+                        Image(systemName: icon)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    Text(msg)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(Color(nsColor: .init(white: 0.12, alpha: 0.92)))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 4)
+                .padding(.top, (showControls || !playerController.isPlaying) ? 66 : 24)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(160)
+
+                Spacer()
+            }
+            .allowsHitTesting(false)
+            .animation(.spring(response: 0.28, dampingFraction: 0.8), value: playerController.hudMessage)
         }
     }
 

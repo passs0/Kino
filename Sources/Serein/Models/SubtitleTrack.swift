@@ -7,6 +7,23 @@ public enum SubtitlePosition: String, Sendable {
     case center
 }
 
+/// Placement strategy for subtitles when media does not fill the display aspect ratio.
+public enum SubtitlePlacement: String, CaseIterable, Identifiable, Sendable {
+    case letterbox = "letterbox"     // Sit according to display height (in letterbox bar)
+    case mediaFrame = "mediaFrame"   // Sit according to media height (inside video frame)
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .letterbox:
+            return "Display Height (In Letterbox Bar)"
+        case .mediaFrame:
+            return "Media Height (Inside Video)"
+        }
+    }
+}
+
 /// Individual subtitle cue containing start time, end time, plain text, and layout position.
 public struct SubtitleCue: Identifiable, Sendable {
     public let id = UUID()

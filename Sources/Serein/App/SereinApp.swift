@@ -65,6 +65,23 @@ public struct SereinApp: App {
                     PlayerController.shared.toggleMute()
                 }
                 .keyboardShortcut("m", modifiers: .command)
+
+                Divider()
+
+                Menu("Subtitle Placement") {
+                    Button("In Letterbox Bar (Display Height)") {
+                        SubtitleManager.shared.setPlacement(.letterbox)
+                    }
+                    Button("Inside Video (Media Height)") {
+                        SubtitleManager.shared.setPlacement(.mediaFrame)
+                    }
+
+                    Divider()
+
+                    Button("Toggle Subtitle Placement") {
+                        SubtitleManager.shared.togglePlacement()
+                    }
+                }
             }
 
             CommandGroup(after: .toolbar) {

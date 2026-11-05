@@ -16,6 +16,9 @@ public final class PlayerController: ObservableObject {
     @Published public private(set) var isBuffering: Bool = false
     @Published public var isPictureInPictureActive: Bool = false
     @Published public var resumeNotificationText: String? = nil
+    @Published public var hudMessage: String? = nil
+    @Published public var hudIconName: String? = nil
+    private var hudDismissTask: Task<Void, Never>?
 
     private var pendingResumeTime: Double? = nil
     private var lastSavedResumeTime: Double = 0
@@ -55,6 +58,23 @@ public final class PlayerController: ObservableObject {
 
     public func toggleLetterbox() {
         isLetterboxed.toggle()
+        let mode = isLetterboxed ? "Fit to Screen (Preserve Aspect)" : "Fill Screen (Crop)"
+        showHUD(message: "Video Aspect: \(mode)", iconName: "aspectratio")
+    }
+
+    /// Displays a transient, non-intrusive on-screen notification pill (HUD).
+    public func showHUD(message: String, iconName: String = "info.circle") {
+        hudDismissTask?.cancel()
+        hudMessage = message
+        hudIconName = iconName
+        hudDismissTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                self?.hudMessage = nil
+                self?.hudIconName = nil
+            }
+        }
     }
 
     private var timeObserverToken: Any?
