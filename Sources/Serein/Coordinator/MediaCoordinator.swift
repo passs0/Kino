@@ -340,27 +340,43 @@ public final class MediaCoordinator: ObservableObject {
                 self.activeStrategy = strategy
                 log("💡 Evaluated Online Strategy: [\(strategy.badgeLabel)]", level: .success)
 
+                if let masterPlaylist = extracted.hlsMasterPlaylist {
+                    state = .preparingStream("Connecting high-speed native HLS stream...")
+                    let streamURL = try ffmpegPipeline.startHLSProxySession(masterPlaylist: masterPlaylist)
+                    self.activePlayableURL = streamURL
+                    self.state = .ready(strategy)
+                    log("⚡️ Connected high-speed native HLS multi-variant stream to AVPlayer via local proxy.", level: .success)
+                    return
+                }
+
                 if extracted.isDirectlyPlayable && !extracted.needsPipedStream {
                     self.activePlayableURL = extracted.selectedStreamURL
                     self.state = .ready(strategy)
                     log("⚡️ Streaming direct progressive/HLS URL in AVPlayer.", level: .success)
-                } else {
-                    state = .preparingStream("Connecting online stream via yt-dlp & FFmpeg bridge...")
-                    log("⚙️ Routing stream through yt-dlp ➔ FFmpeg pipeline...", level: .info)
-                    let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL)
-                    self.activePlayableURL = streamURL
-                    self.state = .ready(strategy)
-                    log("✨ Online stream connected to AVPlayer via local bridge.", level: .success)
+                    return
                 }
+
+                state = .preparingStream("Connecting online stream via yt-dlp & FFmpeg bridge...")
+                log("⚙️ Routing stream through yt-dlp ➔ FFmpeg pipeline...", level: .info)
+                let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL)
+                self.activePlayableURL = streamURL
+                self.state = .ready(strategy)
+                log("✨ Online stream connected to AVPlayer via local bridge.", level: .success)
                 return
             } catch {
                 if case .ytDlpNotFound = (error as? YtDlpError) {
                     NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                    state = .error("yt-dlp is required for this URL. Please install it via Prerequisites.")
+                    return
                 }
                 if case .ffmpegNotFound = (error as? FFmpegPipelineError) {
                     NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
+                    state = .error("FFmpeg is required for this stream. Please install it via Prerequisites.")
+                    return
                 }
-                log("⚠️ yt-dlp note: \(error.localizedDescription). Proceeding with direct stream fallback.", level: .warning)
+                log("❌ Online video extraction error: \(error.localizedDescription)", level: .error)
+                state = .error("Failed to load online video: \(error.localizedDescription)")
+                return
             }
         }
 

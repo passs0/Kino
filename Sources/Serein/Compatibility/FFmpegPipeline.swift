@@ -189,6 +189,29 @@ public final class FFmpegPipeline: @unchecked Sendable {
         return playbackURL
     }
 
+    /// Serves a synthesized multi-variant HLS master playlist through the local HTTP server.
+    /// This connects directly to CDN nodes with full line speed, adaptive bitrate, zero CPU transcode overhead, and instant seeking.
+    public func startHLSProxySession(masterPlaylist: String) throws -> URL {
+        stop()
+
+        let sessionID = UUID().uuidString.prefix(8)
+        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("serein_hls_\(sessionID)")
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        } catch {
+            throw FFmpegPipelineError.sessionDirectoryCreationFailed
+        }
+        self.sessionDir = tempDir
+
+        let playlistFile = tempDir.appendingPathComponent("playlist.m3u8")
+        try masterPlaylist.write(to: playlistFile, atomically: true, encoding: .utf8)
+
+        let serverBaseURL = try streamingServer.start(serving: tempDir)
+        let playbackURL = serverBaseURL.appendingPathComponent("playlist.m3u8")
+        onLogLine?("⚡️ Local HLS manifest proxy ready at \(playbackURL.absoluteString)")
+        return playbackURL
+    }
+
     /// Pipes yt-dlp stdout directly into ffmpeg stdin to stream online sources without 403 Forbidden errors.
     public func startOnlinePipedSession(webURL: URL, seekTime: Double? = nil) async throws -> URL {
         stop()
@@ -228,8 +251,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "--merge-output-format", "mkv",
             "--no-playlist",
             "--no-part",
-            "--buffer-size", "64K"
+            "--buffer-size", "1M"
         ]
+
+        if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/deno") || FileManager.default.fileExists(atPath: "/opt/homebrew/bin/node") {
+            ytArgs.append(contentsOf: ["--js-runtimes", "deno:/opt/homebrew/bin/deno,node:/opt/homebrew/bin/node"])
+        }
 
         if let sTime = seekTime, sTime > 0.5 {
             ytArgs.append(contentsOf: ["--download-sections", "*\(Int(sTime))-inf"])

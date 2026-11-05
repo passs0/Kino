@@ -464,9 +464,11 @@ public struct VideoPlayerView: View {
                         playerController.volume = Float(newVal)
                     }
                 ),
-                trackHeight: 5.0,
-                thumbWidth: 32,
-                thumbHeight: 18,
+                trackHeight: 4.5,
+                idleThumbWidth: 18,
+                idleThumbHeight: 12,
+                activeThumbWidth: 34,
+                activeThumbHeight: 18,
                 onActivity: { registerUserActivity() }
             )
             .frame(width: 92)
@@ -857,11 +859,13 @@ struct TimelineScrubberShelf: View {
                 let bufferFraction = max(0.0, min(1.0, timeState.loadedDuration / maxDuration))
 
                 let isInteracting = isScrubberHovered || isDraggingScrubber
-                let baseThumbW: CGFloat = 28
-                let baseThumbH: CGFloat = 14
-                let scale: CGFloat = isInteracting ? 1.10 : 1.0
-                let thumbW = baseThumbW * scale
-                let thumbH = baseThumbH * scale
+                let idleThumbW: CGFloat = 16
+                let idleThumbH: CGFloat = 10
+                let activeThumbW: CGFloat = 30
+                let activeThumbH: CGFloat = 16
+
+                let thumbW = isInteracting ? activeThumbW : idleThumbW
+                let thumbH = isInteracting ? activeThumbH : idleThumbH
 
                 let thumbCenterX = thumbW / 2 + playedFraction * (width - thumbW)
 
@@ -882,50 +886,61 @@ struct TimelineScrubberShelf: View {
                             .fill(Color.white)
                             .frame(width: max(4.5, thumbCenterX), height: 4.5)
 
-                        // 4. True Apple Liquid Glass Thumb
+                        // 4. Apple Liquid Glass Thumb:
+                        // Solid white when idle, fluidly morphs into true optical Liquid Glass material on hover/drag
                         ZStack {
-                            // Volumetric Glass Body
+                            // A. IDLE STATE: Solid White Capsule Pill
                             Capsule()
-                                .fill(Color.white.opacity(0.12))
-                                .glassEffect(Glass.regular, in: Capsule())
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
+                                .opacity(isInteracting ? 0.0 : 1.0)
 
-                            // 3D Specular Rim
-                            Capsule()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        stops: [
-                                            .init(color: Color.white.opacity(0.85), location: 0.0),
-                                            .init(color: Color.white.opacity(0.25), location: 0.35),
-                                            .init(color: Color.black.opacity(0.35), location: 0.70),
-                                            .init(color: Color.white.opacity(0.20), location: 1.0)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 0.75
-                                )
+                            // B. INTERACTED STATE: True Apple Liquid Glass Capsule
+                            ZStack {
+                                // Volumetric Glass Body
+                                Capsule()
+                                    .fill(Color.white.opacity(0.12))
+                                    .glassEffect(Glass.regular, in: Capsule())
 
-                            // Upper Crescent Specular Glint
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(0.45),
-                                            Color.white.opacity(0.0)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .center
+                                // 3D Specular Rim
+                                Capsule()
+                                    .strokeBorder(
+                                        LinearGradient(
+                                            stops: [
+                                                .init(color: Color.white.opacity(0.85), location: 0.0),
+                                                .init(color: Color.white.opacity(0.25), location: 0.35),
+                                                .init(color: Color.black.opacity(0.35), location: 0.70),
+                                                .init(color: Color.white.opacity(0.20), location: 1.0)
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        ),
+                                        lineWidth: 0.75
                                     )
-                                )
-                                .frame(width: thumbW - 3, height: thumbH * 0.45)
-                                .offset(y: -thumbH * 0.24)
-                                .blur(radius: 0.5)
-                                .mask(Capsule().stroke(lineWidth: 1.5))
+
+                                // Upper Crescent Specular Glint
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.white.opacity(0.45),
+                                                Color.white.opacity(0.0)
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .center
+                                        )
+                                    )
+                                    .frame(width: max(4, activeThumbW - 3), height: activeThumbH * 0.45)
+                                    .offset(y: -activeThumbH * 0.24)
+                                    .blur(radius: 0.5)
+                                    .mask(Capsule().stroke(lineWidth: 1.5))
+                            }
+                            .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
+                            .opacity(isInteracting ? 1.0 : 0.0)
                         }
                         .frame(width: thumbW, height: thumbH)
-                        .shadow(color: Color.black.opacity(0.42), radius: 6, x: 0, y: 2.5)
                         .position(x: thumbCenterX, y: geo.size.height / 2)
-                        .animation(.spring(response: 0.28, dampingFraction: 0.70), value: isInteracting)
+                        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isInteracting)
 
                         // Floating Hover Tooltip
                         if isScrubberHovered && !isDraggingScrubber && width > 0 {

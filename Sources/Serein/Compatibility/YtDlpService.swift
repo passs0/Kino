@@ -46,6 +46,7 @@ public struct ExtractedMediaInfo: Sendable {
     public let needsPipedStream: Bool
     public let resolution: String?
     public let subtitles: [SubtitleTrack]
+    public let hlsMasterPlaylist: String?
 
     public var formattedDuration: String {
         guard let d = duration, d > 0 else { return "Live / Unknown" }
@@ -92,15 +93,20 @@ public final class YtDlpService: Sendable {
             throw YtDlpError.ytDlpNotFound
         }
 
-        let arguments = [
+        var arguments = [
             "-J",
             "--all-subs",
             "--no-check-certificates",
             "--skip-download",
             "--no-warnings",
-            "--no-playlist",
-            url.absoluteString
+            "--no-playlist"
         ]
+
+        if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/deno") || FileManager.default.fileExists(atPath: "/opt/homebrew/bin/node") {
+            arguments.append(contentsOf: ["--js-runtimes", "deno:/opt/homebrew/bin/deno,node:/opt/homebrew/bin/node"])
+        }
+
+        arguments.append(url.absoluteString)
 
         let result = try await ProcessRunner.run(executablePath: ytPath, arguments: arguments)
 
@@ -211,7 +217,7 @@ public final class YtDlpService: Sendable {
             }
         }
 
-        // Direct native HLS (.m3u8) streams from online hosts
+        // 1. Direct native HLS (.m3u8) streams from online hosts (e.g. direct playlist URL)
         if originalURL.pathExtension.lowercased() == "m3u8",
            let m3u8Format = parsedFormats.first(where: { $0.url?.absoluteString.contains(".m3u8") == true }) {
             return ExtractedMediaInfo(
@@ -227,17 +233,93 @@ public final class YtDlpService: Sendable {
                 needsTranscodeOrMux: false,
                 needsPipedStream: false,
                 resolution: m3u8Format.resolution,
-                subtitles: parsedSubtitles
+                subtitles: parsedSubtitles,
+                hlsMasterPlaylist: nil
             )
         }
 
-        // For online media streaming platforms:
-        // Direct media links to CDN nodes (e.g. googlevideo, akamai, etc.) return HTTP 403 Forbidden
-        // when accessed directly by AVPlayer without authentication cookies or client headers.
-        // Piping yt-dlp stdout directly into FFmpeg HLS segmentation provides:
-        // 1. Zero HTTP 403 errors (yt-dlp authenticates with the platform).
-        // 2. Highest available resolution (1080p/4K) merged with authentic original audio.
-        // 3. Apple Silicon VideoToolbox real-time encoding with 0 stalls.
+        // 2. Multi-variant HLS formats available (YouTube, Vimeo, Twitch, etc.)
+        // By compiling a master playlist combining native Apple-compatible AVC/H.264 video variants
+        // and native AAC audio tracks, AVPlayer can stream directly from CDN nodes with full line speed,
+        // adaptive bitrate, zero CPU transcode overhead, and instant timeline scrubbing anywhere.
+        var videoVariants: [(width: Int, height: Int, bandwidth: Int, vcodec: String, url: URL)] = []
+        var audioVariants: [(id: String, name: String, language: String?, isDefault: Bool, url: URL)] = []
+
+        if let rawFormats = json["formats"] as? [[String: Any]] {
+            for item in rawFormats {
+                guard let proto = item["protocol"] as? String, proto.contains("m3u8"),
+                      let urlStr = item["url"] as? String,
+                      let streamURL = URL(string: urlStr) else { continue }
+
+                let vcodec = item["vcodec"] as? String ?? "none"
+                let acodec = item["acodec"] as? String ?? "none"
+                let fId = item["format_id"] as? String ?? ""
+
+                // Apple-compatible H.264 / AVC or HEVC video stream
+                if vcodec != "none" && (vcodec.contains("avc") || vcodec.contains("h264") || vcodec.contains("hev")) {
+                    let w = item["width"] as? Int ?? 1920
+                    let h = item["height"] as? Int ?? 1080
+                    let tbr = item["tbr"] as? Double ?? 2500.0
+                    let bw = Int(tbr * 1000)
+                    // Avoid duplicate resolution entries
+                    if !videoVariants.contains(where: { $0.height == h }) {
+                        videoVariants.append((width: w, height: h, bandwidth: bw, vcodec: vcodec, url: streamURL))
+                    }
+                } else if vcodec == "none" || (acodec != "none" && !acodec.isEmpty) {
+                    let lang = item["language"] as? String
+                    let note = item["format_note"] as? String ?? ""
+                    let isOriginal = note.lowercased().contains("original") || lang == "en-US" || lang == "en"
+                    let name = note.isEmpty ? (lang ?? "Audio") : note
+                    // Filter duplicates by URL
+                    if !audioVariants.contains(where: { $0.url == streamURL }) {
+                        audioVariants.append((id: fId, name: name, language: lang, isDefault: isOriginal, url: streamURL))
+                    }
+                }
+            }
+        }
+
+        if !videoVariants.isEmpty && !audioVariants.isEmpty {
+            // Ensure at least one audio track is default
+            if !audioVariants.contains(where: { $0.isDefault }) {
+                let first = audioVariants[0]
+                audioVariants[0] = (id: first.id, name: first.name, language: first.language, isDefault: true, url: first.url)
+            }
+
+            // Sort video tracks highest resolution to lowest
+            videoVariants.sort { $0.height > $1.height }
+
+            var m3u8 = "#EXTM3U\n#EXT-X-VERSION:4\n#EXT-X-INDEPENDENT-SEGMENTS\n\n"
+            for a in audioVariants {
+                let defStr = a.isDefault ? "YES" : "NO"
+                let langStr = a.language != nil ? ",LANGUAGE=\"\(a.language!)\"" : ""
+                m3u8 += "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"\(a.name)\",DEFAULT=\(defStr),AUTOSELECT=YES\(langStr),URI=\"\(a.url.absoluteString)\"\n"
+            }
+            m3u8 += "\n"
+            for v in videoVariants {
+                m3u8 += "#EXT-X-STREAM-INF:BANDWIDTH=\(v.bandwidth),RESOLUTION=\(v.width)x\(v.height),CODECS=\"\(v.vcodec),mp4a.40.2\",AUDIO=\"audio\"\n"
+                m3u8 += "\(v.url.absoluteString)\n"
+            }
+
+            let topRes = videoVariants.first.map { "\($0.width)x\($0.height)" } ?? "1080p HD"
+            return ExtractedMediaInfo(
+                id: id,
+                title: title,
+                uploader: uploader,
+                duration: duration,
+                thumbnailURL: thumbURL,
+                webpageURL: originalURL,
+                formats: parsedFormats,
+                selectedStreamURL: originalURL,
+                isDirectlyPlayable: true,
+                needsTranscodeOrMux: false,
+                needsPipedStream: false,
+                resolution: topRes,
+                subtitles: parsedSubtitles,
+                hlsMasterPlaylist: m3u8
+            )
+        }
+
+        // 3. For online platforms requiring piped streaming or remuxing:
         return ExtractedMediaInfo(
             id: id,
             title: title,
@@ -251,7 +333,8 @@ public final class YtDlpService: Sendable {
             needsTranscodeOrMux: true,
             needsPipedStream: true,
             resolution: json["resolution"] as? String ?? "Best Available (HD)",
-            subtitles: parsedSubtitles
+            subtitles: parsedSubtitles,
+            hlsMasterPlaylist: nil
         )
     }
 }
