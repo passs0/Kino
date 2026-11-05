@@ -12,7 +12,11 @@ public final class PlayerController: ObservableObject {
     public let player = AVPlayer()
     public weak var activePlayerNSView: SereinPlayerNSView?
 
-    @Published public private(set) var isPlaying: Bool = false
+    @Published public private(set) var isPlaying: Bool = false {
+        didSet {
+            SleepPreventionManager.shared.setSleepDisabled(isPlaying)
+        }
+    }
     @Published public private(set) var isBuffering: Bool = false
     @Published public var isPictureInPictureActive: Bool = false
     @Published public var resumeNotificationText: String? = nil
@@ -92,6 +96,7 @@ public final class PlayerController: ObservableObject {
     private var itemLoadedRangesObserver: NSKeyValueObservation?
     private var itemBufferObserver: NSKeyValueObservation?
     private var itemKeepUpObserver: NSKeyValueObservation?
+    private var itemEndObserver: NSObjectProtocol?
     private var legibleOutput: AVPlayerItemLegibleOutput?
     private lazy var legibleDelegateBridge = LegibleOutputBridge { [weak self] text in
         Task { @MainActor [weak self] in
@@ -492,9 +497,24 @@ public final class PlayerController: ObservableObject {
                 }
             }
         }
+
+        itemEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.isPlaying = false
+            }
+        }
     }
 
     private func cleanupItemObservers() {
+        if let obs = itemEndObserver {
+            NotificationCenter.default.removeObserver(obs)
+            itemEndObserver = nil
+        }
         if let output = legibleOutput, let currentItem = player.currentItem {
             currentItem.remove(output)
         }
