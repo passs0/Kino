@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import AVKit
 import Combine
+import SwiftUI
 
 /// Controller managing the AVPlayer instance, playback state, seeking, and metrics.
 @MainActor
@@ -14,6 +15,11 @@ public final class PlayerController: ObservableObject {
     @Published public private(set) var isPlaying: Bool = false
     @Published public private(set) var isBuffering: Bool = false
     @Published public var isPictureInPictureActive: Bool = false
+    @Published public var resumeNotificationText: String? = nil
+
+    private var pendingResumeTime: Double? = nil
+    private var lastSavedResumeTime: Double = 0
+    private var resumeToastTask: Task<Void, Never>?
 
     public var currentTime: Double {
         get { PlayerTimeState.shared.currentTime }
@@ -77,12 +83,22 @@ public final class PlayerController: ObservableObject {
 
     public func load(url: URL, expectedDuration: Double? = nil) {
         cleanupItemObservers()
+        resumeToastTask?.cancel()
+        resumeNotificationText = nil
         player.volume = 0
         player.pause()
 
         PlayerTimeState.shared.reset()
         if let exp = expectedDuration, exp > 0 {
             PlayerTimeState.shared.duration = exp
+        }
+
+        // Check if there is a saved resume position for this media source
+        if let src = MediaCoordinator.shared.currentSource,
+           let saved = PlaybackResumeManager.shared.savedPosition(for: src) {
+            self.pendingResumeTime = saved
+        } else {
+            self.pendingResumeTime = nil
         }
 
         let item = AVPlayerItem(url: url)
@@ -113,6 +129,13 @@ public final class PlayerController: ObservableObject {
     public func pause() {
         player.pause()
         isPlaying = false
+        if let src = MediaCoordinator.shared.currentSource {
+            PlaybackResumeManager.shared.savePosition(
+                PlayerTimeState.shared.currentTime,
+                duration: PlayerTimeState.shared.duration,
+                for: src
+            )
+        }
     }
 
     public func togglePlayPause() {
@@ -168,6 +191,13 @@ public final class PlayerController: ObservableObject {
 
     /// Smoothly fades out audio to zero before pausing and tearing down the player item to prevent CoreAudio clicks/pops on quit.
     public func shutdownAudioCleanly() async {
+        if let src = MediaCoordinator.shared.currentSource {
+            PlaybackResumeManager.shared.savePosition(
+                PlayerTimeState.shared.currentTime,
+                duration: PlayerTimeState.shared.duration,
+                for: src
+            )
+        }
         let startVol = player.volume
         if isPlaying && !isMuted && startVol > 0 {
             let steps = 5
@@ -192,11 +222,22 @@ public final class PlayerController: ObservableObject {
         let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             Task { @MainActor [weak self] in
-                guard self != nil else { return }
+                guard let self = self else { return }
                 let sec = CMTimeGetSeconds(time)
                 if sec.isFinite && !sec.isNaN {
                     PlayerTimeState.shared.currentTime = sec
                     SubtitleManager.shared.updateTime(sec)
+
+                    // Throttle saving playback position every 2.5 seconds
+                    if abs(sec - self.lastSavedResumeTime) >= 2.5,
+                       let src = MediaCoordinator.shared.currentSource {
+                        self.lastSavedResumeTime = sec
+                        PlaybackResumeManager.shared.savePosition(
+                            sec,
+                            duration: PlayerTimeState.shared.duration,
+                            for: src
+                        )
+                    }
                 }
             }
         }
@@ -220,6 +261,35 @@ public final class PlayerController: ObservableObject {
                     }
                     self.isBuffering = false
                     self.syncNativeSubtitleSelection(for: SubtitleManager.shared.selectedTrack)
+                    self.syncNativeAudioSelection(for: AudioManager.shared.selectedTrack)
+
+                    // Auto-discover native audio tracks if not already detected by FFprobe
+                    Task { @MainActor in
+                        if AudioManager.shared.availableTracks.isEmpty,
+                           let group = try? await observedItem.asset.loadMediaSelectionGroup(for: .audible) {
+                            let tracks = group.options.enumerated().map { (idx, opt) -> AudioTrack in
+                                let lang = opt.extendedLanguageTag ?? opt.locale?.language.languageCode?.identifier
+                                return AudioTrack(
+                                    id: "native_audio_\(idx)",
+                                    streamIndex: idx,
+                                    name: opt.displayName,
+                                    languageCode: lang,
+                                    isDefault: opt == group.defaultOption
+                                )
+                            }
+                            if !tracks.isEmpty {
+                                AudioManager.shared.setAvailableTracks(tracks)
+                            }
+                        }
+                    }
+
+                    // Perform auto-resume if saved position exists (> 4s)
+                    if let resumeSec = self.pendingResumeTime, resumeSec > 4.0 {
+                        self.pendingResumeTime = nil
+                        self.seek(to: resumeSec)
+                        self.showResumeToast(time: resumeSec)
+                    }
+
                     if self.isPlaying {
                         self.player.play()
                         self.player.rate = self.playbackRate
@@ -331,6 +401,68 @@ public final class PlayerController: ObservableObject {
                 item.select(def, in: group)
             }
         }
+    }
+
+    /// Synchronizes AVPlayerItem's native audible media selection group with AudioManager's selected track.
+    public func syncNativeAudioSelection(for track: AudioTrack?) {
+        guard let item = player.currentItem else { return }
+        Task { @MainActor in
+            guard let group = try? await item.asset.loadMediaSelectionGroup(for: .audible) else { return }
+            let options = group.options
+            guard !options.isEmpty else { return }
+
+            if let track = track {
+                if let lang = track.languageCode?.lowercased() {
+                    if let matched = options.first(where: {
+                        let optLang = $0.extendedLanguageTag?.lowercased() ?? $0.locale?.language.languageCode?.identifier.lowercased() ?? ""
+                        return optLang == lang || optLang.hasPrefix(lang) || lang.hasPrefix(optLang)
+                    }) {
+                        item.select(matched, in: group)
+                        return
+                    }
+                }
+                if let matchedByName = options.first(where: {
+                    $0.displayName.localizedCaseInsensitiveContains(track.name) ||
+                    track.name.localizedCaseInsensitiveContains($0.displayName)
+                }) {
+                    item.select(matchedByName, in: group)
+                    return
+                }
+            }
+
+            if let def = group.defaultOption ?? options.first {
+                item.select(def, in: group)
+            }
+        }
+    }
+
+    /// Shows a transient macOS notification toast indicating auto-resume from a saved position.
+    public func showResumeToast(time: Double) {
+        let formatted = formatSeconds(time)
+        resumeNotificationText = "Resumed from \(formatted)"
+
+        resumeToastTask?.cancel()
+        resumeToastTask = Task {
+            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    self.resumeNotificationText = nil
+                }
+            }
+        }
+    }
+
+    /// Re-starts playback from the very beginning and clears the saved position.
+    public func restartFromBeginning() {
+        resumeToastTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            resumeNotificationText = nil
+        }
+        if let src = MediaCoordinator.shared.currentSource {
+            PlaybackResumeManager.shared.clearPosition(for: src)
+        }
+        seek(to: 0)
     }
 
     // MARK: - Formatted Strings

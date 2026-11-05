@@ -63,7 +63,33 @@ public final class OptionsMenuPresenter: NSObject {
         subsItem.submenu = subsMenu
         menu.addItem(subsItem)
 
-        // 2. Playback Speed Submenu
+        // 2. Audio Track Submenu
+        let audioItem = NSMenuItem(title: "Audio Track", action: nil, keyEquivalent: "")
+        let audioMenu = NSMenu(title: "Audio Track")
+        audioMenu.autoenablesItems = false
+
+        let audioTracks = AudioManager.shared.availableTracks
+        let currentAudio = AudioManager.shared.selectedTrack
+
+        if !audioTracks.isEmpty {
+            for track in audioTracks {
+                let item = NSMenuItem(title: track.name, action: #selector(handleSelectAudioTrack(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = track
+                item.state = (currentAudio?.id == track.id) ? .on : .off
+                audioMenu.addItem(item)
+            }
+        } else {
+            let defaultItem = NSMenuItem(title: "Default Audio", action: nil, keyEquivalent: "")
+            defaultItem.isEnabled = false
+            defaultItem.state = .on
+            audioMenu.addItem(defaultItem)
+        }
+
+        audioItem.submenu = audioMenu
+        menu.addItem(audioItem)
+
+        // 3. Playback Speed Submenu
         let speedItem = NSMenuItem(title: "Playback Speed", action: nil, keyEquivalent: "")
         let speedMenu = NSMenu(title: "Playback Speed")
         speedMenu.autoenablesItems = false
@@ -143,6 +169,12 @@ public final class OptionsMenuPresenter: NSObject {
     @objc private func handleSelectTrack(_ sender: NSMenuItem) {
         if let track = sender.representedObject as? SubtitleTrack {
             SubtitleManager.shared.selectTrack(track)
+        }
+    }
+
+    @objc private func handleSelectAudioTrack(_ sender: NSMenuItem) {
+        if let track = sender.representedObject as? AudioTrack {
+            AudioManager.shared.selectTrack(track)
         }
     }
 

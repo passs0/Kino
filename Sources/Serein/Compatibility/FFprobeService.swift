@@ -74,7 +74,9 @@ public final class FFprobeService: Sendable {
 
         if !url.isFileURL {
             arguments.append(contentsOf: [
-                "-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+                "-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+                "-analyzeduration", "5000000",
+                "-probesize", "5000000"
             ])
         }
 

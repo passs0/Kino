@@ -56,7 +56,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
     }
 
     /// Prepares and starts the FFmpeg streaming session, returning the local playback URL.
-    public func startSession(inputURL: URL, mode: PipelineMode) async throws -> URL {
+    public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil) async throws -> URL {
         stop()
 
         guard let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else {
@@ -84,12 +84,18 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-y"
         ]
 
+        if let sTime = seekTime, sTime > 0.5 {
+            args.append(contentsOf: ["-ss", String(format: "%.2f", sTime)])
+        }
+
         if !inputURL.isFileURL {
             args.append(contentsOf: [
                 "-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
                 "-reconnect", "1",
                 "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "5"
+                "-reconnect_delay_max", "5",
+                "-analyzeduration", "10000000",
+                "-probesize", "10000000"
             ])
         }
 
@@ -97,24 +103,28 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-i", inputURL.isFileURL ? inputURL.path : inputURL.absoluteString
         ])
 
+        let audioMap = (audioStreamIndex != nil) ? "0:\(audioStreamIndex!)" : "0:a:0?"
+
         switch mode {
         case .remuxCopy:
-            // Zero video re-encoding: stream copy video, ensure clean compliant HLS AAC audio
+            // Zero video re-encoding: stream copy video, ensure clean compliant HLS AAC audio with stereo downmix
             args.append(contentsOf: [
                 "-map", "0:v:0?",
-                "-map", "0:a:0?",
+                "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-b:a", "192k",
+                "-ac", "2",
+                "-b:a", "256k",
                 "-ar", "48000"
             ])
         case .audioTranscodeOnly:
-            // Copy H.264 video stream, re-encode audio to AAC
+            // Copy H.264 video stream, re-encode audio to AAC stereo
             args.append(contentsOf: [
                 "-map", "0:v:0?",
-                "-map", "0:a:0?",
+                "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
+                "-ac", "2",
                 "-b:a", "256k",
                 "-ar", "48000"
             ])
@@ -123,11 +133,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             // AVPlayer strictly requires H.264 (AVC) in MPEG-TS segments; HEVC/VP9 in .ts are dropped by AVKit.
             args.append(contentsOf: [
                 "-map", "0:v:0?",
-                "-map", "0:a:0?",
+                "-map", audioMap,
                 "-c:v", "h264_videotoolbox",
                 "-pix_fmt", "yuv420p",
                 "-b:v", "4500k",
                 "-c:a", "aac",
+                "-ac", "2",
                 "-b:a", "256k",
                 "-ar", "48000"
             ])
@@ -161,7 +172,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         // Wait until playlist.m3u8 exists and has at least one segment
-        let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: 6.0)
+        let timeoutSec: Double = inputURL.isFileURL ? 8.0 : 16.0
+        let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: timeoutSec)
         guard ready else {
             stop()
             throw FFmpegPipelineError.timedOutWaitingForPlaylist
@@ -234,7 +246,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-maxrate", "6500k",
             "-bufsize", "8000k",
             "-c:a", "aac",
-            "-b:a", "192k",
+            "-ac", "2",
+            "-b:a", "256k",
             "-ar", "48000",
             "-f", "hls",
             "-hls_time", "2",

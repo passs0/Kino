@@ -14,9 +14,10 @@ public struct MainWindowView: View {
 
     public var body: some View {
         ZStack(alignment: .center) {
-            // Solid native macOS window background
-            Color(NSColor.windowBackgroundColor)
+            // Solid native macOS window background for idle, cinematic black for loading & playback
+            (coordinator.state == .idle ? Color(NSColor.windowBackgroundColor) : Color.black)
                 .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.25), value: coordinator.state == .idle)
 
             // Centered video canvas / welcome screen
             VideoPlayerView(
@@ -46,7 +47,7 @@ public struct MainWindowView: View {
             }
         }
         .frame(minWidth: 480, idealWidth: 540, minHeight: 300, idealHeight: 340)
-        .background(WindowGlassAccessor())
+        .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
         .sheet(isPresented: $showURLSheet) {
             URLInputSheet(coordinator: coordinator)
         }
@@ -87,12 +88,18 @@ public struct MainWindowView: View {
 
 /// Helper that configures the parent NSWindow for native window background and insets traffic lights.
 private struct WindowGlassAccessor: NSViewRepresentable {
+    var isIdle: Bool
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
-            guard let window = view.window else { return }
+            guard let window = nsView.window else { return }
             window.isOpaque = true
-            window.backgroundColor = .windowBackgroundColor
+            window.backgroundColor = isIdle ? .windowBackgroundColor : .black
             window.hasShadow = true
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
@@ -113,8 +120,5 @@ private struct WindowGlassAccessor: NSViewRepresentable {
                 }
             }
         }
-        return view
     }
-
-    func updateNSView(_ nsView: NSView, context: Context) {}
 }

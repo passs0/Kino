@@ -91,4 +91,13 @@ public enum PlaybackStrategy: Hashable, Sendable {
         case .onlineTranscode(let url, _, _, _): return url
         }
     }
+
+    public var isDirectNative: Bool {
+        switch self {
+        case .directNative, .onlineDirect:
+            return true
+        default:
+            return false
+        }
+    }
 }

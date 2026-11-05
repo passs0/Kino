@@ -136,6 +136,9 @@ public struct VideoPlayerView: View {
                     .allowsHitTesting(showControls || !playerController.isPlaying)
                     .opacity(showControls || !playerController.isPlaying ? 1 : 0)
                     .animation(.easeInOut(duration: 0.22), value: showControls || !playerController.isPlaying)
+
+                // Layer 5: Resume From Timestamp Toast Banner
+                resumeToastView
             }
             .contentShape(Rectangle())
             .onContinuousHover { phase in
@@ -516,46 +519,137 @@ public struct VideoPlayerView: View {
         registerUserActivity()
     }
 
-    // MARK: - Loading View
+    // MARK: - Resume Toast View
 
-    private func loadingView(message: String) -> some View {
-        VStack(spacing: 14) {
-            ProgressView()
-                .progressViewStyle(.circular)
-                .scaleEffect(1.1)
+    @ViewBuilder
+    private var resumeToastView: some View {
+        if let resumeText = playerController.resumeNotificationText {
+            VStack {
+                HStack(spacing: 9) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
 
-            Text(message)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white)
-        }
-        .padding(24)
-        .glassEffect(Glass.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
+                    Text(resumeText)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
 
-    // MARK: - Error View
+                    Button(action: {
+                        playerController.restartFromBeginning()
+                    }) {
+                        Text("Restart")
+                            .font(.system(size: 12.5, weight: .bold))
+                            .foregroundColor(Color.cyan)
+                            .underline()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 2)
 
-    private func errorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(.orange)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            playerController.resumeNotificationText = nil
+                        }
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white.opacity(0.75))
+                            .padding(4)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(Color(nsColor: .init(white: 0.12, alpha: 0.90)))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 4)
+                .padding(.top, (showControls || !playerController.isPlaying) ? 66 : 24)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(150)
 
-            Text(message)
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.85))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
-
-            HStack(spacing: 12) {
-                Button("Choose File", action: onOpenFile)
-                    .buttonStyle(LiquidCapsuleButtonStyle(isProminent: true))
-
-                Button("Open URL", action: onOpenURL)
-                    .buttonStyle(LiquidCapsuleButtonStyle())
+                Spacer()
             }
         }
-        .padding(28)
-        .glassEffect(Glass.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    // MARK: - Loading View (Always Cinematic Dark with High-Contrast Typography)
+
+    private func loadingView(message: String) -> some View {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .scaleEffect(1.15)
+                    .colorInvert() // Guarantees bright white spinner against dark glass
+
+                Text(message)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 22)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(nsColor: .init(white: 0.14, alpha: 0.88)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.50), radius: 20, x: 0, y: 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.ignoresSafeArea())
+    }
+
+    // MARK: - Error View (Always Cinematic Dark)
+
+    private func errorView(message: String) -> some View {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.orange)
+
+                Text(message)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white.opacity(0.92))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
+
+                HStack(spacing: 12) {
+                    Button("Choose File", action: onOpenFile)
+                        .buttonStyle(LiquidCapsuleButtonStyle(isProminent: true))
+
+                    Button("Open URL", action: onOpenURL)
+                        .buttonStyle(LiquidCapsuleButtonStyle())
+                }
+            }
+            .padding(28)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(nsColor: .init(white: 0.14, alpha: 0.90)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.50), radius: 20, x: 0, y: 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.ignoresSafeArea())
     }
 
     // MARK: - Minimalist Idle State (Centered Native Window Background + Apple Minimalism)

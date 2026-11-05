@@ -75,6 +75,10 @@ public struct MediaProbeResult: Hashable, Sendable {
         streams.first { $0.kind == .audio }
     }
 
+    public var audioStreams: [MediaStream] {
+        streams.filter { $0.kind == .audio }
+    }
+
     public var subtitles: [MediaStream] {
         streams.filter { $0.kind == .subtitle }
     }

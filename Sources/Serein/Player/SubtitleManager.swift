@@ -192,7 +192,7 @@ public final class SubtitleManager: ObservableObject {
         } else {
             // Progressive stdout streaming extraction for remote HTTP streams (PikPak, cloud drives, MKV/MP4 over HTTP)
             downloadTask = Task.detached(priority: .utility) { [weak self] in
-                guard let ffmpegPath = await ToolLocator.shared.path(for: "ffmpeg") else { return }
+                guard let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else { return }
 
                 var args: [String] = [
                     "-nostdin", "-y",

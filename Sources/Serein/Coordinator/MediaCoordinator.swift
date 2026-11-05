@@ -97,6 +97,7 @@ public final class MediaCoordinator: ObservableObject {
         loadTask?.cancel()
         ffmpegPipeline.stop()
         pipelineStats = nil
+        AudioManager.shared.reset()
 
         currentSource = source
         probeResult = nil
@@ -175,6 +176,33 @@ public final class MediaCoordinator: ObservableObject {
                 if !localSubTracks.isEmpty {
                     log("💬 Detected \(localSubTracks.count) subtitle tracks in container.", level: .info)
                 }
+
+                // Populate Audio Tracks
+                let localAudioTracks = p.audioStreams.map { a -> AudioTrack in
+                    let lang = a.language
+                    let langDisplay = lang != nil ? (Locale.current.localizedString(forLanguageCode: lang!) ?? lang!.uppercased()) : nil
+                    let title = a.title
+                    var name = title ?? langDisplay ?? "Track \(a.index)"
+                    if let ch = a.channels {
+                        let chStr = ch == 1 ? "Mono" : (ch == 2 ? "Stereo" : (ch == 6 ? "5.1 Surround" : (ch == 8 ? "7.1 Surround" : "\(ch) ch")))
+                        name += " (\(chStr))"
+                    }
+                    return AudioTrack(
+                        id: "audio_\(a.index)",
+                        streamIndex: a.index,
+                        name: name,
+                        languageCode: lang,
+                        codecName: a.codecName,
+                        channels: a.channels,
+                        channelLayout: a.channelLayout,
+                        sampleRate: a.sampleRate,
+                        isDefault: a.isDefault
+                    )
+                }
+                AudioManager.shared.setAvailableTracks(localAudioTracks)
+                if !localAudioTracks.isEmpty {
+                    log("🔊 Detected \(localAudioTracks.count) audio track(s) in container.", level: .info)
+                }
             }
         } catch {
             log("⚠️ FFprobe inspection warning: \(error.localizedDescription). Proceeding with extension heuristics.", level: .warning)
@@ -185,6 +213,8 @@ public final class MediaCoordinator: ObservableObject {
         self.activeStrategy = strategy
         log("💡 Evaluated Strategy: [\(strategy.badgeLabel)] - \(strategy.strategyTitle)", level: .success)
         log("ℹ️ Rationale: \(strategy.explanation)", level: .info)
+
+        let selectedAudioIndex = AudioManager.shared.selectedTrack?.streamIndex
 
         // Execute Strategy
         switch strategy {
@@ -197,7 +227,7 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Fast Remuxing into local stream...")
             log("⚙️ Starting zero-reencode HLS remux pipeline...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Live remux stream connected to AVPlayer.", level: .success)
@@ -213,7 +243,7 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Transcoding audio track to AAC...")
             log("⚙️ Starting video-copy + AAC audio transcode pipeline...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Audio transcode stream connected to AVPlayer.", level: .success)
@@ -229,7 +259,7 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Transcoding video via VideoToolbox HW encoder...")
             log("⚙️ Starting Apple Silicon VideoToolbox hardware transcode...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Hardware transcode stream connected to AVPlayer.", level: .success)
@@ -264,6 +294,11 @@ public final class MediaCoordinator: ObservableObject {
         }
 
         if path.contains("/download") || path.contains("/file/") || path.contains("/stream") || path.contains("/raw") || query.contains("download") {
+            return true
+        }
+
+        // Online streams without a file extension should be routed directly to the media engine pipeline
+        if url.pathExtension.isEmpty {
             return true
         }
 
@@ -367,6 +402,33 @@ public final class MediaCoordinator: ObservableObject {
                 if !localSubTracks.isEmpty {
                     log("💬 Loaded \(localSubTracks.count) subtitle tracks in online stream.", level: .info)
                 }
+
+                // Populate Audio Tracks for online stream
+                let onlineAudioTracks = p.audioStreams.map { a -> AudioTrack in
+                    let lang = a.language
+                    let langDisplay = lang != nil ? (Locale.current.localizedString(forLanguageCode: lang!) ?? lang!.uppercased()) : nil
+                    let title = a.title
+                    var name = title ?? langDisplay ?? "Track \(a.index)"
+                    if let ch = a.channels {
+                        let chStr = ch == 1 ? "Mono" : (ch == 2 ? "Stereo" : (ch == 6 ? "5.1 Surround" : (ch == 8 ? "7.1 Surround" : "\(ch) ch")))
+                        name += " (\(chStr))"
+                    }
+                    return AudioTrack(
+                        id: "audio_\(a.index)",
+                        streamIndex: a.index,
+                        name: name,
+                        languageCode: lang,
+                        codecName: a.codecName,
+                        channels: a.channels,
+                        channelLayout: a.channelLayout,
+                        sampleRate: a.sampleRate,
+                        isDefault: a.isDefault
+                    )
+                }
+                AudioManager.shared.setAvailableTracks(onlineAudioTracks)
+                if !onlineAudioTracks.isEmpty {
+                    log("🔊 Loaded \(onlineAudioTracks.count) audio track(s) in online stream.", level: .info)
+                }
             }
         } catch {
             log("⚠️ FFprobe remote note: \(error.localizedDescription). Attempting direct playback heuristics.", level: .warning)
@@ -375,6 +437,8 @@ public final class MediaCoordinator: ObservableObject {
         let strategy = CompatibilityMatrix.evaluate(source: .online(url: webURL, originalInput: originalInput), probe: probe, onlineInfo: nil)
         self.activeStrategy = strategy
         log("💡 Evaluated Direct Strategy: [\(strategy.badgeLabel)] - \(strategy.strategyTitle)", level: .success)
+
+        let selectedAudioIndex = AudioManager.shared.selectedTrack?.streamIndex
 
         switch strategy {
         case .directNative, .onlineDirect:
@@ -386,42 +450,102 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Remuxing online container into local stream...")
             log("⚙️ Starting zero-reencode HLS remux pipeline for online stream...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Live online remux stream connected to AVPlayer.", level: .success)
             } catch {
-                log("⚠️ Remux pipeline failed: \(error.localizedDescription). Falling back to direct AVPlayer stream.", level: .warning)
-                self.activePlayableURL = webURL
-                self.state = .ready(.directNative(playableURL: webURL, reason: "Direct progressive stream fallback."))
+                log("⚠️ Remux pipeline note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
+                do {
+                    state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
+                    let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                    self.activePlayableURL = streamURL
+                    self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
+                    log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
+                } catch {
+                    log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
+                    state = .error("Stream pipeline failed: \(error.localizedDescription)")
+                }
             }
 
         case .audioTranscodeOnly(let inputURL, _, _):
             state = .preparingStream("Transcoding online audio track to AAC...")
             log("⚙️ Starting online video-copy + AAC transcode pipeline...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Online audio transcode stream connected to AVPlayer.", level: .success)
             } catch {
-                log("⚠️ Audio transcode failed: \(error.localizedDescription). Falling back to direct stream.", level: .warning)
-                self.activePlayableURL = webURL
-                self.state = .ready(.directNative(playableURL: webURL, reason: "Direct progressive stream fallback."))
+                log("⚠️ Audio transcode note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
+                do {
+                    state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
+                    let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                    self.activePlayableURL = streamURL
+                    self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
+                    log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
+                } catch {
+                    log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
+                    state = .error("Stream pipeline failed: \(error.localizedDescription)")
+                }
             }
 
         case .fullTranscode(let inputURL, _, _), .onlineTranscode(let inputURL, _, _, _):
             state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
             log("⚙️ Starting Apple Silicon VideoToolbox hardware transcode for online stream...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
             } catch {
-                log("⚠️ Transcode failed: \(error.localizedDescription). Falling back to direct stream.", level: .warning)
-                self.activePlayableURL = webURL
-                self.state = .ready(.directNative(playableURL: webURL, reason: "Direct progressive stream fallback."))
+                log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
+                state = .error("Hardware transcode failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Switches the active audio track for the current stream in real-time.
+    public func switchAudioTrack(to track: AudioTrack) async {
+        guard let source = currentSource else { return }
+        let currentSec = PlayerController.shared.currentTime
+        log("🔊 Switching audio track to '\(track.name)' (Stream #\(track.streamIndex)) at \(PlayerController.shared.formattedCurrentTime)", level: .info)
+
+        switch source {
+        case .local(let fileURL):
+            do {
+                let mode: PipelineMode
+                switch activeStrategy {
+                case .audioTranscodeOnly:
+                    mode = .audioTranscodeOnly
+                case .fullTranscode:
+                    mode = .fullHardwareTranscode
+                default:
+                    mode = .remuxCopy
+                }
+                let streamURL = try await ffmpegPipeline.startSession(
+                    inputURL: fileURL,
+                    mode: mode,
+                    audioStreamIndex: track.streamIndex,
+                    seekTime: currentSec
+                )
+                self.activePlayableURL = streamURL
+                log("✨ Audio track switched successfully.", level: .success)
+            } catch {
+                log("❌ Failed to switch audio track: \(error.localizedDescription)", level: .error)
+            }
+        case .online(let webURL, _):
+            do {
+                let streamURL = try await ffmpegPipeline.startSession(
+                    inputURL: webURL,
+                    mode: .remuxCopy,
+                    audioStreamIndex: track.streamIndex,
+                    seekTime: currentSec
+                )
+                self.activePlayableURL = streamURL
+                log("✨ Online audio track switched successfully.", level: .success)
+            } catch {
+                log("❌ Failed to switch online audio track: \(error.localizedDescription)", level: .error)
             }
         }
     }
@@ -433,6 +557,7 @@ public final class MediaCoordinator: ObservableObject {
         activePlayableURL = nil
         activeStrategy = nil
         SubtitleManager.shared.reset()
+        AudioManager.shared.reset()
         state = .idle
         log("Playback stopped and pipelines dismantled.", level: .info)
     }

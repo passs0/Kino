@@ -28,17 +28,32 @@ public struct CompatibilityMatrix: Sendable {
             }
         }
 
-        // Local file evaluation
         let rawURL = source.rawURL
+
+        // Streams or files without a file extension cannot be safely opened or demuxed by AVPlayer.
+        // Force streams without an extension directly through hardware transcoding for guaranteed playback.
+        let rawExt = source.fileExtension.lowercased()
+        let recognizedExts = ["mp4", "mov", "m4v", "mkv", "webm", "avi", "ts", "flv", "m3u8"]
+        let hasRecognizedExtension = recognizedExts.contains(rawExt) && !rawExt.isEmpty
+
+        if !hasRecognizedExtension || rawExt.isEmpty {
+            return .fullTranscode(
+                inputURL: rawURL,
+                streamURL: rawURL,
+                reason: "Stream without extension detected. Forcing Apple Silicon hardware transcoding bridge for guaranteed playback."
+            )
+        }
+
+        // Local file evaluation
         guard let p = probe else {
             // Fallback heuristics when probe is unavailable
             let ext = source.fileExtension
-            if ["mp4", "mov", "m4v"].contains(ext) {
+            if ["mp4", "mov", "m4v"].contains(ext) && !source.isOnline {
                 return .directNative(playableURL: rawURL, reason: "QuickTime/MP4 container detected. Attempting direct hardware playback.")
             } else if ["mkv", "webm"].contains(ext) {
                 return .remuxOnly(inputURL: rawURL, streamURL: rawURL, reason: "Container \(ext.uppercased()) requires stream copy remuxing.")
             } else {
-                return .fullTranscode(inputURL: rawURL, streamURL: rawURL, reason: "Uncommon container or codecs detected.")
+                return .fullTranscode(inputURL: rawURL, streamURL: rawURL, reason: "Stream without recognized extension or uncommon container. Forcing hardware transcoding bridge.")
             }
         }
 
