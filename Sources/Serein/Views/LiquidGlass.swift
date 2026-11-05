@@ -170,61 +170,63 @@ public struct PillSlider: View {
 
                     // 3. Apple Liquid Glass Pill Thumb:
                     // Solid when idle or hovered on!
-                    // Turns into liquid glass with real-time optical refraction when interacted with (isDragging).
+                    // Melts and transforms seamlessly into Liquid Glass with real-time optical refraction when interacted with.
                     ZStack {
-                        if isDragging {
-                            // Volumetric Glass Body with Native Optical Refraction (Adjustable via System Settings)
-                            Capsule()
-                                .fill(Color.white.opacity(settings.backdropOpacity(base: 0.12)))
-                                .glassEffect(settings.glass, in: Capsule())
+                        // Volumetric Glass Body with Native Optical Refraction (Adjustable via System Settings)
+                        Capsule()
+                            .fill(Color.white.opacity(settings.backdropOpacity(base: 0.12)))
+                            .glassEffect(settings.glass, in: Capsule())
+                            .opacity(isDragging ? 1.0 : 0.0)
 
-                            // 3D Specular Rim with multi-stop refraction gradient
-                            Capsule()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        stops: [
-                                            .init(color: Color.white.opacity(0.85), location: 0.0),
-                                            .init(color: Color.white.opacity(0.25), location: 0.35),
-                                            .init(color: Color.black.opacity(0.35), location: 0.70),
-                                            .init(color: Color.white.opacity(0.20), location: 1.0)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 0.75
-                                )
+                        // 3D Specular Rim with multi-stop refraction gradient
+                        Capsule()
+                            .strokeBorder(
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: Color.white.opacity(0.85), location: 0.0),
+                                        .init(color: Color.white.opacity(0.25), location: 0.35),
+                                        .init(color: Color.black.opacity(0.35), location: 0.70),
+                                        .init(color: Color.white.opacity(0.20), location: 1.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 0.75
+                            )
+                            .opacity(isDragging ? 1.0 : 0.0)
 
-                            // Upper Crescent Specular Glint (Light Reflection)
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(0.45),
-                                            Color.white.opacity(0.0)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .center
-                                    )
+                        // Upper Crescent Specular Glint (Light Reflection)
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.45),
+                                        Color.white.opacity(0.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .center
                                 )
-                                .frame(width: max(4, currentThumbWidth - 3), height: currentThumbHeight * 0.45)
-                                .offset(y: -currentThumbHeight * 0.24)
-                                .blur(radius: 0.5)
-                                .mask(Capsule().stroke(lineWidth: 1.5))
-                        } else {
-                            // Completely solid opaque white capsule when idle or hovered on!
-                            Capsule()
-                                .fill(Color.white)
-                        }
+                            )
+                            .frame(width: max(4, currentThumbWidth - 3), height: currentThumbHeight * 0.45)
+                            .offset(y: -currentThumbHeight * 0.24)
+                            .blur(radius: 0.5)
+                            .mask(Capsule().stroke(lineWidth: 1.5))
+                            .opacity(isDragging ? 1.0 : 0.0)
+
+                        // Completely solid opaque white skin (melts away fluidly when interaction begins)
+                        Capsule()
+                            .fill(Color.white)
+                            .opacity(isDragging ? 0.0 : 1.0)
                     }
                     .frame(width: currentThumbWidth, height: currentThumbHeight)
                     .shadow(
                         color: Color.black.opacity(isDragging ? 0.40 : 0.28),
-                        radius: isDragging ? 6 : 2.5,
+                        radius: isDragging ? 6.0 : (isHovering ? 3.5 : 2.5),
                         x: 0,
-                        y: isDragging ? 2.5 : 1
+                        y: isDragging ? 2.5 : 1.0
                     )
-                    .scaleEffect(isHovering && !isDragging ? 1.03 : 1.0)
-                    .animation(.spring(response: 0.26, dampingFraction: 0.74), value: isDragging)
+                    .scaleEffect(isHovering && !isDragging ? 1.04 : 1.0)
+                    .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isDragging)
                     .animation(.spring(response: 0.20, dampingFraction: 0.75), value: isHovering)
                     .position(x: thumbCenterX, y: geo.size.height / 2)
                 }
@@ -234,15 +236,17 @@ public struct PillSlider: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { gesture in
-                        withAnimation(.spring(response: 0.26, dampingFraction: 0.74)) {
-                            isDragging = true
+                        if !isDragging {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                                isDragging = true
+                            }
                         }
                         let fraction = max(0.0, min(1.0, gesture.location.x / width))
                         value = fraction
                         onActivity?()
                     }
                     .onEnded { gesture in
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.74)) {
                             isDragging = false
                         }
                         let fraction = max(0.0, min(1.0, gesture.location.x / width))
