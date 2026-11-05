@@ -17,10 +17,11 @@ import AppKit
 public struct PillSlider: View {
     @Binding var value: Double // Range 0.0 ... 1.0
     var trackHeight: CGFloat = 4.5
-    var idleThumbWidth: CGFloat = 18
-    var idleThumbHeight: CGFloat = 12
-    var activeThumbWidth: CGFloat = 34
-    var activeThumbHeight: CGFloat = 18
+    var idleThumbWidth: CGFloat = 16
+    var idleThumbHeight: CGFloat = 11
+    var activeThumbWidth: CGFloat = 36
+    var activeThumbHeight: CGFloat = 22
+    var activeColor: Color = .white
     var onActivity: (() -> Void)?
 
     @State private var isDragging = false
@@ -29,10 +30,11 @@ public struct PillSlider: View {
     public init(
         value: Binding<Double>,
         trackHeight: CGFloat = 4.5,
-        idleThumbWidth: CGFloat = 18,
-        idleThumbHeight: CGFloat = 12,
-        activeThumbWidth: CGFloat = 34,
-        activeThumbHeight: CGFloat = 18,
+        idleThumbWidth: CGFloat = 16,
+        idleThumbHeight: CGFloat = 11,
+        activeThumbWidth: CGFloat = 36,
+        activeThumbHeight: CGFloat = 22,
+        activeColor: Color = .white,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
@@ -41,22 +43,24 @@ public struct PillSlider: View {
         self.idleThumbHeight = idleThumbHeight
         self.activeThumbWidth = activeThumbWidth
         self.activeThumbHeight = activeThumbHeight
+        self.activeColor = activeColor
         self.onActivity = onActivity
     }
 
     public init(
         value: Binding<Double>,
         trackHeight: CGFloat = 4.5,
-        thumbWidth: CGFloat = 34,
-        thumbHeight: CGFloat = 18,
+        thumbWidth: CGFloat = 36,
+        thumbHeight: CGFloat = 22,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = 18
-        self.idleThumbHeight = 12
+        self.idleThumbWidth = 16
+        self.idleThumbHeight = 11
         self.activeThumbWidth = thumbWidth
         self.activeThumbHeight = thumbHeight
+        self.activeColor = .white
         self.onActivity = onActivity
     }
 
@@ -75,12 +79,12 @@ public struct PillSlider: View {
             ZStack(alignment: .leading) {
                 // 1. Continuous Inactive Background Rail (full width)
                 Capsule()
-                    .fill(Color.white.opacity(0.22))
+                    .fill(Color.white.opacity(0.20))
                     .frame(width: width, height: trackHeight)
 
                 // 2. Active Filled Track (extends seamlessly to thumb center)
                 Capsule()
-                    .fill(Color.white)
+                    .fill(activeColor)
                     .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
 
                 // 3. Apple Liquid Glass Pill Thumb:
@@ -90,9 +94,10 @@ public struct PillSlider: View {
                     if isInteracting {
                         GlassEffectContainer {
                             ZStack {
-                                // Volumetric Glass Body with Native Optical Refraction
+                                // Volumetric Glass Lens with Frosted Backdrop Blur & Apple Optical Refraction
                                 Capsule()
-                                    .fill(Color.white.opacity(0.12))
+                                    .fill(Color.white.opacity(0.06))
+                                    .background(.ultraThinMaterial, in: Capsule())
                                     .glassEffect(Glass.regular, in: Capsule())
 
                                 // 3D Specular Rim with multi-stop refraction gradient
@@ -100,9 +105,9 @@ public struct PillSlider: View {
                                     .strokeBorder(
                                         LinearGradient(
                                             stops: [
-                                                .init(color: Color.white.opacity(0.85), location: 0.0),
-                                                .init(color: Color.white.opacity(0.25), location: 0.35),
-                                                .init(color: Color.black.opacity(0.35), location: 0.70),
+                                                .init(color: Color.white.opacity(0.80), location: 0.0),
+                                                .init(color: Color.white.opacity(0.18), location: 0.35),
+                                                .init(color: Color.black.opacity(0.40), location: 0.75),
                                                 .init(color: Color.white.opacity(0.20), location: 1.0)
                                             ],
                                             startPoint: .top,
@@ -116,7 +121,7 @@ public struct PillSlider: View {
                                     .fill(
                                         LinearGradient(
                                             colors: [
-                                                Color.white.opacity(0.45),
+                                                Color.white.opacity(0.35),
                                                 Color.white.opacity(0.0)
                                             ],
                                             startPoint: .top,
@@ -124,12 +129,12 @@ public struct PillSlider: View {
                                         )
                                     )
                                     .frame(width: max(4, activeThumbWidth - 3), height: activeThumbHeight * 0.45)
-                                    .offset(y: -activeThumbHeight * 0.24)
-                                    .blur(radius: 0.5)
-                                    .mask(Capsule().stroke(lineWidth: 1.5))
+                                    .offset(y: -activeThumbHeight * 0.22)
+                                    .blur(radius: 0.4)
+                                    .mask(Capsule().stroke(lineWidth: 1.0))
                             }
                             .frame(width: activeThumbWidth, height: activeThumbHeight)
-                            .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
+                            .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 3)
                         }
                         .transition(.opacity)
                     } else {
@@ -137,7 +142,7 @@ public struct PillSlider: View {
                         Capsule()
                             .fill(Color.white)
                             .frame(width: idleThumbWidth, height: idleThumbHeight)
-                            .shadow(color: Color.black.opacity(0.28), radius: 2.5, x: 0, y: 1)
+                            .shadow(color: Color.black.opacity(0.30), radius: 2.5, x: 0, y: 1)
                             .transition(.opacity)
                     }
                 }

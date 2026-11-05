@@ -342,11 +342,15 @@ public final class MediaCoordinator: ObservableObject {
 
                 if let masterPlaylist = extracted.hlsMasterPlaylist {
                     state = .preparingStream("Connecting high-speed native HLS stream...")
-                    let streamURL = try ffmpegPipeline.startHLSProxySession(masterPlaylist: masterPlaylist)
-                    self.activePlayableURL = streamURL
-                    self.state = .ready(strategy)
-                    log("⚡️ Connected high-speed native HLS multi-variant stream to AVPlayer via local proxy.", level: .success)
-                    return
+                    do {
+                        let streamURL = try ffmpegPipeline.startHLSProxySession(masterPlaylist: masterPlaylist)
+                        self.activePlayableURL = streamURL
+                        self.state = .ready(strategy)
+                        log("⚡️ Connected high-speed native HLS multi-variant stream to AVPlayer via local proxy.", level: .success)
+                        return
+                    } catch {
+                        log("⚠️ HLS proxy failed: \(error.localizedDescription). Falling back to piped stream...", level: .warning)
+                    }
                 }
 
                 if extracted.isDirectlyPlayable && !extracted.needsPipedStream {
@@ -638,6 +642,35 @@ public final class MediaCoordinator: ObservableObject {
                 }
             } catch {
                 log("❌ Online seek failed: \(error.localizedDescription)", level: .error)
+            }
+        }
+    }
+
+    /// Gracefully recovers from unexpected AVPlayer playback failures (e.g. HLS CDN 404) by falling back to piped streaming.
+    public func handlePlaybackFailure(error: String) {
+        Task { @MainActor in
+            guard let source = self.currentSource, case .online(let webURL, _) = source,
+                  self.extractedOnlineInfo?.hlsMasterPlaylist != nil else { return }
+
+            self.log("⚠️ Native HLS stream reported playback error: \(error). Recovering via online piped stream bridge...", level: .warning)
+            self.extractedOnlineInfo?.hlsMasterPlaylist = nil
+            self.state = .preparingStream("Switching to compatible piped stream...")
+
+            do {
+                let streamURL = try await self.ffmpegPipeline.startOnlinePipedSession(webURL: webURL)
+                self.activePlayableURL = streamURL
+                let fallbackStrategy: PlaybackStrategy = .onlineTranscode(
+                    streamURL: streamURL,
+                    originalURL: webURL,
+                    title: self.extractedOnlineInfo?.title ?? "Online Stream",
+                    reason: "Dynamic fallback compatibility bridge"
+                )
+                self.activeStrategy = fallbackStrategy
+                self.state = .ready(fallbackStrategy)
+                self.log("✨ Seamlessly recovered playback via online piped bridge.", level: .success)
+            } catch {
+                self.state = .error("Stream playback failed: \(error)")
+                self.log("❌ Stream recovery failed: \(error.localizedDescription)", level: .error)
             }
         }
     }

@@ -440,6 +440,7 @@ public final class PlayerController: ObservableObject {
                     let errDesc = observedItem.error?.localizedDescription ?? "Unknown AVPlayerItem error"
                     print("[AVPlayerItem] Failed error: \(errDesc)")
                     MediaCoordinator.shared.log("❌ AVPlayer item failed: \(errDesc)", level: .error)
+                    MediaCoordinator.shared.handlePlaybackFailure(error: errDesc)
                 default:
                     break
                 }

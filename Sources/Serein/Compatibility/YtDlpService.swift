@@ -46,7 +46,7 @@ public struct ExtractedMediaInfo: Sendable {
     public let needsPipedStream: Bool
     public let resolution: String?
     public let subtitles: [SubtitleTrack]
-    public let hlsMasterPlaylist: String?
+    public var hlsMasterPlaylist: String?
 
     public var formattedDuration: String {
         guard let d = duration, d > 0 else { return "Live / Unknown" }
@@ -123,10 +123,26 @@ public final class YtDlpService: Sendable {
             throw YtDlpError.unparseableResponse
         }
 
-        return try parseExtractionJSON(json, originalURL: url)
+        return try await parseExtractionJSON(json, originalURL: url)
     }
 
-    private func parseExtractionJSON(_ json: [String: Any], originalURL: URL) throws -> ExtractedMediaInfo {
+    private func probeURL(_ url: URL) async -> Bool {
+        var req = URLRequest(url: url)
+        req.httpMethod = "HEAD"
+        req.timeoutInterval = 3.5
+        req.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)", forHTTPHeaderField: "User-Agent")
+        do {
+            let (_, response) = try await URLSession.shared.data(for: req)
+            if let http = response as? HTTPURLResponse {
+                return (200...299).contains(http.statusCode)
+            }
+            return false
+        } catch {
+            return false
+        }
+    }
+
+    private func parseExtractionJSON(_ json: [String: Any], originalURL: URL) async throws -> ExtractedMediaInfo {
         let id = json["id"] as? String ?? UUID().uuidString
         let title = json["title"] as? String ?? "Online Stream (\(id))"
         let uploader = json["uploader"] as? String ?? json["channel"] as? String
@@ -279,44 +295,56 @@ public final class YtDlpService: Sendable {
         }
 
         if !videoVariants.isEmpty && !audioVariants.isEmpty {
-            // Ensure at least one audio track is default
-            if !audioVariants.contains(where: { $0.isDefault }) {
-                let first = audioVariants[0]
-                audioVariants[0] = (id: first.id, name: first.name, language: first.language, isDefault: true, url: first.url)
-            }
-
             // Sort video tracks highest resolution to lowest
             videoVariants.sort { $0.height > $1.height }
 
-            var m3u8 = "#EXTM3U\n#EXT-X-VERSION:4\n#EXT-X-INDEPENDENT-SEGMENTS\n\n"
-            for a in audioVariants {
-                let defStr = a.isDefault ? "YES" : "NO"
-                let langStr = a.language != nil ? ",LANGUAGE=\"\(a.language!)\"" : ""
-                m3u8 += "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"\(a.name)\",DEFAULT=\(defStr),AUTOSELECT=YES\(langStr),URI=\"\(a.url.absoluteString)\"\n"
-            }
-            m3u8 += "\n"
-            for v in videoVariants {
-                m3u8 += "#EXT-X-STREAM-INF:BANDWIDTH=\(v.bandwidth),RESOLUTION=\(v.width)x\(v.height),CODECS=\"\(v.vcodec),mp4a.40.2\",AUDIO=\"audio\"\n"
-                m3u8 += "\(v.url.absoluteString)\n"
+            // Strictly select one audio track as default (RFC 8216 compliance)
+            let defaultIdx = audioVariants.firstIndex(where: { $0.isDefault }) ?? 0
+            for i in 0..<audioVariants.count {
+                audioVariants[i].isDefault = (i == defaultIdx)
             }
 
-            let topRes = videoVariants.first.map { "\($0.width)x\($0.height)" } ?? "1080p HD"
-            return ExtractedMediaInfo(
-                id: id,
-                title: title,
-                uploader: uploader,
-                duration: duration,
-                thumbnailURL: thumbURL,
-                webpageURL: originalURL,
-                formats: parsedFormats,
-                selectedStreamURL: originalURL,
-                isDirectlyPlayable: true,
-                needsTranscodeOrMux: false,
-                needsPipedStream: false,
-                resolution: topRes,
-                subtitles: parsedSubtitles,
-                hlsMasterPlaylist: m3u8
-            )
+            // Pre-flight probe top video variant and default audio variant to verify CDN endpoints are live
+            let topVideo = videoVariants[0]
+            let defaultAudio = audioVariants[defaultIdx]
+
+            async let videoValid = probeURL(topVideo.url)
+            async let audioValid = probeURL(defaultAudio.url)
+            let (isVidOk, isAudOk) = await (videoValid, audioValid)
+
+            if isVidOk && isAudOk {
+                var m3u8 = "#EXTM3U\n#EXT-X-VERSION:4\n#EXT-X-INDEPENDENT-SEGMENTS\n\n"
+                for a in audioVariants {
+                    let defStr = a.isDefault ? "YES" : "NO"
+                    let langStr = a.language != nil ? ",LANGUAGE=\"\(a.language!)\"" : ""
+                    m3u8 += "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"\(a.name)\",DEFAULT=\(defStr),AUTOSELECT=YES\(langStr),URI=\"\(a.url.absoluteString)\"\n"
+                }
+                m3u8 += "\n"
+                for v in videoVariants {
+                    m3u8 += "#EXT-X-STREAM-INF:BANDWIDTH=\(v.bandwidth),RESOLUTION=\(v.width)x\(v.height),CODECS=\"\(v.vcodec),mp4a.40.2\",AUDIO=\"audio\"\n"
+                    m3u8 += "\(v.url.absoluteString)\n"
+                }
+
+                let topRes = videoVariants.first.map { "\($0.width)x\($0.height)" } ?? "1080p HD"
+                return ExtractedMediaInfo(
+                    id: id,
+                    title: title,
+                    uploader: uploader,
+                    duration: duration,
+                    thumbnailURL: thumbURL,
+                    webpageURL: originalURL,
+                    formats: parsedFormats,
+                    selectedStreamURL: originalURL,
+                    isDirectlyPlayable: true,
+                    needsTranscodeOrMux: false,
+                    needsPipedStream: false,
+                    resolution: topRes,
+                    subtitles: parsedSubtitles,
+                    hlsMasterPlaylist: m3u8
+                )
+            }
+            // If probe returned 404/failure (as on newly uploaded YouTube videos with unpopulated visionOS HLS CDN edges),
+            // gracefully fall through to piped streaming pipeline with live DASH streams!
         }
 
         // 3. For online platforms requiring piped streaming or remuxing:
