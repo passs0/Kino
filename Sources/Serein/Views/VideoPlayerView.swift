@@ -859,105 +859,49 @@ struct TimelineScrubberShelf: View {
                 let bufferFraction = max(0.0, min(1.0, timeState.loadedDuration / maxDuration))
 
                 let isInteracting = isScrubberHovered || isDraggingScrubber
-                let idleThumbW: CGFloat = 16
-                let idleThumbH: CGFloat = 10
-                let activeThumbW: CGFloat = 30
-                let activeThumbH: CGFloat = 16
-
-                let thumbW = isInteracting ? activeThumbW : idleThumbW
-                let thumbH = isInteracting ? activeThumbH : idleThumbH
+                let thumbW: CGFloat = isInteracting ? 18 : 14
+                let thumbH: CGFloat = isInteracting ? 12 : 9
 
                 let thumbCenterX = thumbW / 2 + playedFraction * (width - thumbW)
 
-                GlassEffectContainer {
-                    ZStack(alignment: .leading) {
-                        // 1. Continuous Background Rail
-                        Capsule()
-                            .fill(Color.white.opacity(0.22))
-                            .frame(width: width, height: 4.5)
+                ZStack(alignment: .leading) {
+                    // 1. Continuous Background Rail
+                    Capsule()
+                        .fill(Color.white.opacity(0.22))
+                        .frame(width: width, height: 4.5)
 
-                        // 2. Buffered Range Rail
-                        Capsule()
-                            .fill(Color.white.opacity(0.40))
-                            .frame(width: width * bufferFraction, height: 4.5)
+                    // 2. Buffered Range Rail
+                    Capsule()
+                        .fill(Color.white.opacity(0.40))
+                        .frame(width: width * bufferFraction, height: 4.5)
 
-                        // 3. Active Track (extends to thumb center)
-                        Capsule()
-                            .fill(Color.white)
-                            .frame(width: max(4.5, thumbCenterX), height: 4.5)
+                    // 3. Active Track (extends to thumb center)
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: max(4.5, thumbCenterX), height: 4.5)
 
-                        // 4. Apple Liquid Glass Thumb:
-                        // Solid white when idle, fluidly morphs into true optical Liquid Glass material on hover/drag
-                        ZStack {
-                            // A. IDLE STATE: Solid White Capsule Pill
-                            Capsule()
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
-                                .opacity(isInteracting ? 0.0 : 1.0)
-
-                            // B. INTERACTED STATE: True Apple Liquid Glass Capsule
-                            ZStack {
-                                // Volumetric Glass Body
-                                Capsule()
-                                    .fill(Color.white.opacity(0.12))
-                                    .glassEffect(Glass.regular, in: Capsule())
-
-                                // 3D Specular Rim
-                                Capsule()
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            stops: [
-                                                .init(color: Color.white.opacity(0.85), location: 0.0),
-                                                .init(color: Color.white.opacity(0.25), location: 0.35),
-                                                .init(color: Color.black.opacity(0.35), location: 0.70),
-                                                .init(color: Color.white.opacity(0.20), location: 1.0)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        ),
-                                        lineWidth: 0.75
-                                    )
-
-                                // Upper Crescent Specular Glint
-                                Capsule()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.white.opacity(0.45),
-                                                Color.white.opacity(0.0)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .center
-                                        )
-                                    )
-                                    .frame(width: max(4, activeThumbW - 3), height: activeThumbH * 0.45)
-                                    .offset(y: -activeThumbH * 0.24)
-                                    .blur(radius: 0.5)
-                                    .mask(Capsule().stroke(lineWidth: 1.5))
-                            }
-                            .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
-                            .opacity(isInteracting ? 1.0 : 0.0)
-                        }
+                    // 4. Lightweight Solid White Scrubber Spot (High performance zero-lag tracking for moving playback)
+                    Capsule()
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.35), radius: 2.5, x: 0, y: 1)
                         .frame(width: thumbW, height: thumbH)
                         .position(x: thumbCenterX, y: geo.size.height / 2)
-                        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isInteracting)
+                        .animation(.spring(response: 0.22, dampingFraction: 0.80), value: isInteracting)
 
-                        // Floating Hover Tooltip
-                        if isScrubberHovered && !isDraggingScrubber && width > 0 {
-                            let hoverFraction = max(0.0, min(1.0, hoverLocationX / width))
-                            let hoverSec = hoverFraction * maxDuration
+                    // Floating Hover Tooltip
+                    if isScrubberHovered && !isDraggingScrubber && width > 0 {
+                        let hoverFraction = max(0.0, min(1.0, hoverLocationX / width))
+                        let hoverSec = hoverFraction * maxDuration
 
-                            Text(formatTime(hoverSec))
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                                .monospacedDigit()
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2.5)
-                                .glassEffect(Glass.regular, in: Capsule())
-                                .offset(x: max(0, min(width - 45, hoverLocationX - 22)), y: -24)
-                        }
+                        Text(formatTime(hoverSec))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .monospacedDigit()
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2.5)
+                            .glassEffect(Glass.regular, in: Capsule())
+                            .offset(x: max(0, min(width - 45, hoverLocationX - 22)), y: -24)
                     }
-                    .frame(maxHeight: .infinity, alignment: .center)
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
                 .contentShape(Rectangle())

@@ -70,80 +70,81 @@ public struct PillSlider: View {
             let clampedVal = max(0.0, min(1.0, value))
 
             let currentThumbWidth: CGFloat = isInteracting ? activeThumbWidth : idleThumbWidth
-            let currentThumbHeight: CGFloat = isInteracting ? activeThumbHeight : idleThumbHeight
-
             let thumbCenterX = currentThumbWidth / 2 + clampedVal * (width - currentThumbWidth)
 
-            GlassEffectContainer {
-                ZStack(alignment: .leading) {
-                    // 1. Continuous Inactive Background Rail (full width)
-                    Capsule()
-                        .fill(Color.white.opacity(0.22))
-                        .frame(width: width, height: trackHeight)
+            ZStack(alignment: .leading) {
+                // 1. Continuous Inactive Background Rail (full width)
+                Capsule()
+                    .fill(Color.white.opacity(0.22))
+                    .frame(width: width, height: trackHeight)
 
-                    // 2. Active Filled Track (extends seamlessly to thumb center)
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
+                // 2. Active Filled Track (extends seamlessly to thumb center)
+                Capsule()
+                    .fill(Color.white)
+                    .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
 
-                    // 3. Apple Liquid Glass Pill Thumb:
-                    // Solid white when idle, fluidly morphs into true optical Liquid Glass material on hover/drag
-                    ZStack {
-                        // A. IDLE STATE: Solid White Capsule Pill (Apple HIG Control Center Default)
+                // 3. Apple Liquid Glass Pill Thumb:
+                // When idle: completely solid opaque white pill. NOT glass.
+                // When interacting (hover/drag): morphs into true optical Liquid Glass material.
+                Group {
+                    if isInteracting {
+                        GlassEffectContainer {
+                            ZStack {
+                                // Volumetric Glass Body with Native Optical Refraction
+                                Capsule()
+                                    .fill(Color.white.opacity(0.12))
+                                    .glassEffect(Glass.regular, in: Capsule())
+
+                                // 3D Specular Rim with multi-stop refraction gradient
+                                Capsule()
+                                    .strokeBorder(
+                                        LinearGradient(
+                                            stops: [
+                                                .init(color: Color.white.opacity(0.85), location: 0.0),
+                                                .init(color: Color.white.opacity(0.25), location: 0.35),
+                                                .init(color: Color.black.opacity(0.35), location: 0.70),
+                                                .init(color: Color.white.opacity(0.20), location: 1.0)
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        ),
+                                        lineWidth: 0.75
+                                    )
+
+                                // Upper Crescent Specular Glint (Light Reflection)
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.white.opacity(0.45),
+                                                Color.white.opacity(0.0)
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .center
+                                        )
+                                    )
+                                    .frame(width: max(4, activeThumbWidth - 3), height: activeThumbHeight * 0.45)
+                                    .offset(y: -activeThumbHeight * 0.24)
+                                    .blur(radius: 0.5)
+                                    .mask(Capsule().stroke(lineWidth: 1.5))
+                            }
+                            .frame(width: activeThumbWidth, height: activeThumbHeight)
+                            .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
+                        }
+                        .transition(.opacity)
+                    } else {
+                        // Completely solid opaque white capsule pill (Apple HIG Control Center Default). NOT glass.
                         Capsule()
                             .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
-                            .opacity(isInteracting ? 0.0 : 1.0)
-
-                        // B. INTERACTED STATE: True Apple Liquid Glass Capsule (Refractive & Translucent)
-                        ZStack {
-                            // Volumetric Glass Body with Native Optical Refraction
-                            Capsule()
-                                .fill(Color.white.opacity(0.12))
-                                .glassEffect(Glass.regular, in: Capsule())
-
-                            // 3D Specular Rim with multi-stop refraction gradient
-                            Capsule()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        stops: [
-                                            .init(color: Color.white.opacity(0.85), location: 0.0),
-                                            .init(color: Color.white.opacity(0.25), location: 0.35),
-                                            .init(color: Color.black.opacity(0.35), location: 0.70),
-                                            .init(color: Color.white.opacity(0.20), location: 1.0)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 0.75
-                                )
-
-                            // Upper Crescent Specular Glint (Light Reflection)
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(0.45),
-                                            Color.white.opacity(0.0)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .center
-                                    )
-                                )
-                                .frame(width: max(4, activeThumbWidth - 3), height: activeThumbHeight * 0.45)
-                                .offset(y: -activeThumbHeight * 0.24)
-                                .blur(radius: 0.5)
-                                .mask(Capsule().stroke(lineWidth: 1.5))
-                        }
-                        .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
-                        .opacity(isInteracting ? 1.0 : 0.0)
+                            .frame(width: idleThumbWidth, height: idleThumbHeight)
+                            .shadow(color: Color.black.opacity(0.28), radius: 2.5, x: 0, y: 1)
+                            .transition(.opacity)
                     }
-                    .frame(width: currentThumbWidth, height: currentThumbHeight)
-                    .position(x: thumbCenterX, y: geo.size.height / 2)
-                    .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isInteracting)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
+                .position(x: thumbCenterX, y: geo.size.height / 2)
+                .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isInteracting)
             }
+            .frame(maxHeight: .infinity, alignment: .center)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
