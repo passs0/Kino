@@ -7,17 +7,18 @@ import AppKit
 
 // MARK: - Apple Control Center Style Pill Slider
 
-/// Apple macOS / iOS Control Center Style Pill Slider
-/// True Apple Liquid Glass behavior:
-/// - When idle: An opaque solid white pill thumb resting on the continuous capsule rail.
-/// - When hovered or dragged: Fluidly transforms into a larger, native Liquid Glass pill with optical refraction and liquid-like spring physics.
+/// Apple macOS / visionOS Liquid Glass Pill Slider
+/// True Apple Liquid Glass implementation matching the official design specification:
+/// - Oblong 3D Liquid Glass pill thumb with real-time optical refraction (`Glass.regular`) and specular crescent highlight.
+/// - The continuous background rail runs across the slider width.
+/// - The active track enters the glass thumb and terminates smoothly at the thumb's center with a rounded capsule cap,
+///   allowing the inactive track to pass through the right half of the glass lens.
+/// - Fluid spring physics with tactile interaction response on hover and drag.
 public struct PillSlider: View {
     @Binding var value: Double // Range 0.0 ... 1.0
-    var trackHeight: CGFloat = 5.5
-    var idleThumbWidth: CGFloat = 16
-    var idleThumbHeight: CGFloat = 11
-    var activeThumbWidth: CGFloat = 26
-    var activeThumbHeight: CGFloat = 17
+    var trackHeight: CGFloat = 5.0
+    var thumbWidth: CGFloat = 36
+    var thumbHeight: CGFloat = 20
     var onActivity: (() -> Void)?
 
     @State private var isDragging = false
@@ -25,35 +26,31 @@ public struct PillSlider: View {
 
     public init(
         value: Binding<Double>,
-        trackHeight: CGFloat = 5.5,
-        idleThumbWidth: CGFloat = 16,
-        idleThumbHeight: CGFloat = 11,
-        activeThumbWidth: CGFloat = 26,
-        activeThumbHeight: CGFloat = 17,
+        trackHeight: CGFloat = 5.0,
+        thumbWidth: CGFloat = 36,
+        thumbHeight: CGFloat = 20,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = idleThumbWidth
-        self.idleThumbHeight = idleThumbHeight
-        self.activeThumbWidth = activeThumbWidth
-        self.activeThumbHeight = activeThumbHeight
+        self.thumbWidth = thumbWidth
+        self.thumbHeight = thumbHeight
         self.onActivity = onActivity
     }
 
     public init(
         value: Binding<Double>,
-        trackHeight: CGFloat = 5.5,
-        thumbWidth: CGFloat = 16,
-        thumbHeight: CGFloat = 11,
+        trackHeight: CGFloat = 5.0,
+        idleThumbWidth: CGFloat = 36,
+        idleThumbHeight: CGFloat = 20,
+        activeThumbWidth: CGFloat = 38,
+        activeThumbHeight: CGFloat = 21,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = thumbWidth
-        self.idleThumbHeight = thumbHeight
-        self.activeThumbWidth = max(24, thumbWidth + 10)
-        self.activeThumbHeight = max(15, thumbHeight + 6)
+        self.thumbWidth = idleThumbWidth
+        self.thumbHeight = idleThumbHeight
         self.onActivity = onActivity
     }
 
@@ -65,42 +62,68 @@ public struct PillSlider: View {
         GeometryReader { geo in
             let width = geo.size.width
             let clampedVal = max(0.0, min(1.0, value))
-            let fillWidth = max(0, min(width, width * clampedVal))
-            let currentThumbWidth = isInteracting ? activeThumbWidth : idleThumbWidth
-            let thumbOffset = max(0, min(width - currentThumbWidth, fillWidth - (currentThumbWidth / 2)))
+
+            let scale: CGFloat = isInteracting ? 1.06 : 1.0
+            let currentThumbWidth = thumbWidth * scale
+            let currentThumbHeight = thumbHeight * scale
+
+            let thumbCenterX = currentThumbWidth / 2 + clampedVal * (width - currentThumbWidth)
 
             GlassEffectContainer {
                 ZStack(alignment: .leading) {
-                    // Continuous Background Rail
+                    // 1. Continuous Inactive Background Rail (full width)
                     Capsule()
-                        .fill(Color.white.opacity(0.24))
-                        .frame(height: trackHeight)
+                        .fill(Color.white.opacity(0.22))
+                        .frame(width: width, height: trackHeight)
 
-                    // Active Filled Track
+                    // 2. Active Filled Track (extends seamlessly to thumb center)
                     Capsule()
                         .fill(Color.white)
-                        .frame(width: fillWidth, height: trackHeight)
+                        .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
 
-                    // Thumb: Idle is solid white pill; Interacting is bigger native Liquid Glass pill with true optical refraction
-                    Group {
-                        if isInteracting {
-                            Capsule()
-                                .fill(Color.clear)
-                                .frame(width: activeThumbWidth, height: activeThumbHeight)
-                                .glassEffect(Glass.regular, in: Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+                    // 3. True Apple Liquid Glass Pill Thumb
+                    ZStack {
+                        // Volumetric Glass Body with Native Optical Refraction
+                        Capsule()
+                            .fill(Color.white.opacity(0.12))
+                            .glassEffect(Glass.regular, in: Capsule())
+
+                        // 3D Specular Rim with multi-stop refraction gradient
+                        Capsule()
+                            .strokeBorder(
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: Color.white.opacity(0.85), location: 0.0),
+                                        .init(color: Color.white.opacity(0.25), location: 0.35),
+                                        .init(color: Color.black.opacity(0.35), location: 0.70),
+                                        .init(color: Color.white.opacity(0.20), location: 1.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 0.75
+                            )
+
+                        // Upper Crescent Specular Glint (Light Reflection)
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.45),
+                                        Color.white.opacity(0.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .center
                                 )
-                                .shadow(color: Color.black.opacity(0.35), radius: 5, x: 0, y: 2)
-                        } else {
-                            Capsule()
-                                .fill(Color.white)
-                                .frame(width: idleThumbWidth, height: idleThumbHeight)
-                                .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
-                        }
+                            )
+                            .frame(width: currentThumbWidth - 3, height: currentThumbHeight * 0.45)
+                            .offset(y: -currentThumbHeight * 0.24)
+                            .blur(radius: 0.5)
+                            .mask(Capsule().stroke(lineWidth: 1.5))
                     }
-                    .offset(x: thumbOffset)
+                    .frame(width: currentThumbWidth, height: currentThumbHeight)
+                    .shadow(color: Color.black.opacity(0.42), radius: 6, x: 0, y: 2.5)
+                    .position(x: thumbCenterX, y: geo.size.height / 2)
                     .animation(.spring(response: 0.28, dampingFraction: 0.70), value: isInteracting)
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
@@ -125,7 +148,7 @@ public struct PillSlider: View {
                 isHovering = h
             }
         }
-        .frame(height: max(trackHeight, activeThumbHeight) + 6)
+        .frame(height: thumbHeight + 6)
     }
 }
 
