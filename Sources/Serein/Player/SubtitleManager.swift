@@ -192,7 +192,7 @@ public final class SubtitleManager: ObservableObject {
         } else {
             // Progressive stdout streaming extraction for remote HTTP streams (PikPak, cloud drives, MKV/MP4 over HTTP)
             downloadTask = Task.detached(priority: .utility) { [weak self] in
-                guard let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else { return }
+                guard let self = self, let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else { return }
 
                 var args: [String] = [
                     "-nostdin", "-y",
@@ -229,7 +229,7 @@ public final class SubtitleManager: ObservableObject {
                 process.standardError = FileHandle.nullDevice
 
                 await MainActor.run {
-                    self?.activeFFmpegProcess = process
+                    self.activeFFmpegProcess = process
                 }
 
                 do {
@@ -257,7 +257,7 @@ public final class SubtitleManager: ObservableObject {
                         let newlyParsed = SubtitleParser.parse(text)
                         if !newlyParsed.isEmpty {
                             await MainActor.run {
-                                self?.mergeProgressiveCues(newlyParsed, forTrackID: track.id)
+                                self.mergeProgressiveCues(newlyParsed, forTrackID: track.id)
                             }
                         }
                     }
@@ -273,7 +273,7 @@ public final class SubtitleManager: ObservableObject {
                     let finalParsed = SubtitleParser.parse(finalText)
                     if !finalParsed.isEmpty {
                         await MainActor.run {
-                            self?.mergeProgressiveCues(finalParsed, forTrackID: track.id)
+                            self.mergeProgressiveCues(finalParsed, forTrackID: track.id)
                         }
                     }
                 }

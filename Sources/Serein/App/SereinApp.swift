@@ -34,6 +34,13 @@ public struct SereinApp: App {
                     NotificationCenter.default.post(name: .openURLSheetNotification, object: nil)
                 }
                 .keyboardShortcut("u", modifiers: .command)
+
+                Divider()
+
+                Button("Close Video") {
+                    NotificationCenter.default.post(name: .closeMediaNotification, object: nil)
+                }
+                .keyboardShortcut("w", modifiers: .command)
             }
 
             CommandMenu("Playback") {
@@ -86,4 +93,5 @@ public struct SereinApp: App {
 public extension Notification.Name {
     static let openURLSheetNotification = Notification.Name("SereinOpenURLSheetNotification")
     static let openPrerequisitesSheetNotification = Notification.Name("SereinOpenPrerequisitesSheetNotification")
+    static let closeMediaNotification = Notification.Name("SereinCloseMediaNotification")
 }

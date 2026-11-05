@@ -86,6 +86,11 @@ public struct VideoPlayerView: View {
                 isFullScreen = false
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
+            if coordinator.state != .idle {
+                quitVideoAndReturnToWelcome()
+            }
+        }
         .onChange(of: coordinator.activePlayableURL) { _, newURL in
             if let url = newURL {
                 let expDuration = coordinator.knownDuration
@@ -208,16 +213,30 @@ public struct VideoPlayerView: View {
 
     private var controlsOverlay: some View {
         VStack(spacing: 0) {
-            // TOP BAR: Left has traffic lights (windowed) / far-left (fullscreen) + PiP & AirPlay; Middle has Title; Right has Volume
+            // TOP BAR: Left has close button (fullscreen) / clearance (windowed) + PiP & AirPlay Video; Middle has Title; Right has Sound & AirPlay Pill Control
             HStack(spacing: 12) {
-                // Inset clearance for standard macOS traffic lights (only when in windowed mode!)
-                if !isFullScreen {
+                // In full screen mode: dedicated 'X' button to quit current video and return to welcome screen!
+                if isFullScreen {
+                    Button(action: {
+                        quitVideoAndReturnToWelcome()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 34, height: 34)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(Glass.regular, in: Circle())
+                    .help("Close Video and Return to Welcome Screen (Esc / ⌘W)")
+                } else {
+                    // Inset clearance for standard macOS traffic lights (only when in windowed mode!)
                     Color.clear
                         .frame(width: 68, height: 1)
                         .transition(.opacity)
                 }
 
-                // Top-Left: PiP & AirPlay Capsule (Supporting Video & Audio Routing)
+                // Top-Left: PiP & AirPlay Video Capsule
                 HStack(spacing: 8) {
                     // Native Picture in Picture Button
                     Button(action: {
@@ -239,13 +258,6 @@ public struct VideoPlayerView: View {
                     AirPlayRoutePicker(player: playerController.player, mode: .video)
                         .frame(width: 24, height: 24)
                         .help("AirPlay Video (Apple TV / External Display)")
-
-                    GlassDivider(height: 14)
-
-                    // Native macOS AirPlay Audio Route Picker (HomePod / Speakers)
-                    AirPlayRoutePicker(player: playerController.player, mode: .audio)
-                        .frame(width: 24, height: 24)
-                        .help("AirPlay Audio (HomePod / Speakers)")
                 }
                 .padding(.horizontal, 10)
                 .frame(height: 34)
@@ -267,41 +279,30 @@ public struct VideoPlayerView: View {
 
                 Spacer(minLength: 12)
 
-                // Top-Right: Volume Slider Capsule
-                volumeCapsule
+                // Top-Right: Sound & AirPlay Audio Pill Control (macOS Sequoia Control Center style)
+                soundPillControl
             }
             .padding(.top, 16)
             .padding(.horizontal, 20)
 
             Spacer()
 
-            // CENTER TRANSPORT CONTROLS: [Rewind 10]  [Play / Pause]  [Forward 10]
-            GlassEffectContainer {
-                HStack(spacing: 28) {
-                    LiquidCircleButton(icon: "gobackward.10", size: 54, iconSize: 20) {
-                        playerController.seekRelative(seconds: -10)
-                        registerUserActivity()
-                    }
-                    .help("Rewind 10 seconds")
-
-                    LiquidCircleButton(
-                        icon: playerController.isPlaying ? "pause.fill" : "play.fill",
-                        size: 80,
-                        iconSize: 32,
-                        isBold: true
-                    ) {
-                        playerController.togglePlayPause()
-                        registerUserActivity()
-                    }
-                    .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
-
-                    LiquidCircleButton(icon: "goforward.10", size: 54, iconSize: 20) {
-                        playerController.seekRelative(seconds: 10)
-                        registerUserActivity()
-                    }
-                    .help("Forward 10 seconds")
+            // CENTER TRANSPORT CONTROLS: Unified Floating Liquid Glass Pill Bar
+            TransportPillBar(
+                isPlaying: playerController.isPlaying,
+                onRewind: {
+                    playerController.seekRelative(seconds: -10)
+                    registerUserActivity()
+                },
+                onPlayPause: {
+                    playerController.togglePlayPause()
+                    registerUserActivity()
+                },
+                onForward: {
+                    playerController.seekRelative(seconds: 10)
+                    registerUserActivity()
                 }
-            }
+            )
 
             Spacer()
 
@@ -365,45 +366,11 @@ public struct VideoPlayerView: View {
         return String(format: "%g", rate)
     }
 
-    // MARK: - Volume Capsule
+    // MARK: - Sound & AirPlay Pill Control (macOS Sequoia / iOS 18 Control Center style)
 
-    private var volumeCapsule: some View {
+    private var soundPillControl: some View {
         HStack(spacing: 8) {
-            // Interactive Slider Bar
-            GeometryReader { geo in
-                let width = geo.size.width
-                let currentVal = Double(playerController.isMuted ? 0 : playerController.volume)
-                let fillWidth = max(0, min(width, width * currentVal))
-
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.25))
-                        .frame(height: 4)
-
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: fillWidth, height: 4)
-
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 9, height: 9)
-                        .offset(x: max(0, fillWidth - 4.5))
-                }
-                .frame(maxHeight: .infinity, alignment: .center)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            let fraction = max(0, min(1, value.location.x / width))
-                            playerController.isMuted = false
-                            playerController.volume = Float(fraction)
-                            registerUserActivity()
-                        }
-                )
-            }
-            .frame(width: 90, height: 20)
-
-            // Mute / Speaker Icon
+            // Mute / Speaker Icon Button
             Button(action: {
                 playerController.toggleMute()
                 registerUserActivity()
@@ -411,13 +378,36 @@ public struct VideoPlayerView: View {
                 Image(systemName: volumeIconName)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 14)
+                    .frame(width: 16, height: 16)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(playerController.isMuted ? "Unmute" : "Mute")
+
+            // Tactile Pill Slider with Oblong Horizontal Pill Thumb
+            PillSlider(
+                value: Binding(
+                    get: { Double(playerController.isMuted ? 0 : playerController.volume) },
+                    set: { newVal in
+                        playerController.isMuted = false
+                        playerController.volume = Float(newVal)
+                    }
+                ),
+                trackHeight: 5.5,
+                thumbWidth: 16,
+                thumbHeight: 11,
+                onActivity: { registerUserActivity() }
+            )
+            .frame(width: 82)
+
+            GlassDivider(height: 14)
+
+            // Native macOS AirPlay Audio Route Picker (Speakers / HomePod / AirPods)
+            AirPlayRoutePicker(player: playerController.player, mode: .audio)
+                .frame(width: 22, height: 22)
+                .help("AirPlay Audio (HomePod / Speakers)")
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .frame(height: 34)
         .glassEffect(Glass.regular, in: Capsule())
     }
@@ -517,6 +507,18 @@ public struct VideoPlayerView: View {
     private func toggleFullscreen() {
         NSApp.keyWindow?.toggleFullScreen(nil)
         registerUserActivity()
+    }
+
+    // MARK: - Close Video & Return to Welcome Screen
+
+    private func quitVideoAndReturnToWelcome() {
+        playerController.saveCurrentPosition()
+        playerController.pause()
+        if isFullScreen, let win = NSApp.keyWindow ?? NSApp.windows.first {
+            win.toggleFullScreen(nil)
+        }
+        coordinator.stop()
+        playerController.reset()
     }
 
     // MARK: - Resume Toast View
@@ -758,11 +760,15 @@ struct TimelineScrubberShelf: View {
                         .fill(Color.white)
                         .frame(width: width * playedFraction, height: 4.5)
 
-                    Circle()
+                    Capsule()
                         .fill(Color.white)
-                        .frame(width: 11, height: 11)
-                        .offset(x: max(0, width * playedFraction - 5.5))
-                        .opacity(isScrubberHovered || isDraggingScrubber ? 1 : 0.8)
+                        .frame(
+                            width: isScrubberHovered || isDraggingScrubber ? 16 : 14,
+                            height: isScrubberHovered || isDraggingScrubber ? 11 : 9
+                        )
+                        .shadow(color: .black.opacity(0.35), radius: 2, x: 0, y: 1)
+                        .offset(x: max(0, min(width - 14, width * playedFraction - (isScrubberHovered || isDraggingScrubber ? 8 : 7))))
+                        .opacity(isScrubberHovered || isDraggingScrubber ? 1 : 0.88)
 
                     // Floating Hover Tooltip
                     if isScrubberHovered && !isDraggingScrubber && width > 0 {

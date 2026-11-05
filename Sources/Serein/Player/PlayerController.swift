@@ -129,6 +129,10 @@ public final class PlayerController: ObservableObject {
     public func pause() {
         player.pause()
         isPlaying = false
+        saveCurrentPosition()
+    }
+
+    public func saveCurrentPosition() {
         if let src = MediaCoordinator.shared.currentSource {
             PlaybackResumeManager.shared.savePosition(
                 PlayerTimeState.shared.currentTime,
