@@ -17,32 +17,12 @@ import AppKit
 public struct PillSlider: View {
     @Binding var value: Double // Range 0.0 ... 1.0
     var trackHeight: CGFloat = 4.5
-    var idleThumbWidth: CGFloat = 18
-    var idleThumbHeight: CGFloat = 12
-    var activeThumbWidth: CGFloat = 34
-    var activeThumbHeight: CGFloat = 18
+    var thumbWidth: CGFloat = 34
+    var thumbHeight: CGFloat = 18
     var onActivity: (() -> Void)?
 
     @State private var isDragging = false
     @State private var isHovering = false
-
-    public init(
-        value: Binding<Double>,
-        trackHeight: CGFloat = 4.5,
-        idleThumbWidth: CGFloat = 18,
-        idleThumbHeight: CGFloat = 12,
-        activeThumbWidth: CGFloat = 34,
-        activeThumbHeight: CGFloat = 18,
-        onActivity: (() -> Void)? = nil
-    ) {
-        self._value = value
-        self.trackHeight = trackHeight
-        self.idleThumbWidth = idleThumbWidth
-        self.idleThumbHeight = idleThumbHeight
-        self.activeThumbWidth = activeThumbWidth
-        self.activeThumbHeight = activeThumbHeight
-        self.onActivity = onActivity
-    }
 
     public init(
         value: Binding<Double>,
@@ -53,10 +33,24 @@ public struct PillSlider: View {
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = 18
-        self.idleThumbHeight = 12
-        self.activeThumbWidth = thumbWidth
-        self.activeThumbHeight = thumbHeight
+        self.thumbWidth = thumbWidth
+        self.thumbHeight = thumbHeight
+        self.onActivity = onActivity
+    }
+
+    public init(
+        value: Binding<Double>,
+        trackHeight: CGFloat = 4.5,
+        idleThumbWidth: CGFloat = 34,
+        idleThumbHeight: CGFloat = 18,
+        activeThumbWidth: CGFloat = 34,
+        activeThumbHeight: CGFloat = 18,
+        onActivity: (() -> Void)? = nil
+    ) {
+        self._value = value
+        self.trackHeight = trackHeight
+        self.thumbWidth = activeThumbWidth
+        self.thumbHeight = activeThumbHeight
         self.onActivity = onActivity
     }
 
@@ -69,82 +63,70 @@ public struct PillSlider: View {
             let width = geo.size.width
             let clampedVal = max(0.0, min(1.0, value))
 
-            let currentThumbWidth: CGFloat = isInteracting ? activeThumbWidth : idleThumbWidth
+            let currentThumbWidth = thumbWidth
+            let currentThumbHeight = thumbHeight
             let thumbCenterX = currentThumbWidth / 2 + clampedVal * (width - currentThumbWidth)
 
-            ZStack(alignment: .leading) {
-                // 1. Continuous Inactive Background Rail (full width)
-                Capsule()
-                    .fill(Color.white.opacity(0.22))
-                    .frame(width: width, height: trackHeight)
+            GlassEffectContainer {
+                ZStack(alignment: .leading) {
+                    // 1. Continuous Inactive Background Rail (full width)
+                    Capsule()
+                        .fill(Color.white.opacity(0.22))
+                        .frame(width: width, height: trackHeight)
 
-                // 2. Active Filled Track (extends seamlessly to thumb center)
-                Capsule()
-                    .fill(Color.white)
-                    .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
+                    // 2. Active Filled Track (extends seamlessly to thumb center)
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: max(trackHeight, thumbCenterX), height: trackHeight)
 
-                // 3. Apple Liquid Glass Pill Thumb:
-                // When idle: completely solid opaque white pill. NOT glass.
-                // When interacting (hover/drag): morphs into true optical Liquid Glass material.
-                Group {
-                    if isInteracting {
-                        GlassEffectContainer {
-                            ZStack {
-                                // Volumetric Glass Body with Native Optical Refraction
-                                Capsule()
-                                    .fill(Color.white.opacity(0.12))
-                                    .glassEffect(Glass.regular, in: Capsule())
-
-                                // 3D Specular Rim with multi-stop refraction gradient
-                                Capsule()
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            stops: [
-                                                .init(color: Color.white.opacity(0.85), location: 0.0),
-                                                .init(color: Color.white.opacity(0.25), location: 0.35),
-                                                .init(color: Color.black.opacity(0.35), location: 0.70),
-                                                .init(color: Color.white.opacity(0.20), location: 1.0)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        ),
-                                        lineWidth: 0.75
-                                    )
-
-                                // Upper Crescent Specular Glint (Light Reflection)
-                                Capsule()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.white.opacity(0.45),
-                                                Color.white.opacity(0.0)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .center
-                                        )
-                                    )
-                                    .frame(width: max(4, activeThumbWidth - 3), height: activeThumbHeight * 0.45)
-                                    .offset(y: -activeThumbHeight * 0.24)
-                                    .blur(radius: 0.5)
-                                    .mask(Capsule().stroke(lineWidth: 1.5))
-                            }
-                            .frame(width: activeThumbWidth, height: activeThumbHeight)
-                            .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
-                        }
-                        .transition(.opacity)
-                    } else {
-                        // Completely solid opaque white capsule pill (Apple HIG Control Center Default). NOT glass.
+                    // 3. Authentic Apple Liquid Glass Pill Thumb (Permanent - No idle/active transition)
+                    ZStack {
+                        // Volumetric Glass Body with Native Optical Refraction
                         Capsule()
-                            .fill(Color.white)
-                            .frame(width: idleThumbWidth, height: idleThumbHeight)
-                            .shadow(color: Color.black.opacity(0.28), radius: 2.5, x: 0, y: 1)
-                            .transition(.opacity)
+                            .fill(Color.white.opacity(0.12))
+                            .glassEffect(Glass.regular, in: Capsule())
+
+                        // 3D Specular Rim with multi-stop refraction gradient
+                        Capsule()
+                            .strokeBorder(
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: Color.white.opacity(0.85), location: 0.0),
+                                        .init(color: Color.white.opacity(0.25), location: 0.35),
+                                        .init(color: Color.black.opacity(0.35), location: 0.70),
+                                        .init(color: Color.white.opacity(0.20), location: 1.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 0.75
+                            )
+
+                        // Upper Crescent Specular Glint (Light Reflection)
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.45),
+                                        Color.white.opacity(0.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .center
+                                )
+                            )
+                            .frame(width: max(4, currentThumbWidth - 3), height: currentThumbHeight * 0.45)
+                            .offset(y: -currentThumbHeight * 0.24)
+                            .blur(radius: 0.5)
+                            .mask(Capsule().stroke(lineWidth: 1.5))
                     }
+                    .frame(width: currentThumbWidth, height: currentThumbHeight)
+                    .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2.5)
+                    .scaleEffect(isDragging ? 1.05 : (isHovering ? 1.02 : 1.0))
+                    .animation(.spring(response: 0.22, dampingFraction: 0.75), value: isInteracting)
+                    .position(x: thumbCenterX, y: geo.size.height / 2)
                 }
-                .position(x: thumbCenterX, y: geo.size.height / 2)
-                .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isInteracting)
+                .frame(maxHeight: .infinity, alignment: .center)
             }
-            .frame(maxHeight: .infinity, alignment: .center)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -165,7 +147,7 @@ public struct PillSlider: View {
                 isHovering = h
             }
         }
-        .frame(height: max(idleThumbHeight, activeThumbHeight) + 6)
+        .frame(height: thumbHeight + 6)
     }
 }
 

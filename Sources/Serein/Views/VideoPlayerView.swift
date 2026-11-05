@@ -465,10 +465,8 @@ public struct VideoPlayerView: View {
                     }
                 ),
                 trackHeight: 4.5,
-                idleThumbWidth: 18,
-                idleThumbHeight: 12,
-                activeThumbWidth: 34,
-                activeThumbHeight: 18,
+                thumbWidth: 34,
+                thumbHeight: 18,
                 onActivity: { registerUserActivity() }
             )
             .frame(width: 92)
