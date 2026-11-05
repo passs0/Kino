@@ -345,29 +345,31 @@ public struct VideoPlayerView: View {
             Spacer()
 
             // CENTER TRANSPORT CONTROLS: [Rewind 10]  [Play / Pause]  [Forward 10]
-            HStack(spacing: 28) {
-                LiquidCircleButton(icon: "gobackward.10", size: 54, iconSize: 20) {
-                    playerController.seekRelative(seconds: -10)
-                    registerUserActivity()
-                }
-                .help("Rewind 10 seconds (⌘←)")
+            GlassEffectContainer {
+                HStack(spacing: 28) {
+                    LiquidCircleButton(icon: "gobackward.10", size: 54, iconSize: 20) {
+                        playerController.seekRelative(seconds: -10)
+                        registerUserActivity()
+                    }
+                    .help("Rewind 10 seconds (⌘←)")
 
-                LiquidCircleButton(
-                    icon: playerController.isPlaying ? "pause.fill" : "play.fill",
-                    size: 80,
-                    iconSize: 32,
-                    isBold: true
-                ) {
-                    playerController.togglePlayPause()
-                    registerUserActivity()
-                }
-                .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
+                    LiquidCircleButton(
+                        icon: playerController.isPlaying ? "pause.fill" : "play.fill",
+                        size: 80,
+                        iconSize: 32,
+                        isBold: true
+                    ) {
+                        playerController.togglePlayPause()
+                        registerUserActivity()
+                    }
+                    .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
 
-                LiquidCircleButton(icon: "goforward.10", size: 54, iconSize: 20) {
-                    playerController.seekRelative(seconds: 10)
-                    registerUserActivity()
+                    LiquidCircleButton(icon: "goforward.10", size: 54, iconSize: 20) {
+                        playerController.seekRelative(seconds: 10)
+                        registerUserActivity()
+                    }
+                    .help("Forward 10 seconds (⌘→)")
                 }
-                .help("Forward 10 seconds (⌘→)")
             }
 
             Spacer()

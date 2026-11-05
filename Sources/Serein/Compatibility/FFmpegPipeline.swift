@@ -85,7 +85,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
         ]
 
         if let sTime = seekTime, sTime > 0.5 {
-            args.append(contentsOf: ["-ss", String(format: "%.2f", sTime)])
+            args.append(contentsOf: [
+                "-ss", String(format: "%.2f", sTime),
+                "-output_ts_offset", String(format: "%.2f", sTime)
+            ])
         }
 
         if !inputURL.isFileURL {
@@ -148,7 +151,17 @@ public final class FFmpegPipeline: @unchecked Sendable {
         args.append(contentsOf: [
             "-f", "hls",
             "-hls_time", "2",
-            "-hls_list_size", "0",
+            "-hls_list_size", "0"
+        ])
+
+        if let sTime = seekTime, sTime > 0.5 {
+            let startNum = Int(sTime / 2.0)
+            args.append(contentsOf: [
+                "-start_number", String(startNum)
+            ])
+        }
+
+        args.append(contentsOf: [
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
         ])
@@ -185,7 +198,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
     }
 
     /// Pipes yt-dlp stdout directly into ffmpeg stdin to stream online sources without 403 Forbidden errors.
-    public func startOnlinePipedSession(webURL: URL) async throws -> URL {
+    public func startOnlinePipedSession(webURL: URL, seekTime: Double? = nil) async throws -> URL {
         stop()
 
         guard let ytPath = ToolLocator.shared.path(for: "yt-dlp") else {
@@ -215,7 +228,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         // yt-dlp extraction process outputting to pipe:
         let ytProc = Process()
         ytProc.executableURL = URL(fileURLWithPath: ytPath)
-        ytProc.arguments = [
+        var ytArgs = [
             "-o", "-",
             "--ffmpeg-location", ffmpegPath,
             "--format-sort", "lang,quality",
@@ -223,9 +236,15 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "--merge-output-format", "mkv",
             "--no-playlist",
             "--no-part",
-            "--buffer-size", "64K",
-            webURL.absoluteString
+            "--buffer-size", "64K"
         ]
+
+        if let sTime = seekTime, sTime > 0.5 {
+            ytArgs.append(contentsOf: ["--download-sections", "*\(Int(sTime))-inf"])
+        }
+
+        ytArgs.append(webURL.absoluteString)
+        ytProc.arguments = ytArgs
         ytProc.environment = env
 
         // ffmpeg process receiving from pipe:0
@@ -233,7 +252,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         // -realtime 1 guarantees >5x encoding speed on Apple Silicon, eliminating stream buffering stalls.
         let ffmpegProc = Process()
         ffmpegProc.executableURL = URL(fileURLWithPath: ffmpegPath)
-        ffmpegProc.arguments = [
+        var ffmpegArgs = [
             "-nostdin",
             "-y",
             "-i", "pipe:0",
@@ -248,13 +267,29 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-c:a", "aac",
             "-ac", "2",
             "-b:a", "256k",
-            "-ar", "48000",
+            "-ar", "48000"
+        ]
+
+        if let sTime = seekTime, sTime > 0.5 {
+            ffmpegArgs.append(contentsOf: ["-output_ts_offset", String(format: "%.2f", sTime)])
+        }
+
+        ffmpegArgs.append(contentsOf: [
             "-f", "hls",
             "-hls_time", "2",
-            "-hls_list_size", "0",
+            "-hls_list_size", "0"
+        ])
+
+        if let sTime = seekTime, sTime > 0.5 {
+            let startNum = Int(sTime / 2.0)
+            ffmpegArgs.append(contentsOf: ["-start_number", String(startNum)])
+        }
+
+        ffmpegArgs.append(contentsOf: [
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
-        ]
+        ])
+        ffmpegProc.arguments = ffmpegArgs
         ffmpegProc.environment = env
 
         // Inter-process pipe: yt-dlp stdout -> ffmpeg stdin

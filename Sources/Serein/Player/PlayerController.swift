@@ -101,28 +101,34 @@ public final class PlayerController: ObservableObject {
         }
     }
 
-    public func load(url: URL, expectedDuration: Double? = nil) {
+    public func load(url: URL, expectedDuration: Double? = nil, initialTime: Double? = nil) {
         cleanupItemObservers()
         resumeToastTask?.cancel()
         resumeNotificationText = nil
         player.volume = 0
+        let wasPlaying = self.isPlaying
         player.pause()
 
-        PlayerTimeState.shared.reset()
+        if let initTime = initialTime, initTime > 0 {
+            PlayerTimeState.shared.currentTime = initTime
+            self.pendingResumeTime = nil
+        } else {
+            PlayerTimeState.shared.reset()
+            // Check if there is a saved resume position for this media source
+            if let src = MediaCoordinator.shared.currentSource,
+               let saved = PlaybackResumeManager.shared.savedPosition(for: src) {
+                self.pendingResumeTime = saved
+            } else {
+                self.pendingResumeTime = nil
+            }
+        }
+
         if let exp = expectedDuration, exp > 0 {
             PlayerTimeState.shared.duration = exp
         }
 
-        // Check if there is a saved resume position for this media source
-        if let src = MediaCoordinator.shared.currentSource,
-           let saved = PlaybackResumeManager.shared.savedPosition(for: src) {
-            self.pendingResumeTime = saved
-        } else {
-            self.pendingResumeTime = nil
-        }
-
         let item = AVPlayerItem(url: url)
-        setupItemObservers(for: item)
+        setupItemObservers(for: item, autoResumePlayback: wasPlaying)
 
         player.replaceCurrentItem(with: item)
         player.actionAtItemEnd = .pause
@@ -181,12 +187,49 @@ public final class PlayerController: ObservableObject {
         volume = max(0.0, min(1.0, volume + delta))
     }
 
+    /// Checks if a given timestamp is already contained in AVPlayer's loaded time ranges.
+    public func isTimestampBuffered(_ targetSeconds: Double) -> Bool {
+        guard let item = player.currentItem else { return false }
+        for val in item.loadedTimeRanges {
+            let range = val.timeRangeValue
+            let start = CMTimeGetSeconds(range.start)
+            let dur = CMTimeGetSeconds(range.duration)
+            if start.isFinite && dur.isFinite && !start.isNaN && !dur.isNaN {
+                if targetSeconds >= start && targetSeconds <= (start + dur - 0.5) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private var streamSeekTask: Task<Void, Never>?
+
     public func seek(to seconds: Double) {
         let maxD = PlayerTimeState.shared.duration
         let targetSec = max(0, min(seconds, maxD > 0 ? maxD : seconds))
         let cmTime = CMTime(seconds: targetSec, preferredTimescale: 600)
         SubtitleManager.shared.handleUserSeek(to: targetSec)
-        player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+
+        // Check if the target timestamp is already buffered in AVPlayer
+        let isLoaded = isTimestampBuffered(targetSec)
+
+        if !isLoaded && MediaCoordinator.shared.isPipelineActive {
+            // Seeking to an unloaded timestamp in an active transcoding / HLS stream:
+            PlayerTimeState.shared.currentTime = targetSec
+            SubtitleManager.shared.updateTime(targetSec)
+            streamSeekTask?.cancel()
+            streamSeekTask = Task { @MainActor in
+                // 120ms debounce to coalesce rapid clicks (e.g. hitting forward 10s multiple times)
+                try? await Task.sleep(nanoseconds: 120_000_000)
+                guard !Task.isCancelled else { return }
+                await MediaCoordinator.shared.seekPipeline(to: targetSec)
+            }
+            return
+        }
+
+        // Seeking within buffered data or direct native stream (with 1.5s tolerance for fast keyframe response)
+        player.seek(to: cmTime, toleranceBefore: CMTime(seconds: 1.5, preferredTimescale: 600), toleranceAfter: CMTime(seconds: 1.5, preferredTimescale: 600)) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard self != nil else { return }
                 PlayerTimeState.shared.currentTime = targetSec
@@ -267,7 +310,7 @@ public final class PlayerController: ObservableObject {
         }
     }
 
-    private func setupItemObservers(for item: AVPlayerItem) {
+    private func setupItemObservers(for item: AVPlayerItem, autoResumePlayback: Bool = false) {
         let output = AVPlayerItemLegibleOutput(mediaSubtypesForNativeRepresentation: [])
         output.suppressesPlayerRendering = true
         output.setDelegate(legibleDelegateBridge, queue: .main)
@@ -314,7 +357,8 @@ public final class PlayerController: ObservableObject {
                         self.showResumeToast(time: resumeSec)
                     }
 
-                    if self.isPlaying {
+                    if self.isPlaying || autoResumePlayback {
+                        self.isPlaying = true
                         self.player.play()
                         self.player.rate = self.playbackRate
                     }

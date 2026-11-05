@@ -47,3 +47,8 @@ codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "✅ Successfully built $APP_BUNDLE"
 ls -ld "$APP_BUNDLE"
+
+echo "🚀 Installing cleanly to /Applications/$APP_NAME.app..."
+rm -rf "/Applications/$APP_NAME.app"
+cp -R "$APP_BUNDLE" "/Applications/$APP_NAME.app"
+echo "✨ Installed to /Applications/$APP_NAME.app"

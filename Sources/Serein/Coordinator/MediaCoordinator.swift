@@ -555,6 +555,89 @@ public final class MediaCoordinator: ObservableObject {
         }
     }
 
+    public var isPipelineActive: Bool {
+        ffmpegPipeline.isRunning
+    }
+
+    /// Fast-forwards / seeks an active streaming or transcoding session directly to an unloaded timestamp.
+    public func seekPipeline(to targetSeconds: Double) async {
+        guard let source = currentSource, ffmpegPipeline.isRunning else { return }
+        log("⏩ Seeking stream pipeline to \(formatSeconds(targetSeconds))...", level: .info)
+
+        let selectedAudioIndex = AudioManager.shared.selectedTrack?.streamIndex
+        let knownD = self.knownDuration
+
+        switch source {
+        case .local(let fileURL):
+            do {
+                let mode: PipelineMode
+                switch activeStrategy {
+                case .audioTranscodeOnly:
+                    mode = .audioTranscodeOnly
+                case .fullTranscode:
+                    mode = .fullHardwareTranscode
+                default:
+                    mode = .remuxCopy
+                }
+                let streamURL = try await ffmpegPipeline.startSession(
+                    inputURL: fileURL,
+                    mode: mode,
+                    audioStreamIndex: selectedAudioIndex,
+                    seekTime: targetSeconds
+                )
+                self.activePlayableURL = streamURL
+                PlayerController.shared.load(url: streamURL, expectedDuration: knownD, initialTime: targetSeconds)
+                log("✨ Pipeline fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
+            } catch {
+                log("❌ Seek pipeline failed: \(error.localizedDescription)", level: .error)
+            }
+
+        case .online(let webURL, _):
+            do {
+                if let strategy = activeStrategy, case .onlineTranscode = strategy {
+                    // Video platform stream (YouTube, Vimeo, etc.)
+                    let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: targetSeconds)
+                    self.activePlayableURL = streamURL
+                    PlayerController.shared.load(url: streamURL, expectedDuration: knownD, initialTime: targetSeconds)
+                    log("✨ Online stream fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
+                } else {
+                    let mode: PipelineMode
+                    switch activeStrategy {
+                    case .audioTranscodeOnly:
+                        mode = .audioTranscodeOnly
+                    case .fullTranscode:
+                        mode = .fullHardwareTranscode
+                    default:
+                        mode = .remuxCopy
+                    }
+                    let streamURL = try await ffmpegPipeline.startSession(
+                        inputURL: webURL,
+                        mode: mode,
+                        audioStreamIndex: selectedAudioIndex,
+                        seekTime: targetSeconds
+                    )
+                    self.activePlayableURL = streamURL
+                    PlayerController.shared.load(url: streamURL, expectedDuration: knownD, initialTime: targetSeconds)
+                    log("✨ Stream fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
+                }
+            } catch {
+                log("❌ Online seek failed: \(error.localizedDescription)", level: .error)
+            }
+        }
+    }
+
+    private func formatSeconds(_ seconds: Double) -> String {
+        let total = Int(seconds)
+        let m = (total % 3600) / 60
+        let s = total % 60
+        let h = total / 3600
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        } else {
+            return String(format: "%02d:%02d", m, s)
+        }
+    }
+
     public func stop() {
         loadTask?.cancel()
         ffmpegPipeline.stop()
