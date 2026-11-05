@@ -11,6 +11,7 @@ public struct VideoPlayerView: View {
     @ObservedObject var playerController: PlayerController
     @ObservedObject var subtitleManager = SubtitleManager.shared
     @ObservedObject var captionAppearance = CaptionAppearanceManager.shared
+    @ObservedObject var glassSettings = LiquidGlassSettings.shared
 
     var onOpenFile: () -> Void
     var onOpenURL: () -> Void
@@ -287,7 +288,7 @@ public struct VideoPlayerView: View {
                             .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .glassEffect(Glass.regular, in: Circle())
+                    .glassEffect(glassSettings.glass, in: Circle())
                     .help("Close Video and Return to Welcome Screen (Esc / ⌘W)")
                 } else {
                     // Inset clearance for standard macOS traffic lights (only when in windowed mode!)
@@ -321,7 +322,7 @@ public struct VideoPlayerView: View {
                 }
                 .padding(.horizontal, 10)
                 .frame(height: 34)
-                .glassEffect(Glass.regular, in: Capsule())
+                .glassEffect(glassSettings.glass, in: Capsule())
 
                 Spacer(minLength: 12)
 
@@ -333,7 +334,7 @@ public struct VideoPlayerView: View {
                     .truncationMode(.tail)
                     .padding(.horizontal, 14)
                     .frame(height: 34)
-                    .glassEffect(Glass.regular, in: Capsule())
+                    .glassEffect(glassSettings.glass, in: Capsule())
                     .frame(maxWidth: 420)
                     .allowsHitTesting(false)
 
@@ -426,7 +427,7 @@ public struct VideoPlayerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .glassEffect(Glass.regular, in: Capsule())
+        .glassEffect(glassSettings.glass, in: Capsule())
         .help("Playback Options (Subtitles, Speed, Media Statistics)")
     }
 
@@ -465,8 +466,10 @@ public struct VideoPlayerView: View {
                     }
                 ),
                 trackHeight: 4.5,
-                thumbWidth: 34,
-                thumbHeight: 18,
+                idleThumbWidth: 18,
+                idleThumbHeight: 12,
+                activeThumbWidth: 34,
+                activeThumbHeight: 18,
                 onActivity: { registerUserActivity() }
             )
             .frame(width: 92)
@@ -480,7 +483,7 @@ public struct VideoPlayerView: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 34)
-        .glassEffect(Glass.regular, in: Capsule())
+        .glassEffect(glassSettings.glass, in: Capsule())
     }
 
     private var volumeIconName: String {
@@ -778,7 +781,7 @@ public struct VideoPlayerView: View {
                     .foregroundColor(.primary)
                     .offset(x: 2)
             }
-            .glassEffect(Glass.regular, in: Circle())
+            .glassEffect(glassSettings.glass, in: Circle())
             .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 3)
 
             VStack(spacing: 4) {
@@ -820,7 +823,7 @@ public struct VideoPlayerView: View {
             }
             .padding(.horizontal, 36)
             .padding(.vertical, 20)
-            .glassEffect(Glass.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .glassEffect(glassSettings.glass, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .padding(24)
@@ -897,7 +900,7 @@ struct TimelineScrubberShelf: View {
                             .monospacedDigit()
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2.5)
-                            .glassEffect(Glass.regular, in: Capsule())
+                            .glassEffect(LiquidGlassSettings.shared.glass, in: Capsule())
                             .offset(x: max(0, min(width - 45, hoverLocationX - 22)), y: -24)
                     }
                 }
@@ -940,7 +943,7 @@ struct TimelineScrubberShelf: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 38)
-        .glassEffect(Glass.regular, in: Capsule())
+        .glassEffect(LiquidGlassSettings.shared.glass, in: Capsule())
     }
 
     private var currentTimeValue: Double {

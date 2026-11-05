@@ -52,7 +52,7 @@ public struct MediaInspectorView: View {
             .padding(16)
         }
         .frame(width: 340)
-        .glassEffect(Glass.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassEffect(LiquidGlassSettings.shared.glass, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     // MARK: - Strategy Section
