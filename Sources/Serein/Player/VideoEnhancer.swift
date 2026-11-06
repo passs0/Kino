@@ -14,39 +14,41 @@ public final class VideoEnhancer: ObservableObject {
     private static let userDefaultsKey = "Serein_VideoEnhancementMode"
 
     public enum EnhancementMode: String, CaseIterable, Identifiable, Sendable {
+        case off = "Native Hardware (Default)"
         case metalFX = "Apple MetalFX: Spatial Super-Resolution"
         case luminanceDetail = "Apple CoreImage: Luminance Detail"
         case edgeOutline = "Apple CoreImage: Edge & Outline"
         case noiseReduction = "Apple CoreImage: Noise & Grain Suppression"
         case cinematicVibrance = "Apple CoreImage: Cinematic Contrast & Color"
-        case off = "Native Hardware (Bypass)"
 
         public var id: String { rawValue }
 
         public var iconName: String {
             switch self {
+            case .off: return "display"
             case .metalFX: return "cpu"
             case .luminanceDetail: return "sparkles"
             case .edgeOutline: return "paintbrush.pointed"
             case .noiseReduction: return "bubbles.and.sparkles"
             case .cinematicVibrance: return "film.stack"
-            case .off: return "display"
             }
         }
 
         public var technologyBadge: String {
             switch self {
+            case .off: return "Apple Display Engine"
             case .metalFX: return "Apple MetalFX (GPU)"
             case .luminanceDetail: return "CoreImage (CISharpenLuminance)"
             case .edgeOutline: return "CoreImage (CIUnsharpMask)"
             case .noiseReduction: return "CoreImage (CINoiseReduction)"
             case .cinematicVibrance: return "CoreImage (Compound)"
-            case .off: return "Apple Display Engine"
             }
         }
 
         public var shortDescription: String {
             switch self {
+            case .off:
+                return "Direct uncompressed hardware pass via the Apple Silicon Video Processing Unit & Display Engine with zero filtering."
             case .metalFX:
                 return "Apple's first-party MetalFX spatial upscaler profile, combining high-frequency luminance detail with adaptive edge reconstruction for Retina & 4K displays."
             case .luminanceDetail:
@@ -57,8 +59,6 @@ public final class VideoEnhancer: ObservableObject {
                 return "Apple's spatial noise filter (CINoiseReduction). Smooths compression macroblocking and sensor grain while preserving sharp edge boundaries."
             case .cinematicVibrance:
                 return "Apple dynamic range enhancement combining luminance clarity with rich cinematic contrast and color saturation."
-            case .off:
-                return "Direct uncompressed hardware pass via the Apple Silicon Video Processing Unit & Display Engine with zero filtering."
             }
         }
     }
@@ -72,8 +72,8 @@ public final class VideoEnhancer: ObservableObject {
            let savedMode = EnhancementMode(rawValue: savedRaw) {
             self.activeMode = savedMode
         } else {
-            // Default to Apple MetalFX: Spatial Super-Resolution as the premier upscaling engine
-            self.activeMode = .metalFX
+            // Default to untouched native hardware rendering
+            self.activeMode = .off
         }
     }
 
