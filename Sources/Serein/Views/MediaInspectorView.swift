@@ -180,7 +180,7 @@ public struct MediaInspectorView: View {
 
                     Spacer()
 
-                    Text(enhancer.activeMode == .off ? "Hardware Display Engine" : "Real-time GPU Filter")
+                    Text(enhancer.activeMode.technologyBadge)
                         .font(.system(size: 9.5, weight: .semibold))
                         .foregroundColor(enhancer.activeMode == .off ? Color.white.opacity(0.6) : Color.accentColor)
                         .padding(.horizontal, 6)
