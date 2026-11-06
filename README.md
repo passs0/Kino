@@ -9,6 +9,13 @@
   Native, lightweight, hardware-accelerated media player & coordinator built with SwiftUI, AppKit, and AVFoundation for Apple Silicon macOS.
 </p>
 
+<p align="center">
+  <a href="https://github.com/passs0/Serein/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Serein?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
+  <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
+  <img src="https://img.shields.io/badge/bundle-3.6%20MB-success" alt="Bundle Size" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
+</p>
+
 ---
 
 > [!NOTE]
@@ -26,6 +33,8 @@ For decades, **QuickTime Player** has set the standard for macOS media playback:
 **Serein is the modern successor:**
 - **QuickTime Aesthetics & Efficiency:** Native Cocoa chrome, fluid animations, and 0% CPU consumption on standard formats.
 - **Universal Codec & Container Support:** Plays `.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, VP9, AV1, and Opus seamlessly.
+- **Pure Apple Native Video Enhancement:** Built-in Apple MetalFX Spatial Super-Resolution and CoreImage GPU filters with zero file bloat.
+- **Multi-Channel Surround Audio:** Preserves discrete 5.1 and 7.1 audio tracks and Dolby Atmos Spatial Audio pass-through.
 - **Zero-Friction In-App Engine Setup:** Automatically manages helper engines with 1 click in user space—no Terminal commands, no Homebrew, and no `sudo` required!
 
 ---
@@ -43,18 +52,37 @@ Serein actively evaluates container formats, audio streams, and video codecs bef
 | **Hardware VideoToolbox** | Incompatible video codecs (VP9, VP8, AV1, MPEG-2) | Real-time Apple Silicon VideoToolbox GPU encoding with 0% dropped frames. |
 | **Online Stream Bridge** | Web streaming links & video platforms | Authenticated piped `yt-dlp` ➔ `FFmpeg` pipeline bypassing 403 Forbidden CDN blocks while preserving original audio. |
 
-### 2. macOS System Settings Accessibility Captions
+### 2. Pure Apple Native Video Enhancement & Upscaling Suite
+Serein includes a zero-bloat GPU video enhancement suite integrated directly via hardware-accelerated CoreAnimation layer filtering (`AVPlayerLayer.filters`):
+- **Apple MetalFX: Spatial Super-Resolution:** Integrates Apple's first-party `MetalFX.framework` (`MTLFXSpatialScaler`), engineered specifically for Apple Silicon GPUs to reconstruct crisp high-frequency detail.
+- **Luminance Detail Enhancer (`CISharpenLuminance`):** Isolates the luma channel to sharpen micro-textures and fine details without amplifying chroma noise.
+- **Edge & Outline Enhancer (`CIUnsharpMask`):** High-contrast edge restoration tuned with a tight radius for animation, cel-shading, cartoons, line art, and interface text.
+- **Noise & Grain Suppression (`CINoiseReduction`):** Spatial bilateral noise reduction smoothing macroblocking and sensor grain while keeping edge boundaries razor-sharp.
+- **Cinematic Contrast & Color:** Compound dynamic range filter combining luminance clarity with rich contrast and color vibrance.
+- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **3.6 MB**.
+
+### 3. Discrete Multi-Channel Surround Sound & Dolby Atmos
+- **Discrete 5.1 & 7.1 Preservation:** Retains discrete multi-channel surround tracks at high studio bitrates (384–640 kbps) without downmixing to stereo.
+- **Dolby Atmos & Spatial Audio:** Passes E-AC-3 JOC directly to macOS AudioToolbox, enabling native Spatial Audio with dynamic head tracking on AirPods and built-in Mac speaker arrays.
+- **Multi-Track Audio Switching:** Effortlessly switch between original audio tracks, commentary, and localized dubs from the Options menu (`...`).
+
+### 4. macOS System Settings Accessibility Captions
 Serein treats subtitles as a first-class citizen using Apple's official `MediaAccessibility` framework (`MACaptionAppearance`):
 - **System-Wide Consistency:** Subtitles dynamically adapt to your preferences in **System Settings ➔ Accessibility ➔ Captions** (e.g. *Transparent Background*, *Classic*, *Outline Text*, or *Large Text*).
-- **Responsive Subtitle Scaling:** Caption font size, padding, and line height dynamically scale with the viewport height (`18 pt` to `48 pt`) when entering full screen.
+- **Responsive Subtitle Scaling:** Caption font size, padding, and line height dynamically scale with viewport height (`18 pt` to `48 pt`) when entering full screen.
 - **Smart ASS/SSA Sanitization:** Automatically strips cluttered custom font/color overrides from anime and community subtitles while preserving semantic screen positioning (top, bottom, and center placement).
 - **Embedded Subtitle Extraction:** Automatically extracts container-embedded tracks (`mov_text`, `srt`, `ass`, `webvtt`) on-the-fly.
+
+### 5. Centered Media Statistics HUD & Liquid Glass Controls
+- **Centered Floating Modal HUD (`⌘I`):** A centered floating diagnostic block presenting live playback strategy, active upscaling pipeline, audio codec channels, and stream probe metadata. Hugs content snugly and scrolls smoothly with high-contrast dark frosted glass (`black.opacity(0.95)`) and a 50% backdrop dimming scrim. Dismiss with `Esc` or a click outside.
+- **Generous Traffic Light Breathing Room:** Swizzled window layout keeps macOS window controls comfortably placed at `18pt` left and `16pt` top margin across playback and resizing.
+- **Minimalist Liquid Level Sliders:** Continuous fluid level bars for volume and scrubbing with zero knob clutter.
 
 ---
 
 ## ⚡️ Zero-Friction Setup: No Terminal Required
 
-Unlike traditional players that demand manual command-line installations, Serein keeps the core application download ultra-compact (**~3.2 MB**) and provides an **automated in-app engine installer**:
+Unlike traditional players that demand manual command-line installations, Serein keeps the core application download ultra-compact (**~3.6 MB app, 1.5 MB .dmg**) and provides an **automated in-app engine installer**:
 
 1. **Automatic Detection:** If you already have Homebrew (`brew install ffmpeg yt-dlp`), Serein detects and uses them immediately with zero configuration.
 2. **1-Click In-App Download:** On fresh Macs without Homebrew, Serein prompts you with a clean native setup sheet (`⌘,`) and downloads managed static binaries directly into `~/Library/Application Support/Serein/bin/`.
@@ -72,23 +100,27 @@ Unlike traditional players that demand manual command-line installations, Serein
 | **`+` / `=`** | Volume Up (`+10%`) |
 | **`-`** | Volume Down (`-10%`) |
 | **`M`** | Mute / Unmute |
-| **`Z`** | Toggle Aspect Ratio: **Fit to Screen (Letterbox)** vs. **Fill Screen** |
-| **`⌘I`** | Toggle Media Statistics & Technical Inspector HUD |
+| **`C`** | Toggle Video Aspect Ratio: **Fit to Screen (Letterbox)** vs. **Fill Screen** |
+| **`Z`** | Toggle Subtitle Placement: **Video Frame Bounds** vs. **Display Frame Bounds** |
+| **`⌘I`** | Toggle Centered Media Statistics & Technical Inspector HUD |
+| **`Esc`** | Dismiss Media Statistics HUD or active modal |
 | **`⌘,`** | Media Engines & Codecs Setup Sheet |
 | **`⌘O`** | Open Local Media File |
 | **`⌘U`** | Open Online Streaming URL |
+| **`⌘W`** | Close Window |
 
 ---
 
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **`Serein-v0.1.6.dmg`** from [GitHub Releases](https://github.com/passs0/Serein/releases).
+1. Download **[`Serein-v0.1.6.dmg`](https://github.com/passs0/Serein/releases/latest)** from [GitHub Releases](https://github.com/passs0/Serein/releases).
 2. Open the downloaded `.dmg` and drag **`Serein.app`** directly into the **`Applications`** folder shortcut.
-3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed), run:
-   ```zsh
-   xattr -cr /Applications/Serein.app
-   ```
+3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
+   - Right-click `Serein.app` ➔ **Open**, or run:
+     ```zsh
+     xattr -cr /Applications/Serein.app
+     ```
 4. Open `Serein.app` and press `⌘O` to open any file or `⌘U` for streaming links!
 
 ### Option 2: Build from Source
@@ -98,7 +130,7 @@ cd Serein
 ./build_app.sh
 ```
 > [!NOTE]
-> `./build_app.sh` automatically compiles, ad-hoc code-signs, and cleanly installs `Serein.app` directly into `/Applications/`.
+> `./build_app.sh` automatically compiles, ad-hoc code-signs, and cleanly installs `Serein.app` directly into `/Applications/`. You can also run `make dmg` to package a release disk image.
 
 ---
 
@@ -119,6 +151,7 @@ cd Serein
 - [x] Native traffic light positioning with generous breathing room across playback & window resizing
 - [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
 - [x] Multi-channel surround sound preservation (5.1 & 7.1 audio tracks & Dolby Atmos)
+- [x] Automated drag-and-drop macOS disk image (`.dmg`) packaging
 - [ ] **v0.2.0**: Dedicated Audio Mode & Floating Mini Player HUD
 - [ ] **v0.2.0**: Playlist Queue with drag-and-drop & continuous playback
 - [ ] **v0.2.0**: macOS Control Center (`MPNowPlayingInfoCenter`) & media key support
