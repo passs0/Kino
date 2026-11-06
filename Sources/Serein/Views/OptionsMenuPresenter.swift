@@ -158,6 +158,24 @@ public final class OptionsMenuPresenter: NSObject {
         aspectItem.submenu = aspectMenu
         menu.addItem(aspectItem)
 
+        // 5. Video Upscaler & Enhancer Submenu (GPU-accelerated native upscaling)
+        let enhanceItem = NSMenuItem(title: "Video Upscaler & Enhancer", action: nil, keyEquivalent: "")
+        let enhanceMenu = NSMenu(title: "Video Upscaler & Enhancer")
+        enhanceMenu.autoenablesItems = false
+
+        let currentMode = VideoEnhancer.shared.activeMode
+        for mode in VideoEnhancer.EnhancementMode.allCases {
+            let item = NSMenuItem(title: mode.rawValue, action: #selector(handleSelectEnhancementMode(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = mode
+            item.state = (currentMode == mode) ? .on : .off
+            item.toolTip = mode.shortDescription
+            enhanceMenu.addItem(item)
+        }
+
+        enhanceItem.submenu = enhanceMenu
+        menu.addItem(enhanceItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // 4. Media Statistics (Canonical access point for media information & technical inspector)
@@ -228,6 +246,12 @@ public final class OptionsMenuPresenter: NSObject {
 
     @objc private func handleSetLetterboxFill() {
         PlayerController.shared.isLetterboxed = false
+    }
+
+    @objc private func handleSelectEnhancementMode(_ sender: NSMenuItem) {
+        if let mode = sender.representedObject as? VideoEnhancer.EnhancementMode {
+            VideoEnhancer.shared.setMode(mode)
+        }
     }
 
     @objc private func handleToggleStats() {

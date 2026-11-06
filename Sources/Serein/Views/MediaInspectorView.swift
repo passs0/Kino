@@ -3,6 +3,7 @@ import SwiftUI
 /// Detailed centered modal HUD displaying media container analysis, stream codecs, and coordinator rationale.
 public struct MediaInspectorView: View {
     @ObservedObject var coordinator: MediaCoordinator
+    @ObservedObject private var enhancer = VideoEnhancer.shared
     var onClose: (() -> Void)?
 
     @State private var innerContentHeight: CGFloat = 0
@@ -49,6 +50,8 @@ public struct MediaInspectorView: View {
                     if let strategy = coordinator.activeStrategy {
                         strategySection(strategy)
                     }
+
+                    videoEnhancementSection
 
                     if let stats = coordinator.pipelineStats {
                         livePipelineSection(stats)
@@ -151,6 +154,45 @@ public struct MediaInspectorView: View {
                             .foregroundColor(.white)
                     }
                 }
+            }
+            .padding(12)
+            .background(cardBackground)
+        }
+    }
+
+    // MARK: - Video Enhancement Section
+
+    private var videoEnhancementSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("VIDEO ENHANCEMENT & UPSCALING")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(Color.white.opacity(0.65))
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: enhancer.activeMode.iconName)
+                        .foregroundColor(enhancer.activeMode == .off ? Color.white.opacity(0.6) : Color.accentColor)
+                        .font(.system(size: 13, weight: .semibold))
+
+                    Text(enhancer.activeMode.rawValue)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Text(enhancer.activeMode == .off ? "Hardware Display Engine" : "Real-time GPU Filter")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundColor(enhancer.activeMode == .off ? Color.white.opacity(0.6) : Color.accentColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background((enhancer.activeMode == .off ? Color.white : Color.accentColor).opacity(0.12))
+                        .cornerRadius(4)
+                }
+
+                Text(enhancer.activeMode.shortDescription)
+                    .font(.system(size: 10.5))
+                    .foregroundColor(Color.white.opacity(0.70))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
             .background(cardBackground)

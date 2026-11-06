@@ -94,6 +94,7 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
 
         registerForDraggedTypes([.fileURL, .URL])
         PlayerController.shared.activePlayerNSView = self
+        VideoEnhancer.shared.register(playerLayer: playerLayer)
     }
 
     public override func layout() {

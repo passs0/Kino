@@ -109,39 +109,36 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         switch mode {
         case .remuxCopy:
-            // Zero video re-encoding: stream copy video, ensure clean compliant HLS AAC audio with stereo downmix
+            // Zero video re-encoding: stream copy video, preserve multichannel audio in high-fidelity AAC
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-ac", "2",
-                "-b:a", "256k",
+                "-b:a", "384k",
                 "-ar", "48000"
             ])
         case .audioTranscodeOnly:
-            // Copy H.264 video stream, re-encode audio to AAC stereo
+            // Copy native video stream, transcode audio to high-fidelity AAC preserving multichannel audio
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-ac", "2",
-                "-b:a", "256k",
+                "-b:a", "384k",
                 "-ar", "48000"
             ])
         case .fullHardwareTranscode:
-            // Hardware accelerated Apple Silicon VideoToolbox encoding to H.264.
-            // AVPlayer strictly requires H.264 (AVC) in MPEG-TS segments; HEVC/VP9 in .ts are dropped by AVKit.
+            // Hardware accelerated Apple Silicon VideoToolbox encoding.
+            // Preserves high-fidelity audio up to multichannel surround.
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "h264_videotoolbox",
                 "-pix_fmt", "yuv420p",
-                "-b:v", "4500k",
+                "-b:v", "6000k",
                 "-c:a", "aac",
-                "-ac", "2",
-                "-b:a", "256k",
+                "-b:a", "384k",
                 "-ar", "48000"
             ])
         }
