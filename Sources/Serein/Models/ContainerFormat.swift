@@ -11,6 +11,14 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
     case ts
     case flv
     case hls
+    case flac
+    case mp3
+    case m4a
+    case aac
+    case wav
+    case aiff
+    case ogg
+    case opus
     case unknown(String)
 
     public init(rawString: String) {
@@ -33,6 +41,22 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
             self = .flv
         } else if lowered.contains("hls") || lowered.contains("m3u8") {
             self = .hls
+        } else if lowered.contains("flac") {
+            self = .flac
+        } else if lowered.contains("mp3") {
+            self = .mp3
+        } else if lowered.contains("m4a") {
+            self = .m4a
+        } else if lowered.contains("aac") {
+            self = .aac
+        } else if lowered.contains("wav") || lowered.contains("wave") {
+            self = .wav
+        } else if lowered.contains("aiff") || lowered.contains("aif") {
+            self = .aiff
+        } else if lowered.contains("ogg") || lowered.contains("oga") {
+            self = .ogg
+        } else if lowered.contains("opus") {
+            self = .opus
         } else {
             self = .unknown(rawString)
         }
@@ -49,6 +73,14 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
         case "ts": return .ts
         case "flv": return .flv
         case "m3u8": return .hls
+        case "flac": return .flac
+        case "mp3": return .mp3
+        case "m4a": return .m4a
+        case "aac": return .aac
+        case "wav", "wave": return .wav
+        case "aiff", "aif": return .aiff
+        case "ogg", "oga": return .ogg
+        case "opus": return .opus
         default: return .unknown(fileExtension)
         }
     }
@@ -56,11 +88,9 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
     /// Whether macOS AVFoundation (AVPlayer) can open and demux this container format directly.
     public var isNativelySupportedByAVPlayer: Bool {
         switch self {
-        case .mp4, .mov, .m4v, .hls:
+        case .mp4, .mov, .m4v, .hls, .ts, .flac, .mp3, .m4a, .aac, .wav, .aiff:
             return true
-        case .ts:
-            return true
-        case .mkv, .webm, .avi, .flv, .unknown:
+        case .mkv, .webm, .avi, .flv, .ogg, .opus, .unknown:
             return false
         }
     }
@@ -68,7 +98,7 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
     /// Whether this container generally allows fast stream-copy remuxing into MP4 or HLS without re-encoding.
     public var canStreamCopyRemux: Bool {
         switch self {
-        case .mkv, .webm, .ts, .mov, .mp4, .m4v, .avi, .flv, .hls:
+        case .mkv, .webm, .ts, .mov, .mp4, .m4v, .avi, .flv, .hls, .flac, .mp3, .m4a, .aac, .wav, .aiff, .ogg, .opus:
             return true
         case .unknown:
             return true
@@ -86,6 +116,14 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
         case .ts: return "MPEG-2 Transport Stream (.ts)"
         case .flv: return "Flash Video (.flv)"
         case .hls: return "HTTP Live Streaming (.m3u8)"
+        case .flac: return "Free Lossless Audio Codec (.flac)"
+        case .mp3: return "MPEG Audio Layer III (.mp3)"
+        case .m4a: return "Apple Audio (.m4a)"
+        case .aac: return "Advanced Audio Coding (.aac)"
+        case .wav: return "Waveform Audio (.wav)"
+        case .aiff: return "Audio Interchange File Format (.aiff)"
+        case .ogg: return "Ogg Audio (.ogg)"
+        case .opus: return "Opus Audio (.opus)"
         case .unknown(let str): return "Custom (\(str))"
         }
     }
@@ -101,6 +139,14 @@ public enum ContainerFormat: Hashable, Sendable, CustomStringConvertible {
         case .ts: return "MPEG-TS"
         case .flv: return "FLV"
         case .hls: return "HLS"
+        case .flac: return "FLAC"
+        case .mp3: return "MP3"
+        case .m4a: return "M4A"
+        case .aac: return "AAC"
+        case .wav: return "WAV"
+        case .aiff: return "AIFF"
+        case .ogg: return "OGG"
+        case .opus: return "OPUS"
         case .unknown(let str): return str.uppercased()
         }
     }

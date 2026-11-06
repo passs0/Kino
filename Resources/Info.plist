@@ -41,7 +41,7 @@
     <array>
         <dict>
             <key>CFBundleTypeName</key>
-            <string>Video Media</string>
+            <string>Media</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
             <key>LSHandlerRank</key>
@@ -54,6 +54,13 @@
                 <string>public.mpeg-4</string>
                 <string>org.matroska.mkv</string>
                 <string>org.webmproject.webm</string>
+                <string>public.audio</string>
+                <string>org.xiph.flac</string>
+                <string>public.mp3</string>
+                <string>com.apple.m4a-audio</string>
+                <string>com.microsoft.waveform-audio</string>
+                <string>public.aifc-audio</string>
+                <string>public.aiff-audio</string>
             </array>
         </dict>
     </array>

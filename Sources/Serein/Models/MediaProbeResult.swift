@@ -75,6 +75,10 @@ public struct MediaProbeResult: Hashable, Sendable {
         streams.first { $0.kind == .audio }
     }
 
+    public var isAudioOnly: Bool {
+        primaryVideo == nil && primaryAudio != nil
+    }
+
     public var audioStreams: [MediaStream] {
         streams.filter { $0.kind == .audio }
     }

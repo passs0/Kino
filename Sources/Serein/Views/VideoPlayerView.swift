@@ -126,6 +126,11 @@ public struct VideoPlayerView: View {
                 }
                 .ignoresSafeArea()
 
+                // Layer 1.5: Audio Presentation Canvas (for FLAC, MP3, M4A, ALAC pure audio)
+                if coordinator.probeResult?.isAudioOnly == true {
+                    audioOnlyCanvasView
+                }
+
                 // Layer 2: Background Tap Catch (only for empty canvas clicks, beneath interactive controls)
                 Color.clear
                     .contentShape(Rectangle())
@@ -590,6 +595,60 @@ public struct VideoPlayerView: View {
         }
         coordinator.stop()
         playerController.reset()
+    }
+
+    // MARK: - Audio Only Presentation Canvas
+
+    private var audioOnlyCanvasView: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.35), Color.purple.opacity(0.25), Color.black.opacity(0.60)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 140, height: 140)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+                    .shadow(color: Color.blue.opacity(0.20), radius: 24, x: 0, y: 8)
+
+                Image(systemName: "music.note")
+                    .font(.system(size: 48, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.90))
+            }
+
+            VStack(spacing: 6) {
+                Text(coordinator.currentSource?.displayName ?? "Audio Track")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
+                if let probe = coordinator.probeResult {
+                    HStack(spacing: 8) {
+                        Text(probe.containerFormat.description)
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.25))
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+
+                        if let audio = probe.primaryAudio {
+                            Text(audio.audioDetailsString ?? audio.codecName.uppercased())
+                                .font(.system(size: 11))
+                                .foregroundColor(.white.opacity(0.65))
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.bottom, 60)
+        .transition(.opacity)
     }
 
     // MARK: - Resume Toast View

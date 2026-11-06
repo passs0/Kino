@@ -33,7 +33,10 @@ public struct CompatibilityMatrix: Sendable {
         // Streams or files without a file extension cannot be safely opened or demuxed by AVPlayer.
         // Force streams without an extension directly through hardware transcoding for guaranteed playback.
         let rawExt = source.fileExtension.lowercased()
-        let recognizedExts = ["mp4", "mov", "m4v", "mkv", "webm", "avi", "ts", "flv", "m3u8"]
+        let recognizedExts = [
+            "mp4", "mov", "m4v", "mkv", "webm", "avi", "ts", "flv", "m3u8",
+            "flac", "mp3", "m4a", "aac", "wav", "wave", "aiff", "aif", "ogg", "oga", "opus"
+        ]
         let hasRecognizedExtension = recognizedExts.contains(rawExt) && !rawExt.isEmpty
 
         if !hasRecognizedExtension || rawExt.isEmpty {
@@ -47,9 +50,9 @@ public struct CompatibilityMatrix: Sendable {
         // Local file evaluation
         guard let p = probe else {
             // Fallback heuristics when probe is unavailable
-            let ext = source.fileExtension
-            if ["mp4", "mov", "m4v"].contains(ext) && !source.isOnline {
-                return .directNative(playableURL: rawURL, reason: "QuickTime/MP4 container detected. Attempting direct hardware playback.")
+            let ext = source.fileExtension.lowercased()
+            if ["mp4", "mov", "m4v", "flac", "mp3", "m4a", "aac", "wav", "aiff", "aif"].contains(ext) && !source.isOnline {
+                return .directNative(playableURL: rawURL, reason: "Native container detected (\(ext.uppercased())). Attempting direct hardware playback.")
             } else if ["mkv", "webm"].contains(ext) {
                 return .remuxOnly(inputURL: rawURL, streamURL: rawURL, reason: "Container \(ext.uppercased()) requires stream copy remuxing.")
             } else {
@@ -68,7 +71,7 @@ public struct CompatibilityMatrix: Sendable {
         // For online streams, AVPlayer strictly requires a clean static .mp4/.mov/.m4v file path without query-string download endpoints.
         // Download endpoints (with /download/?fid=... or dynamic parameters) return application/octet-stream and must be remuxed by FFmpeg.
         let isCleanNativeURL = !source.isOnline || (
-            ["mp4", "mov", "m4v"].contains(rawURL.pathExtension.lowercased()) &&
+            ["mp4", "mov", "m4v", "flac", "mp3", "m4a", "aac", "wav", "aiff"].contains(rawURL.pathExtension.lowercased()) &&
             !rawURL.path.contains("/download") &&
             rawURL.query == nil
         )
