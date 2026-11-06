@@ -83,17 +83,22 @@ Unlike traditional players that demand manual command-line installations, Serein
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built)
-1. Download `Serein.app` from the [GitHub Releases](https://github.com/passs0/Serein/releases).
-2. Drag `Serein.app` into your `/Applications/` folder.
-3. Open `Serein.app` and press `⌘O` to open any file or `⌘U` for streaming links!
+1. Download `Serein-v0.1.5-beta-arm64.zip` from [GitHub Releases](https://github.com/passs0/Serein/releases).
+2. Unzip and drag `Serein.app` into your `/Applications/` folder.
+3. If macOS Gatekeeper flags the downloaded binary on first launch, run:
+   ```zsh
+   xattr -cr /Applications/Serein.app
+   ```
+4. Open `Serein.app` and press `⌘O` to open any file or `⌘U` for streaming links!
 
 ### Option 2: Build from Source
 ```zsh
 git clone https://github.com/passs0/Serein.git
 cd Serein
 ./build_app.sh
-cp -R build/Serein.app /Applications/
 ```
+> [!NOTE]
+> `./build_app.sh` automatically compiles, ad-hoc code-signs, and cleanly installs `Serein.app` directly into `/Applications/`.
 
 ---
 
@@ -103,11 +108,17 @@ cp -R build/Serein.app /Applications/
 - [x] In-app automated media engine downloader & updater
 - [x] macOS Accessibility caption rendering
 - [x] Online streaming pipeline with original audio selection
+- [x] Native Picture-in-Picture (`AVPictureInPictureController`)
+- [x] Variable speed with CoreAudio pitch correction (`0.5×`–`2.0×`)
+- [x] High-speed visionOS multi-variant HLS streaming with automated CDN fallback
+- [x] Apple Liquid Glass design & dynamic System Settings tint adjustment (`NSGlassTintAmount`)
+- [x] Minimalist thumbless liquid level sliders for volume & timeline
+- [x] Display & system idle sleep prevention during playback
+- [x] Sample-accurate WebVTT, SRT, and ASS/SSA subtitle synchronization on resume
 - [ ] **v0.2.0**: Dedicated Audio Mode & Floating Mini Player HUD
 - [ ] **v0.2.0**: Playlist Queue with drag-and-drop & continuous playback
 - [ ] **v0.2.0**: macOS Control Center (`MPNowPlayingInfoCenter`) & media key support
-- [ ] **v0.3.0**: Native Picture-in-Picture (`AVPictureInPictureController`)
-- [ ] **v0.3.0**: Variable speed with CoreAudio pitch correction (`0.5×`–`3.0×`)
+- [ ] **v0.3.0**: Audio equalizer & CoreAudio visualizer
 
 ---
 
