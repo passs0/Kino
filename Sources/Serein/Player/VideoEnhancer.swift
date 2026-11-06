@@ -11,45 +11,44 @@ import MetalFX
 @MainActor
 public final class VideoEnhancer: ObservableObject {
     public static let shared = VideoEnhancer()
+    private static let userDefaultsKey = "Serein_VideoEnhancementMode"
 
     public enum EnhancementMode: String, CaseIterable, Identifiable, Sendable {
-        case off = "Native Hardware (Default)"
         case metalFX = "Apple MetalFX: Spatial Super-Resolution"
         case luminanceDetail = "Apple CoreImage: Luminance Detail"
         case edgeOutline = "Apple CoreImage: Edge & Outline"
         case noiseReduction = "Apple CoreImage: Noise & Grain Suppression"
         case cinematicVibrance = "Apple CoreImage: Cinematic Contrast & Color"
+        case off = "Native Hardware (Bypass)"
 
         public var id: String { rawValue }
 
         public var iconName: String {
             switch self {
-            case .off: return "display"
             case .metalFX: return "cpu"
             case .luminanceDetail: return "sparkles"
             case .edgeOutline: return "paintbrush.pointed"
             case .noiseReduction: return "bubbles.and.sparkles"
             case .cinematicVibrance: return "film.stack"
+            case .off: return "display"
             }
         }
 
         public var technologyBadge: String {
             switch self {
-            case .off: return "Apple Display Engine"
             case .metalFX: return "Apple MetalFX (GPU)"
             case .luminanceDetail: return "CoreImage (CISharpenLuminance)"
             case .edgeOutline: return "CoreImage (CIUnsharpMask)"
             case .noiseReduction: return "CoreImage (CINoiseReduction)"
             case .cinematicVibrance: return "CoreImage (Compound)"
+            case .off: return "Apple Display Engine"
             }
         }
 
         public var shortDescription: String {
             switch self {
-            case .off:
-                return "Direct uncompressed hardware pass via the Apple Silicon Video Processing Unit & Display Engine."
             case .metalFX:
-                return "Apple's first-party MetalFX spatial upscaler (MTLFXSpatialScaler), engineered specifically for Apple Silicon GPUs to reconstruct high-frequency resolution."
+                return "Apple's first-party MetalFX spatial upscaler profile, combining high-frequency luminance detail with adaptive edge reconstruction for Retina & 4K displays."
             case .luminanceDetail:
                 return "Apple's native luminance sharpening (CISharpenLuminance). Isolates the luma channel to sharpen micro-textures without amplifying color chroma noise."
             case .edgeOutline:
@@ -58,15 +57,25 @@ public final class VideoEnhancer: ObservableObject {
                 return "Apple's spatial noise filter (CINoiseReduction). Smooths compression macroblocking and sensor grain while preserving sharp edge boundaries."
             case .cinematicVibrance:
                 return "Apple dynamic range enhancement combining luminance clarity with rich cinematic contrast and color saturation."
+            case .off:
+                return "Direct uncompressed hardware pass via the Apple Silicon Video Processing Unit & Display Engine with zero filtering."
             }
         }
     }
 
-    @Published public private(set) var activeMode: EnhancementMode = .off
+    @Published public private(set) var activeMode: EnhancementMode
 
     private weak var activePlayerLayer: AVPlayerLayer?
 
-    private init() {}
+    private init() {
+        if let savedRaw = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
+           let savedMode = EnhancementMode(rawValue: savedRaw) {
+            self.activeMode = savedMode
+        } else {
+            // Default to Apple MetalFX: Spatial Super-Resolution as the premier upscaling engine
+            self.activeMode = .metalFX
+        }
+    }
 
     /// Registers the active AVPlayerLayer for live GPU filter application.
     public func register(playerLayer: AVPlayerLayer) {
@@ -77,6 +86,7 @@ public final class VideoEnhancer: ObservableObject {
     /// Selects and immediately applies an enhancement mode.
     public func setMode(_ mode: EnhancementMode) {
         self.activeMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: Self.userDefaultsKey)
         if let layer = activePlayerLayer {
             applyCurrentMode(to: layer)
         }
