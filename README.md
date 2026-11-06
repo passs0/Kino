@@ -83,7 +83,7 @@ Unlike traditional players that demand manual command-line installations, Serein
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built)
-1. Download `Serein-v0.1.5-beta-arm64.zip` from [GitHub Releases](https://github.com/passs0/Serein/releases).
+1. Download `Serein-v0.1.6-macOS.zip` from [GitHub Releases](https://github.com/passs0/Serein/releases).
 2. Unzip and drag `Serein.app` into your `/Applications/` folder.
 3. If macOS Gatekeeper flags the downloaded binary on first launch, run:
    ```zsh
@@ -115,6 +115,10 @@ cd Serein
 - [x] Minimalist thumbless liquid level sliders for volume & timeline
 - [x] Display & system idle sleep prevention during playback
 - [x] Sample-accurate WebVTT, SRT, and ASS/SSA subtitle synchronization on resume
+- [x] Centered Media Statistics HUD (`⌘I`) with content-adaptive sizing & high-contrast dark glass
+- [x] Native traffic light positioning with generous breathing room across playback & window resizing
+- [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
+- [x] Multi-channel surround sound preservation (5.1 & 7.1 audio tracks & Dolby Atmos)
 - [ ] **v0.2.0**: Dedicated Audio Mode & Floating Mini Player HUD
 - [ ] **v0.2.0**: Playlist Queue with drag-and-drop & continuous playback
 - [ ] **v0.2.0**: macOS Control Center (`MPNowPlayingInfoCenter`) & media key support
