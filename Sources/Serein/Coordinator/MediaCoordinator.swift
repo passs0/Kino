@@ -117,6 +117,12 @@ public final class MediaCoordinator: ObservableObject {
 
         log("📂 Ingesting media source: [\(source.displayName)]", level: .info)
 
+        if source.isAudioTrack {
+            Task { @MainActor in
+                WindowManager.shared.setMiniPlayer(true)
+            }
+        }
+
         loadTask = Task { [weak self] in
             guard let self = self else { return }
             await self.processSource(source)
@@ -730,6 +736,9 @@ public final class MediaCoordinator: ObservableObject {
         SubtitleManager.shared.reset()
         AudioManager.shared.reset()
         NowPlayingManager.shared.clear()
+        Task { @MainActor in
+            WindowManager.shared.setMiniPlayer(false)
+        }
         state = .idle
         log("Playback stopped and pipelines dismantled.", level: .info)
     }

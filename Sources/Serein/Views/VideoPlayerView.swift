@@ -302,8 +302,24 @@ public struct VideoPlayerView: View {
                         .transition(.opacity)
                 }
 
-                // Top-Left: PiP & AirPlay Video Capsule
+                // Top-Left: MiniPlayer, PiP & AirPlay Video Capsule
                 HStack(spacing: 8) {
+                    // Compact MiniPlayer Button
+                    Button(action: {
+                        WindowManager.shared.toggleMiniPlayer()
+                        registerUserActivity()
+                    }) {
+                        Image(systemName: "rectangle.compress.vertical")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 22, height: 22)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Compact MiniPlayer (⌥⌘M)")
+
+                    GlassDivider(height: 14)
+
                     // Native Picture in Picture Button
                     Button(action: {
                         playerController.togglePictureInPicture()
@@ -588,6 +604,7 @@ public struct VideoPlayerView: View {
     // MARK: - Close Video & Return to Welcome Screen
 
     private func quitVideoAndReturnToWelcome() {
+        WindowManager.shared.setMiniPlayer(false)
         playerController.saveCurrentPosition()
         playerController.pause()
         if isFullScreen, let win = NSApp.keyWindow ?? NSApp.windows.first {

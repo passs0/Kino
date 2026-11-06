@@ -57,6 +57,11 @@ public enum MediaSource: Identifiable, Hashable, Sendable {
         }
     }
 
+    public var isAudioTrack: Bool {
+        let audioExts: Set<String> = ["flac", "alac", "mp3", "m4a", "wav", "aac", "ogg", "opus", "aiff"]
+        return audioExts.contains(fileExtension)
+    }
+
     public var rawURL: URL {
         switch self {
         case .local(let url):

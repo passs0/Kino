@@ -3,13 +3,19 @@ import AppKit
 
 public struct SereinApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @ObservedObject var windowManager = WindowManager.shared
 
     public init() {}
 
     public var body: some Scene {
         WindowGroup {
             MainWindowView()
-                .frame(minWidth: 720, minHeight: 460)
+                .frame(
+                    minWidth: windowManager.isMiniPlayer ? 420 : 720,
+                    maxWidth: windowManager.isMiniPlayer ? 620 : .infinity,
+                    minHeight: windowManager.isMiniPlayer ? 130 : 460,
+                    maxHeight: windowManager.isMiniPlayer ? 160 : .infinity
+                )
                 .onOpenURL { url in
                     Task { @MainActor in
                         if url.isFileURL {
@@ -100,6 +106,18 @@ public struct SereinApp: App {
                     }
                 }
                 .keyboardShortcut("i", modifiers: .command)
+
+                Divider()
+
+                Button(windowManager.isMiniPlayer ? "Exit Compact MiniPlayer" : "Enter Compact MiniPlayer") {
+                    WindowManager.shared.toggleMiniPlayer()
+                }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+
+                Button(windowManager.isPinnedAlwaysOnTop ? "Unpin from Always on Top" : "Keep Window Always on Top") {
+                    WindowManager.shared.togglePinAlwaysOnTop()
+                }
+                .keyboardShortcut("p", modifiers: [.command, .option])
             }
         }
     }

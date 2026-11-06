@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 public struct MainWindowView: View {
     @StateObject private var coordinator = MediaCoordinator.shared
     @StateObject private var playerController = PlayerController.shared
+    @StateObject private var windowManager = WindowManager.shared
 
     @State private var showURLSheet = false
     @State private var showPrerequisitesSheet = false
@@ -19,15 +20,20 @@ public struct MainWindowView: View {
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.25), value: coordinator.state == .idle)
 
-            // Centered video canvas / welcome screen
-            VideoPlayerView(
-                coordinator: coordinator,
-                playerController: playerController,
-                onOpenFile: openFilePicker,
-                onOpenURL: { showURLSheet = true }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .ignoresSafeArea()
+            if windowManager.isMiniPlayer && coordinator.state != .idle {
+                CompactPlayerView(coordinator: coordinator, playerController: playerController)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            } else {
+                // Centered video canvas / welcome screen
+                VideoPlayerView(
+                    coordinator: coordinator,
+                    playerController: playerController,
+                    onOpenFile: openFilePicker,
+                    onOpenURL: { showURLSheet = true }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .ignoresSafeArea()
+            }
 
             // Centered Floating Media Statistics HUD (Cmd + I / Options Menu)
             if coordinator.isInspectorPresented {
@@ -53,8 +59,11 @@ public struct MainWindowView: View {
                 .zIndex(200)
             }
         }
-        .frame(minWidth: 480, idealWidth: 540, minHeight: 300, idealHeight: 340)
-        .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
+        .frame(
+            minWidth: windowManager.isMiniPlayer ? 420 : 480,
+            minHeight: windowManager.isMiniPlayer ? 130 : 300
+        )
+        .background(WindowGlassAccessor(isIdle: coordinator.state == .idle, isMiniPlayer: windowManager.isMiniPlayer))
         .sheet(isPresented: $showURLSheet) {
             URLInputSheet(coordinator: coordinator)
         }
@@ -106,6 +115,7 @@ public struct MainWindowView: View {
 /// Helper that configures the parent NSWindow for native window background and insets traffic lights.
 private struct WindowGlassAccessor: NSViewRepresentable {
     var isIdle: Bool
+    var isMiniPlayer: Bool
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
@@ -115,13 +125,14 @@ private struct WindowGlassAccessor: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }
+            WindowManager.shared.register(window: window)
             window.isOpaque = true
             window.backgroundColor = isIdle ? .windowBackgroundColor : .black
             window.hasShadow = true
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.styleMask.insert([.fullSizeContentView])
-            window.isMovableByWindowBackground = false
+            window.isMovableByWindowBackground = isMiniPlayer
 
             // Position traffic lights cleanly with generous breathing room
             TrafficLightManager.shared.repositionTrafficLights(for: window)
