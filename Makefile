@@ -1,10 +1,14 @@
-.PHONY: all build run clean test-media
+.PHONY: all build run dmg clean test-media
 
 all: build
 
 build:
 	@chmod +x build_app.sh
 	@./build_app.sh
+
+dmg: build
+	@chmod +x scripts/package_dmg.sh
+	@./scripts/package_dmg.sh
 
 run: build
 	@echo "Launching Serein.app..."
@@ -19,4 +23,4 @@ test-media:
 	@ls -lh /tmp/serein_sample_*
 
 clean:
-	@rm -rf build
+	@rm -rf build *.dmg /tmp/serein_*

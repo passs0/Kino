@@ -82,10 +82,10 @@ Unlike traditional players that demand manual command-line installations, Serein
 
 ## 🛠️ Building & Installing
 
-### Option 1: Direct Download (Pre-built)
-1. Download `Serein-v0.1.6-macOS.zip` from [GitHub Releases](https://github.com/passs0/Serein/releases).
-2. Unzip and drag `Serein.app` into your `/Applications/` folder.
-3. If macOS Gatekeeper flags the downloaded binary on first launch, run:
+### Option 1: Direct Download (Pre-built macOS Disk Image)
+1. Download **`Serein-v0.1.6-macOS.dmg`** from [GitHub Releases](https://github.com/passs0/Serein/releases).
+2. Open the downloaded `.dmg` and drag **`Serein.app`** directly into the **`Applications`** folder shortcut.
+3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed), run:
    ```zsh
    xattr -cr /Applications/Serein.app
    ```
