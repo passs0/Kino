@@ -456,7 +456,7 @@ public struct VideoPlayerView: View {
             .buttonStyle(.plain)
             .help(playerController.isMuted ? "Unmute" : "Mute")
 
-            // True Apple Liquid Glass Pill Slider
+            // Minimalist Thumbless Volume Slider
             PillSlider(
                 value: Binding(
                     get: { Double(playerController.isMuted ? 0 : playerController.volume) },
@@ -465,14 +465,11 @@ public struct VideoPlayerView: View {
                         playerController.volume = Float(newVal)
                     }
                 ),
-                trackHeight: 4.5,
-                idleThumbWidth: 18,
-                idleThumbHeight: 12,
-                activeThumbWidth: 34,
-                activeThumbHeight: 18,
+                trackHeight: 5.0,
+                interactiveTrackHeight: 7.0,
                 onActivity: { registerUserActivity() }
             )
-            .frame(width: 92)
+            .frame(width: 84)
 
             GlassDivider(height: 14)
 
@@ -851,7 +848,7 @@ struct TimelineScrubberShelf: View {
                 .monospacedDigit()
                 .frame(minWidth: 46, alignment: .leading)
 
-            // Interactive Progress Bar
+            // Interactive Progress Bar (Minimalist Thumbless Design)
             GeometryReader { geo in
                 let width = geo.size.width
                 let maxDuration = max(timeState.duration, 1.0)
@@ -860,34 +857,29 @@ struct TimelineScrubberShelf: View {
                 let bufferFraction = max(0.0, min(1.0, timeState.loadedDuration / maxDuration))
 
                 let isInteracting = isScrubberHovered || isDraggingScrubber
-                let thumbW: CGFloat = isInteracting ? 18 : 14
-                let thumbH: CGFloat = isInteracting ? 12 : 9
-
-                let thumbCenterX = thumbW / 2 + playedFraction * (width - thumbW)
+                let currentHeight: CGFloat = isInteracting ? 7.0 : 4.5
+                let playedWidth = width * playedFraction
+                let bufferWidth = width * bufferFraction
 
                 ZStack(alignment: .leading) {
-                    // 1. Continuous Background Rail
+                    // 1. Continuous Background Rail (full width)
                     Capsule()
                         .fill(Color.white.opacity(0.22))
-                        .frame(width: width, height: 4.5)
+                        .frame(width: width, height: currentHeight)
 
                     // 2. Buffered Range Rail
-                    Capsule()
-                        .fill(Color.white.opacity(0.40))
-                        .frame(width: width * bufferFraction, height: 4.5)
+                    if bufferWidth > 0 {
+                        Capsule()
+                            .fill(Color.white.opacity(0.40))
+                            .frame(width: max(currentHeight, bufferWidth), height: currentHeight)
+                    }
 
-                    // 3. Active Track (extends to thumb center)
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: max(4.5, thumbCenterX), height: 4.5)
-
-                    // 4. Lightweight Solid White Scrubber Spot (High performance zero-lag tracking for moving playback)
-                    Capsule()
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.35), radius: 2.5, x: 0, y: 1)
-                        .frame(width: thumbW, height: thumbH)
-                        .position(x: thumbCenterX, y: geo.size.height / 2)
-                        .animation(.spring(response: 0.22, dampingFraction: 0.80), value: isInteracting)
+                    // 3. Active Played Track (continuous liquid level)
+                    if playedWidth > 0 {
+                        Capsule()
+                            .fill(Color.white)
+                            .frame(width: max(currentHeight, playedWidth), height: currentHeight)
+                    }
 
                     // Floating Hover Tooltip
                     if isScrubberHovered && !isDraggingScrubber && width > 0 {
@@ -905,6 +897,7 @@ struct TimelineScrubberShelf: View {
                     }
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
+                .animation(.spring(response: 0.22, dampingFraction: 0.80), value: isInteracting)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)

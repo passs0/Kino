@@ -91,60 +91,57 @@ public final class LiquidGlassSettings: ObservableObject {
     }
 }
 
-// MARK: - Apple Control Center Style Pill Slider
+// MARK: - Apple Minimalist Thumbless Track Slider
 
-/// Apple macOS / visionOS Liquid Glass Pill Slider
-/// True Apple Liquid Glass implementation matching the official design specification:
-/// - Oblong 3D Liquid Glass pill thumb with real-time optical refraction (`Glass.regular`) and specular crescent highlight.
-/// - The inactive background rail runs between trackInset endpoints cleanly within the thumb bounds.
-/// - The active track enters the glass thumb and extends proportionally with value.
-///   At value 1.0, it extends all the way into the right half of the glass thumb and terminates with a rounded capsule cap near the right rim,
-///   matching Apple's native Control Center Sound slider.
-/// - Solid white when idle/hovered on; morphs fluidly into Liquid Glass with real-time refraction when interacted with.
+/// Apple-style minimalist thumbless track slider.
+/// Features a continuous liquid progress/volume bar with zero thumb clutter.
+/// Smoothly expands its track height on hover and interaction for enhanced scrubbing precision.
 public struct PillSlider: View {
     @Binding var value: Double // Range 0.0 ... 1.0
-    var trackHeight: CGFloat = 4.5
-    var idleThumbWidth: CGFloat = 18
-    var idleThumbHeight: CGFloat = 12
-    var activeThumbWidth: CGFloat = 34
-    var activeThumbHeight: CGFloat = 18
+    var trackHeight: CGFloat = 5.0
+    var interactiveTrackHeight: CGFloat = 7.0
     var onActivity: (() -> Void)?
 
-    @ObservedObject private var settings = LiquidGlassSettings.shared
     @State private var isDragging = false
     @State private var isHovering = false
 
     public init(
         value: Binding<Double>,
-        trackHeight: CGFloat = 4.5,
-        idleThumbWidth: CGFloat = 18,
-        idleThumbHeight: CGFloat = 12,
-        activeThumbWidth: CGFloat = 34,
-        activeThumbHeight: CGFloat = 18,
+        trackHeight: CGFloat = 5.0,
+        interactiveTrackHeight: CGFloat = 7.0,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = idleThumbWidth
-        self.idleThumbHeight = idleThumbHeight
-        self.activeThumbWidth = activeThumbWidth
-        self.activeThumbHeight = activeThumbHeight
+        self.interactiveTrackHeight = interactiveTrackHeight
         self.onActivity = onActivity
     }
 
     public init(
         value: Binding<Double>,
-        trackHeight: CGFloat = 4.5,
-        thumbWidth: CGFloat = 34,
-        thumbHeight: CGFloat = 18,
+        trackHeight: CGFloat = 5.0,
+        idleThumbWidth: CGFloat = 0,
+        idleThumbHeight: CGFloat = 0,
+        activeThumbWidth: CGFloat = 0,
+        activeThumbHeight: CGFloat = 0,
         onActivity: (() -> Void)? = nil
     ) {
         self._value = value
         self.trackHeight = trackHeight
-        self.idleThumbWidth = 18
-        self.idleThumbHeight = 12
-        self.activeThumbWidth = thumbWidth
-        self.activeThumbHeight = thumbHeight
+        self.interactiveTrackHeight = max(trackHeight + 2.0, 7.0)
+        self.onActivity = onActivity
+    }
+
+    public init(
+        value: Binding<Double>,
+        trackHeight: CGFloat = 5.0,
+        thumbWidth: CGFloat = 0,
+        thumbHeight: CGFloat = 0,
+        onActivity: (() -> Void)? = nil
+    ) {
+        self._value = value
+        self.trackHeight = trackHeight
+        self.interactiveTrackHeight = max(trackHeight + 2.0, 7.0)
         self.onActivity = onActivity
     }
 
@@ -152,120 +149,37 @@ public struct PillSlider: View {
         GeometryReader { geo in
             let width = geo.size.width
             let clampedVal = max(0.0, min(1.0, value))
+            let isInteracting = isDragging || isHovering
+            let currentHeight = isInteracting ? interactiveTrackHeight : trackHeight
+            let activeWidth = width * clampedVal
 
-            let currentThumbWidth: CGFloat = isDragging ? activeThumbWidth : idleThumbWidth
-            let currentThumbHeight: CGFloat = isDragging ? activeThumbHeight : idleThumbHeight
-            let thumbCenterX = (currentThumbWidth / 2) + clampedVal * (width - currentThumbWidth)
+            ZStack(alignment: .leading) {
+                // 1. Continuous Inactive Background Rail (full width)
+                Capsule()
+                    .fill(Color.white.opacity(0.22))
+                    .frame(width: width, height: currentHeight)
 
-            // Track endpoints inset within thumb margins at limits (3.5pt inside thumb rim)
-            let trackInset: CGFloat = 3.5
-            let trackStart = trackInset
-            let trackEnd = max(trackStart, width - trackInset)
-
-            // Active track end moves smoothly with value from trackStart to trackEnd
-            let activeTrackEnd = trackStart + clampedVal * (trackEnd - trackStart)
-            let activeTrackWidth = max(0, activeTrackEnd - trackStart)
-
-            GlassEffectContainer {
-                ZStack(alignment: .leading) {
-                    // 1. Continuous Inactive Background Rail (inside endpoints)
+                // 2. Active Filled Track (smooth continuous liquid level)
+                if activeWidth > 0 {
                     Capsule()
-                        .fill(Color.white.opacity(0.20))
-                        .frame(width: max(0, trackEnd - trackStart), height: trackHeight)
-                        .offset(x: trackStart)
-
-                    // 2. Active Filled Track (extends through thumb proportionally, ending near right rim at 1.0)
-                    if activeTrackWidth > 0 {
-                        Capsule()
-                            .fill(Color.white)
-                            .frame(width: max(trackHeight, activeTrackWidth), height: trackHeight)
-                            .offset(x: trackStart)
-                    }
-
-                    // 3. Apple Liquid Glass Pill Thumb:
-                    // Solid white when idle or hovered on!
-                    // Melts and transforms seamlessly into Liquid Glass with real-time optical refraction when interacted with.
-                    ZStack {
-                        // Volumetric Glass Body with Native Optical Refraction (Adjustable via System Settings)
-                        Capsule()
-                            .fill(Color.white.opacity(settings.backdropOpacity(base: 0.12)))
-                            .glassEffect(settings.glass, in: Capsule())
-                            .opacity(isDragging ? 1.0 : 0.0)
-
-                        // 3D Specular Rim with multi-stop refraction gradient
-                        Capsule()
-                            .strokeBorder(
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: Color.white.opacity(0.85), location: 0.0),
-                                        .init(color: Color.white.opacity(0.20), location: 0.35),
-                                        .init(color: Color.black.opacity(0.35), location: 0.70),
-                                        .init(color: Color.white.opacity(0.20), location: 1.0)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ),
-                                lineWidth: 0.75
-                            )
-                            .opacity(isDragging ? 1.0 : 0.0)
-
-                        // Upper Crescent Specular Glint (Light Reflection)
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(0.40),
-                                        Color.white.opacity(0.0)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .center
-                                )
-                            )
-                            .frame(width: max(4, currentThumbWidth - 3), height: currentThumbHeight * 0.45)
-                            .offset(y: -currentThumbHeight * 0.22)
-                            .blur(radius: 0.5)
-                            .mask(Capsule().stroke(lineWidth: 1.2))
-                            .opacity(isDragging ? 1.0 : 0.0)
-
-                        // Completely solid opaque white skin (melts away fluidly when interaction begins)
-                        Capsule()
-                            .fill(Color.white)
-                            .opacity(isDragging ? 0.0 : 1.0)
-                    }
-                    .frame(width: currentThumbWidth, height: currentThumbHeight)
-                    .shadow(
-                        color: Color.black.opacity(isDragging ? 0.38 : 0.25),
-                        radius: isDragging ? 5.5 : (isHovering ? 3.0 : 2.0),
-                        x: 0,
-                        y: isDragging ? 2.0 : 1.0
-                    )
-                    .scaleEffect(isHovering && !isDragging ? 1.04 : 1.0)
-                    .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isDragging)
-                    .animation(.spring(response: 0.20, dampingFraction: 0.75), value: isHovering)
-                    .position(x: thumbCenterX, y: geo.size.height / 2)
+                        .fill(Color.white)
+                        .frame(width: max(currentHeight, activeWidth), height: currentHeight)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
             }
+            .frame(maxHeight: .infinity, alignment: .center)
+            .animation(.spring(response: 0.22, dampingFraction: 0.80), value: isInteracting)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { gesture in
-                        if !isDragging {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-                                isDragging = true
-                            }
-                        }
-                        let trackSpan = width - currentThumbWidth
-                        let fraction = trackSpan > 0 ? max(0.0, min(1.0, (gesture.location.x - currentThumbWidth / 2) / trackSpan)) : 0.0
+                        isDragging = true
+                        let fraction = width > 0 ? max(0.0, min(1.0, gesture.location.x / width)) : 0.0
                         value = fraction
                         onActivity?()
                     }
                     .onEnded { gesture in
-                        withAnimation(.spring(response: 0.30, dampingFraction: 0.82)) {
-                            isDragging = false
-                        }
-                        let trackSpan = width - currentThumbWidth
-                        let fraction = trackSpan > 0 ? max(0.0, min(1.0, (gesture.location.x - currentThumbWidth / 2) / trackSpan)) : 0.0
+                        isDragging = false
+                        let fraction = width > 0 ? max(0.0, min(1.0, gesture.location.x / width)) : 0.0
                         value = fraction
                         onActivity?()
                     }
@@ -274,7 +188,7 @@ public struct PillSlider: View {
                 isHovering = h
             }
         }
-        .frame(height: max(idleThumbHeight, activeThumbHeight) + 6)
+        .frame(height: max(trackHeight, interactiveTrackHeight) + 4)
     }
 }
 
