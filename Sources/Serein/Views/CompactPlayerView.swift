@@ -179,7 +179,7 @@ public struct CompactPlayerView: View {
                                 dragScrubTime = time
                             }
                         )
-                        .frame(height: 18)
+                        .frame(height: 24)
 
                         // Transport Controls Row
                         HStack(spacing: 14) {
@@ -323,58 +323,48 @@ public final class MiniScrubberNSView: NSView {
 
     public override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         guard bounds.width > 0, bounds.height > 0 else { return }
 
-        let trackHeight: CGFloat = isDragging ? 4.5 : 3.5
+        let trackHeight: CGFloat = 5.5
         let trackY = (bounds.height - trackHeight) / 2.0
-        let trackRect = NSRect(x: 0, y: trackY, width: bounds.width, height: trackHeight)
+        let trackRect = CGRect(x: 0, y: trackY, width: bounds.width, height: trackHeight)
 
-        // Background rail
-        let bgPath = NSBezierPath(roundedRect: trackRect, xRadius: trackHeight / 2, yRadius: trackHeight / 2)
-        NSColor.white.withAlphaComponent(0.18).setFill()
-        bgPath.fill()
+        // 1. Unplayed continuous background rail
+        let bgPath = CGPath(roundedRect: trackRect, cornerWidth: trackHeight / 2, cornerHeight: trackHeight / 2, transform: nil)
+        ctx.setFillColor(NSColor.white.withAlphaComponent(0.18).cgColor)
+        ctx.addPath(bgPath)
+        ctx.fillPath()
 
-        // Played rail
+        // 2. Played rail
         let activeTime = isDragging ? dragTime : currentTime
         let progress = duration > 0 ? max(0, min(1.0, activeTime / duration)) : 0
         let playedWidth = bounds.width * CGFloat(progress)
 
+        let thumbWidth: CGFloat = isDragging ? 24.0 : 20.0
+        let thumbHeight: CGFloat = isDragging ? 19.5 : 16.0
+        let thumbX = max(0, min(bounds.width - thumbWidth, playedWidth - (thumbWidth / 2.0)))
+        let thumbY = (bounds.height - thumbHeight) / 2.0
+        let thumbRect = CGRect(x: thumbX, y: thumbY, width: thumbWidth, height: thumbHeight)
+
         if playedWidth > 0 {
-            let playedRect = NSRect(x: 0, y: trackY, width: max(trackHeight, playedWidth), height: trackHeight)
-            let playedPath = NSBezierPath(roundedRect: playedRect, xRadius: trackHeight / 2, yRadius: trackHeight / 2)
-            NSColor.white.setFill()
-            playedPath.fill()
+            // When scrubbing, outer played rail terminates cleanly at left edge of thumb
+            let playedOuterWidth = isDragging ? min(playedWidth, thumbX + 2) : playedWidth
+            let playedRect = CGRect(x: 0, y: trackY, width: max(trackHeight, playedOuterWidth), height: trackHeight)
+            let playedPath = CGPath(roundedRect: playedRect, cornerWidth: trackHeight / 2, cornerHeight: trackHeight / 2, transform: nil)
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.addPath(playedPath)
+            ctx.fillPath()
         }
 
-        // Liquid Glass Thumb (morphs when scrubbing!)
-        if isDragging {
-            let thumbWidth: CGFloat = 12.0
-            let thumbHeight: CGFloat = 18.0
-            let thumbX = max(0, min(bounds.width - thumbWidth, playedWidth - (thumbWidth / 2.0)))
-            let thumbY = (bounds.height - thumbHeight) / 2.0
-            let thumbRect = NSRect(x: thumbX, y: thumbY, width: thumbWidth, height: thumbHeight)
-
-            NSGraphicsContext.saveGraphicsState()
-
-            // Specular drop shadow
-            let shadow = NSShadow()
-            shadow.shadowColor = NSColor.black.withAlphaComponent(0.45)
-            shadow.shadowOffset = NSSize(width: 0, height: -2)
-            shadow.shadowBlurRadius = 5.0
-            shadow.set()
-
-            // Glass gradient fill
-            let thumbPath = NSBezierPath(roundedRect: thumbRect, xRadius: thumbWidth / 2, yRadius: thumbWidth / 2)
-            let gradient = NSGradient(starting: NSColor.white, ending: NSColor(white: 0.90, alpha: 1.0))
-            gradient?.draw(in: thumbPath, angle: -90)
-
-            // Specular white stroke rim
-            NSColor.white.withAlphaComponent(0.85).setStroke()
-            thumbPath.lineWidth = 1.0
-            thumbPath.stroke()
-
-            NSGraphicsContext.restoreGraphicsState()
-        }
+        // 3. Native Apple Scrubber Thumb (Resting white capsule -> Scrubbing Liquid Glass Lens)
+        QuickTimeLiquidGlassRenderer.draw(
+            in: ctx,
+            isScrubbing: isDragging,
+            thumbRect: thumbRect,
+            trackY: trackY,
+            trackHeight: trackHeight
+        )
     }
 
     public override func mouseDown(with event: NSEvent) {

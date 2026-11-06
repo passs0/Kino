@@ -922,10 +922,9 @@ struct TimelineScrubberShelf: View {
             Text(formatTime(currentTimeValue))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white.opacity(0.85))
-                .monospacedDigit()
                 .frame(minWidth: 46, alignment: .leading)
 
-            // Interactive Progress Bar (Minimalist Thumbless Design)
+            // Interactive Progress Bar (Native QuickTime Scrubber)
             GeometryReader { geo in
                 let width = geo.size.width
                 let maxDuration = max(timeState.duration, 1.0)
@@ -934,7 +933,7 @@ struct TimelineScrubberShelf: View {
                 let bufferFraction = max(0.0, min(1.0, timeState.loadedDuration / maxDuration))
 
                 let isInteracting = isScrubberHovered || isDraggingScrubber
-                let currentHeight: CGFloat = isInteracting ? 7.0 : 4.5
+                let currentHeight: CGFloat = isInteracting ? 5.5 : 4.5
                 let playedWidth = width * playedFraction
                 let bufferWidth = width * bufferFraction
 
@@ -953,29 +952,18 @@ struct TimelineScrubberShelf: View {
 
                     // 3. Active Played Track (continuous liquid level)
                     if playedWidth > 0 {
+                        let outerWidth = isDraggingScrubber ? max(currentHeight, playedWidth - 10) : max(currentHeight, playedWidth)
                         Capsule()
                             .fill(Color.white)
-                            .frame(width: max(currentHeight, playedWidth), height: currentHeight)
+                            .frame(width: outerWidth, height: currentHeight)
                     }
 
-                    // 4. Liquid Glass Thumb (morphs when scrubbing!)
-                    if isDraggingScrubber {
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.white, Color(white: 0.90)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .frame(width: 14, height: 22)
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(Color.white.opacity(0.80), lineWidth: 1)
-                            )
-                            .shadow(color: Color.black.opacity(0.45), radius: 6, x: 0, y: 3)
-                            .offset(x: max(0, min(width - 14, playedWidth - 7)))
-                            .transition(.scale.combined(with: .opacity))
+                    // 4. Native Apple Scrubber Thumb (Resting white capsule -> Scrubbing Liquid Glass Lens)
+                    if isInteracting {
+                        let thumbWidth: CGFloat = isDraggingScrubber ? 24.0 : 20.0
+                        NativeQuickTimeScrubberThumb(isScrubbing: isDraggingScrubber, trackHeight: currentHeight)
+                            .offset(x: max(0, min(width - thumbWidth, playedWidth - (thumbWidth / 2.0))))
+                            .transition(.opacity)
                     }
 
                     // Floating Hover Tooltip
@@ -986,7 +974,6 @@ struct TimelineScrubberShelf: View {
                         Text(formatTime(hoverSec))
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
-                            .monospacedDigit()
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2.5)
                             .glassEffect(LiquidGlassSettings.shared.glass, in: Capsule())
@@ -1039,7 +1026,6 @@ struct TimelineScrubberShelf: View {
             Text(formatRemainingTime())
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white.opacity(0.85))
-                .monospacedDigit()
                 .frame(minWidth: 50, alignment: .trailing)
         }
         .padding(.horizontal, 16)
