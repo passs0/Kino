@@ -106,7 +106,7 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
         super.viewDidMoveToWindow()
         guard let win = window else { return }
         win.isOpaque = true
-        win.backgroundColor = .windowBackgroundColor
+        win.backgroundColor = .black
         win.hasShadow = true
         win.isMovableByWindowBackground = false
         win.titlebarAppearsTransparent = true
@@ -202,20 +202,7 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
 
     public func repositionTrafficLights() {
         guard let win = window else { return }
-        let xOffset: CGFloat = 18
-        let yOffset: CGFloat = 16
-        let spacing: CGFloat = 8
-
-        let buttonTypes: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
-        var currentX = xOffset
-        for type in buttonTypes {
-            if let btn = win.standardWindowButton(type), let superview = btn.superview {
-                btn.translatesAutoresizingMaskIntoConstraints = true
-                let btnY = superview.bounds.height - btn.frame.height - yOffset
-                btn.setFrameOrigin(NSPoint(x: currentX, y: btnY))
-                currentX += btn.frame.width + spacing
-            }
-        }
+        TrafficLightManager.shared.repositionTrafficLights(for: win)
     }
 
     // MARK: - Drag and Drop

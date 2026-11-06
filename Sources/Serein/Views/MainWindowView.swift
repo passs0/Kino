@@ -113,19 +113,8 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.styleMask.insert([.fullSizeContentView])
             window.isMovableByWindowBackground = false
 
-            // Position traffic lights cleanly
-            let xOffset: CGFloat = 18
-            let yOffset: CGFloat = 16
-            let spacing: CGFloat = 8
-            var currentX = xOffset
-            for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-                if let btn = window.standardWindowButton(type), let superview = btn.superview {
-                    btn.translatesAutoresizingMaskIntoConstraints = true
-                    let btnY = superview.bounds.height - btn.frame.height - yOffset
-                    btn.setFrameOrigin(NSPoint(x: currentX, y: btnY))
-                    currentX += btn.frame.width + spacing
-                }
-            }
+            // Position traffic lights cleanly with generous breathing room
+            TrafficLightManager.shared.repositionTrafficLights(for: window)
         }
     }
 }
