@@ -83,6 +83,12 @@ Serein treats subtitles as a first-class citizen using Apple's official `MediaAc
 - **Live Metadata & Poster Artwork:** Broadcasts real-time video title, creator/channel, duration, elapsed position, and video thumbnail/poster frames to the macOS menu bar Control Center widget, Lock Screen, and Touch Bar.
 - **Hardware Media Key & Remote Commands:** Full native support for keyboard Play/Pause, Touch Bar scrubbing, headphone remotes, and `±5s` skip controls.
 
+### 7. Music Mode & Liquid Glass Compact MiniPlayer
+- **Lossless Audio Engine (0% CPU):** Direct hardware playback for `.flac`, `.alac`, `.m4a`, `.mp3`, `.wav`, and `.aiff`.
+- **Pure Swift Album Art Parser:** Extracts high-resolution embedded cover artwork directly from FLAC `METADATA_BLOCK_PICTURE` headers, MP3 ID3 APIC frames, and M4A `covr` atoms in `< 1ms` with zero subprocesses.
+- **Fluid Window Morphing (`⌥⌘M`):** Automatically detects audio files and smoothly transitions the window into a sleek, compact desktop card (`440×132 pt`) featuring cover art, title, artist, audio codec badge, and interactive scrubber.
+- **Desktop Always-On-Top Pinning (`⌥⌘P`):** Float the MiniPlayer above code editors, browsers, and terminal windows with a single click on the pin button (`📌`).
+
 ---
 
 ## ⚡️ Zero-Friction Setup: No Terminal Required
@@ -108,6 +114,8 @@ Unlike traditional players that demand manual command-line installations, Serein
 | **`C`** | Toggle Video Aspect Ratio: **Fit to Screen (Letterbox)** vs. **Fill Screen** |
 | **`Z`** | Toggle Subtitle Placement: **Video Frame Bounds** vs. **Display Frame Bounds** |
 | **`⌘I`** | Toggle Centered Media Statistics & Technical Inspector HUD |
+| **`⌥⌘M`** | Toggle Compact Liquid Glass MiniPlayer (Music Mode) |
+| **`⌥⌘P`** | Toggle Always-on-Top Floating Window |
 | **`Esc`** | Dismiss Media Statistics HUD or active modal |
 | **`⌘,`** | Media Engines & Codecs Setup Sheet |
 | **`⌘O`** | Open Local Media File |
