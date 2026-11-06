@@ -1,116 +1,159 @@
 import SwiftUI
 
-/// Detailed inspector pane displaying media container analysis, stream codecs, and coordinator rationale.
+/// Detailed centered modal HUD displaying media container analysis, stream codecs, and coordinator rationale.
 public struct MediaInspectorView: View {
     @ObservedObject var coordinator: MediaCoordinator
     var onClose: (() -> Void)?
 
+    @State private var innerContentHeight: CGFloat = 0
+
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Header
-                HStack {
-                    Label("Media Coordinator Inspector", systemImage: "waveform.badge.magnifyingglass")
+        VStack(spacing: 0) {
+            // Header
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "waveform.badge.magnifyingglass")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(Color.accentColor)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Media Statistics")
                         .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Technical Stream Inspector")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.60))
+                }
 
-                    Spacer()
+                Spacer()
 
-                    if let onClose = onClose {
-                        Button(action: onClose) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
+                if let onClose = onClose {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color.white.opacity(0.65))
                     }
-                }
-                .padding(.bottom, 4)
-
-                Divider()
-
-                if let strategy = coordinator.activeStrategy {
-                    strategySection(strategy)
-                }
-
-                if let stats = coordinator.pipelineStats {
-                    livePipelineSection(stats)
-                }
-
-                if let probe = coordinator.probeResult {
-                    sourceSection(probe)
-                    compatibilityMatrixSection(probe)
-                    videoStreamsSection(probe)
-                    audioStreamsSection(probe)
-                    if !probe.subtitles.isEmpty {
-                        subtitleSection(probe.subtitles)
-                    }
-                } else if let online = coordinator.extractedOnlineInfo {
-                    onlineSourceSection(online)
-                } else {
-                    emptyState
+                    .buttonStyle(.plain)
+                    .help("Close (Esc)")
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+                .overlay(Color.white.opacity(0.12))
+
+            // Scrollable Content
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let strategy = coordinator.activeStrategy {
+                        strategySection(strategy)
+                    }
+
+                    if let stats = coordinator.pipelineStats {
+                        livePipelineSection(stats)
+                    }
+
+                    if let probe = coordinator.probeResult {
+                        sourceSection(probe)
+                        compatibilityMatrixSection(probe)
+                        videoStreamsSection(probe)
+                        audioStreamsSection(probe)
+                        if !probe.subtitles.isEmpty {
+                            subtitleSection(probe.subtitles)
+                        }
+                    } else if let online = coordinator.extractedOnlineInfo {
+                        onlineSourceSection(online)
+                    } else {
+                        emptyState
+                    }
+                }
+                .padding(18)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: InspectorContentHeightKey.self,
+                            value: proxy.size.height
+                        )
+                    }
+                )
+            }
+            .frame(height: innerContentHeight > 0 ? min(innerContentHeight, 480) : nil)
+            .onPreferenceChange(InspectorContentHeightKey.self) { height in
+                if height > 0 {
+                    innerContentHeight = height
+                }
+            }
         }
-        .frame(width: 340)
-        .glassEffect(LiquidGlassSettings.shared.glass, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(minWidth: 320, maxWidth: 440)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(nsColor: .init(white: 0.11, alpha: 0.95)))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.black.opacity(0.65), radius: 30, x: 0, y: 12)
+        .environment(\.colorScheme, .dark)
     }
 
     // MARK: - Strategy Section
 
     private func strategySection(_ strategy: PlaybackStrategy) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("PLAYBACK STRATEGY")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                HStack(spacing: 8) {
                     Text(strategy.badgeLabel)
                         .font(.system(size: 10, weight: .black, design: .rounded))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Color.accentColor.opacity(0.15))
-                        .foregroundColor(.accentColor)
+                        .background(Color.accentColor.opacity(0.25))
+                        .foregroundColor(Color.accentColor)
                         .cornerRadius(4)
 
                     Text(strategy.strategyTitle)
                         .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
 
                     Spacer()
                 }
 
                 Text(strategy.explanation)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(Color.white.opacity(0.80))
                     .fixedSize(horizontal: false, vertical: true)
 
                 Divider()
+                    .overlay(Color.white.opacity(0.10))
 
                 HStack {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("CPU Overhead")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 9.5))
+                            .foregroundColor(Color.white.opacity(0.60))
                         Text(strategy.estimatedCpuImpact)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundColor(.white)
                     }
                     Spacer()
-                    VStack(alignment: .trailing) {
+                    VStack(alignment: .trailing, spacing: 2) {
                         Text("Startup Latency")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 9.5))
+                            .foregroundColor(Color.white.opacity(0.60))
                         Text(strategy.latencyDescription)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundColor(.white)
                     }
                 }
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-            )
+            .background(cardBackground)
         }
     }
 
@@ -120,9 +163,9 @@ public struct MediaInspectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("LIVE COMPATIBILITY PIPELINE")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 metricBox(title: "TRANSCODE SPEED", value: stats.speedFactor, icon: "gauge.with.needle")
                 metricBox(title: "FPS", value: String(format: "%.1f", stats.fps), icon: "film")
                 metricBox(title: "TIME ENCODED", value: stats.currentTime, icon: "clock")
@@ -133,26 +176,32 @@ public struct MediaInspectorView: View {
     private func metricBox(title: String, value: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: icon)
-                .font(.system(size: 8, weight: .bold))
-                .foregroundColor(.secondary)
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundColor(Color.white.opacity(0.60))
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12.5, weight: .bold))
                 .monospacedDigit()
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(6)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Source Section
 
     private func sourceSection(_ probe: MediaProbeResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("CONTAINER & FORMAT")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
             VStack(spacing: 6) {
                 metaRow(label: "Container", value: probe.containerFormat.friendlyName)
@@ -162,8 +211,7 @@ public struct MediaInspectorView: View {
                 metaRow(label: "Filename", value: probe.filename)
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
+            .background(cardBackground)
         }
     }
 
@@ -177,9 +225,9 @@ public struct MediaInspectorView: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text("NATIVE COMPATIBILITY BREAKDOWN")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 compatRow(
                     title: "Container Demuxing",
                     subtitle: probe.containerFormat.description,
@@ -200,33 +248,33 @@ public struct MediaInspectorView: View {
                 )
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
+            .background(cardBackground)
         }
     }
 
     private func compatRow(title: String, subtitle: String, isNative: Bool, actionIfIncompatible: String) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             Image(systemName: isNative ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundColor(isNative ? .green : .orange)
-                .font(.system(size: 12))
+                .foregroundColor(isNative ? Color(red: 0.30, green: 0.85, blue: 0.45) : Color.orange)
+                .font(.system(size: 13))
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundColor(.white)
                 Text(subtitle)
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.white.opacity(0.65))
             }
 
             Spacer()
 
             Text(isNative ? "Native AVPlayer" : actionIfIncompatible)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(isNative ? .green : .orange)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background((isNative ? Color.green : Color.orange).opacity(0.12))
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundColor(isNative ? Color(red: 0.40, green: 0.95, blue: 0.55) : Color.orange)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background((isNative ? Color.green : Color.orange).opacity(0.18))
                 .cornerRadius(4)
         }
     }
@@ -237,7 +285,7 @@ public struct MediaInspectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("VIDEO STREAM")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
             if let v = probe.primaryVideo {
                 VStack(spacing: 6) {
@@ -259,12 +307,13 @@ public struct MediaInspectorView: View {
                     }
                 }
                 .padding(12)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
+                .background(cardBackground)
             } else {
                 Text("No video stream found.")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.white.opacity(0.60))
+                    .padding(12)
+                    .background(cardBackground)
             }
         }
     }
@@ -275,7 +324,7 @@ public struct MediaInspectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("AUDIO STREAMS")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
             if let a = probe.primaryAudio {
                 VStack(spacing: 6) {
@@ -294,12 +343,13 @@ public struct MediaInspectorView: View {
                     }
                 }
                 .padding(12)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
+                .background(cardBackground)
             } else {
                 Text("No audio stream found.")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.white.opacity(0.60))
+                    .padding(12)
+                    .background(cardBackground)
             }
         }
     }
@@ -310,42 +360,42 @@ public struct MediaInspectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("SUBTITLES (\(subtitles.count))")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
             VStack(spacing: 4) {
                 ForEach(subtitles) { sub in
                     HStack {
                         Image(systemName: "captions.bubble")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.white.opacity(0.70))
                         Text(sub.language?.uppercased() ?? "Track \(sub.index)")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundColor(.white)
                         if let title = sub.title {
                             Text("— \(title)")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.white.opacity(0.75))
                         }
                         Spacer()
                         Text(sub.codecName)
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.60))
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 3)
                 }
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
+            .background(cardBackground)
         }
     }
 
     // MARK: - Online Source Section
 
     private func onlineSourceSection(_ info: ExtractedMediaInfo) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("ONLINE EXTRACTION (YT-DLP)")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.white.opacity(0.65))
 
             VStack(spacing: 6) {
                 metaRow(label: "Title", value: info.title)
@@ -357,23 +407,32 @@ public struct MediaInspectorView: View {
                 metaRow(label: "Selected URL", value: info.selectedStreamURL.host ?? "Online Host")
             }
             .padding(12)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
+            .background(cardBackground)
         }
     }
 
     // MARK: - Helpers
 
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.white.opacity(0.06))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+            )
+    }
+
     private var emptyState: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Image(systemName: "film.stack")
-                .font(.system(size: 28))
-                .foregroundColor(.secondary)
+                .font(.system(size: 32))
+                .foregroundColor(Color.white.opacity(0.60))
             Text("No Media Loaded")
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white)
             Text("Open a local file or paste an online URL to inspect stream compatibility.")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+                .font(.system(size: 11))
+                .foregroundColor(Color.white.opacity(0.60))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -383,14 +442,22 @@ public struct MediaInspectorView: View {
     private func metaRow(label: String, value: String) -> some View {
         HStack(alignment: .top) {
             Text(label)
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .frame(width: 90, alignment: .leading)
+                .font(.system(size: 11.5))
+                .foregroundColor(Color.white.opacity(0.65))
+                .frame(width: 105, alignment: .leading)
             Text(value)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.primary)
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundColor(.white)
+                .monospacedDigit()
                 .lineLimit(2)
             Spacer()
         }
+    }
+}
+
+private struct InspectorContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

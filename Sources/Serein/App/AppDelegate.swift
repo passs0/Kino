@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: Any?
@@ -23,6 +24,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let keyCode = event.keyCode
             let chars = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+            // Escape (keyCode 53): Dismiss Media Statistics HUD if presented
+            if keyCode == 53 && MainActor.assumeIsolated({ MediaCoordinator.shared.isInspectorPresented }) {
+                MainActor.assumeIsolated {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        MediaCoordinator.shared.isInspectorPresented = false
+                    }
+                }
+                return nil
+            }
 
             // Space (keyCode 49): Play / Pause
             if keyCode == 49 {

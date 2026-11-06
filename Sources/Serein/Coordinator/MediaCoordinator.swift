@@ -47,6 +47,13 @@ public final class MediaCoordinator: ObservableObject {
 
     @Published public var isInspectorPresented: Bool = false
 
+    /// Debug and preview helper to populate inspector state
+    public func setDebugInspectorData(strategy: PlaybackStrategy?, onlineInfo: ExtractedMediaInfo?, probe: MediaProbeResult? = nil) {
+        self.activeStrategy = strategy
+        self.extractedOnlineInfo = onlineInfo
+        self.probeResult = probe
+    }
+
     public var knownDuration: Double? {
         if let p = probeResult, p.duration > 0 {
             return p.duration

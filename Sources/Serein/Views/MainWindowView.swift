@@ -29,21 +29,28 @@ public struct MainWindowView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .ignoresSafeArea()
 
-            // Floating Stream Inspector (Cmd + I)
+            // Centered Floating Media Statistics HUD (Cmd + I / Options Menu)
             if coordinator.isInspectorPresented {
-                HStack {
-                    Spacer()
+                ZStack(alignment: .center) {
+                    // Subtle dimmed backdrop scrim to guarantee legibility and quick dismissal
+                    Color.black.opacity(0.50)
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                                coordinator.isInspectorPresented = false
+                            }
+                        }
+
                     MediaInspectorView(coordinator: coordinator) {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                             coordinator.isInspectorPresented = false
                         }
                     }
-                    .padding(.top, 14)
-                    .padding(.trailing, 14)
-                    .padding(.bottom, 18)
+                    .padding(24)
                 }
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-                .zIndex(100)
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(200)
             }
         }
         .frame(minWidth: 480, idealWidth: 540, minHeight: 300, idealHeight: 340)
