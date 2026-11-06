@@ -76,6 +76,35 @@ public struct MainWindowView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
             showPrerequisitesSheet = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
+            if coordinator.state != .idle {
+                WindowManager.shared.setMiniPlayer(false)
+                playerController.saveCurrentPosition()
+                playerController.pause()
+                coordinator.stop()
+                playerController.reset()
+            }
+        }
+        .onChange(of: coordinator.activePlayableURL) { _, newURL in
+            if let url = newURL {
+                if !playerController.isSeeking {
+                    let expDuration = coordinator.knownDuration
+                    playerController.load(url: url, expectedDuration: expDuration)
+                }
+            } else {
+                playerController.reset()
+            }
+        }
+        .onChange(of: coordinator.probeResult) { _, newProbe in
+            if let d = newProbe?.duration, d > 0 {
+                playerController.setKnownDuration(d)
+            }
+        }
+        .onChange(of: coordinator.extractedOnlineInfo?.duration) { _, newDuration in
+            if let d = newDuration, d > 0 {
+                playerController.setKnownDuration(d)
+            }
+        }
     }
 
     private func openFilePicker() {
