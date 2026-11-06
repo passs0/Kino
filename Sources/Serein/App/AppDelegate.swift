@@ -10,6 +10,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         TrafficLightManager.shared.install()
         NowPlayingManager.shared.install()
         setupKeyboardShortcuts()
+
+        // Handle file passed via CLI arguments if any
+        let args = CommandLine.arguments.dropFirst().filter { !$0.starts(with: "-") }
+        if let first = args.first {
+            let url = URL(fileURLWithPath: first)
+            Task { @MainActor in
+                MediaCoordinator.shared.openLocalFile(url: url)
+            }
+        }
     }
 
     private func setupKeyboardShortcuts() {
@@ -111,6 +120,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             MediaCoordinator.shared.openLocalFile(url: url)
         }
+    }
+
+    public func application(_ sender: NSApplication, openFile filename: String) -> Bool {
+        let url = URL(fileURLWithPath: filename)
+        Task { @MainActor in
+            MediaCoordinator.shared.openLocalFile(url: url)
+        }
+        return true
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

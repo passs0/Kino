@@ -204,6 +204,11 @@ public final class NowPlayingManager: ObservableObject {
 
     // MARK: - Artwork Extraction & Fetching
 
+    /// Directly updates the active artwork image.
+    public func updateArtwork(_ image: NSImage) {
+        applyArtwork(image)
+    }
+
     private func fetchArtwork(for source: MediaSource) {
         switch source {
         case .online(_, _):
@@ -226,22 +231,16 @@ public final class NowPlayingManager: ObservableObject {
 
         case .local(let url):
             Task.detached(priority: .utility) { [weak self] in
-                let asset = AVURLAsset(url: url)
-
-                // 1. Try embedded artwork metadata (for audio tracks: FLAC, MP3, M4A)
-                if let metadata = try? await asset.load(.metadata) {
-                    let artItems = AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: .commonIdentifierArtwork)
-                    if let firstArt = artItems.first,
-                       let data = try? await firstArt.load(.dataValue),
-                       let image = NSImage(data: data) {
-                        await MainActor.run { [weak self] in
-                            self?.applyArtwork(image)
-                        }
-                        return
+                // 1. Try high-performance artwork extractor (FLAC, MP3, M4A, ALAC)
+                if let image = await ArtworkExtractor.extractArtwork(from: url) {
+                    await MainActor.run { [weak self] in
+                        self?.applyArtwork(image)
                     }
+                    return
                 }
 
                 // 2. Fall back to video frame generator (for video files)
+                let asset = AVURLAsset(url: url)
                 let generator = AVAssetImageGenerator(asset: asset)
                 generator.appliesPreferredTrackTransform = true
                 generator.maximumSize = CGSize(width: 512, height: 512)

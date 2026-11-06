@@ -10,6 +10,15 @@ public struct SereinApp: App {
         WindowGroup {
             MainWindowView()
                 .frame(minWidth: 720, minHeight: 460)
+                .onOpenURL { url in
+                    Task { @MainActor in
+                        if url.isFileURL {
+                            MediaCoordinator.shared.openLocalFile(url: url)
+                        } else {
+                            MediaCoordinator.shared.openOnlineURL(string: url.absoluteString)
+                        }
+                    }
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {

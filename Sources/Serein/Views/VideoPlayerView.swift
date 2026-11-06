@@ -600,33 +600,58 @@ public struct VideoPlayerView: View {
     // MARK: - Audio Only Presentation Canvas
 
     private var audioOnlyCanvasView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
             ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.blue.opacity(0.35), Color.purple.opacity(0.25), Color.black.opacity(0.60)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                if let art = coordinator.currentArtwork {
+                    Image(nsImage: art)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 170, height: 170)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.white.opacity(0.20), lineWidth: 1)
                         )
-                    )
-                    .frame(width: 140, height: 140)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                    )
-                    .shadow(color: Color.blue.opacity(0.20), radius: 24, x: 0, y: 8)
+                        .shadow(color: Color.black.opacity(0.40), radius: 24, x: 0, y: 8)
+                } else {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.35), Color.purple.opacity(0.25), Color.black.opacity(0.60)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 170, height: 170)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                        .shadow(color: Color.blue.opacity(0.20), radius: 24, x: 0, y: 8)
 
-                Image(systemName: "music.note")
-                    .font(.system(size: 48, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.90))
+                    Image(systemName: "music.note")
+                        .font(.system(size: 54, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.90))
+                }
             }
 
             VStack(spacing: 6) {
-                Text(coordinator.currentSource?.displayName ?? "Audio Track")
-                    .font(.system(size: 15, weight: .semibold))
+                let title = coordinator.probeResult?.trackTitle ?? coordinator.currentSource?.displayName ?? "Audio Track"
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .lineLimit(1)
+                    .padding(.horizontal, 32)
+
+                if let artist = coordinator.probeResult?.trackArtist {
+                    let album = coordinator.probeResult?.trackAlbum
+                    let sub = album != nil ? "\(artist) — \(album!)" : artist
+                    Text(sub)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.75))
+                        .lineLimit(1)
+                        .padding(.horizontal, 32)
+                }
 
                 if let probe = coordinator.probeResult {
                     HStack(spacing: 8) {
@@ -644,6 +669,7 @@ public struct VideoPlayerView: View {
                                 .foregroundColor(.white.opacity(0.65))
                         }
                     }
+                    .padding(.top, 2)
                 }
             }
         }

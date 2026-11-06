@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import AppKit
 
 public enum CoordinatorState: Equatable, Sendable {
     case idle
@@ -43,6 +44,7 @@ public final class MediaCoordinator: ObservableObject {
     @Published public private(set) var activeStrategy: PlaybackStrategy?
     @Published public private(set) var activePlayableURL: URL?
     @Published public private(set) var pipelineStats: PipelineStats?
+    @Published public private(set) var currentArtwork: NSImage?
     @Published public private(set) var logs: [CoordinatorLogItem] = []
 
     @Published public var isInspectorPresented: Bool = false
@@ -107,6 +109,7 @@ public final class MediaCoordinator: ObservableObject {
         AudioManager.shared.reset()
 
         currentSource = source
+        currentArtwork = nil
         probeResult = nil
         extractedOnlineInfo = nil
         activeStrategy = nil
@@ -221,6 +224,16 @@ public final class MediaCoordinator: ObservableObject {
         log("💡 Evaluated Strategy: [\(strategy.badgeLabel)] - \(strategy.strategyTitle)", level: .success)
         log("ℹ️ Rationale: \(strategy.explanation)", level: .info)
 
+        // Asynchronously extract embedded album/cover artwork
+        Task.detached(priority: .userInitiated) { [weak self] in
+            if let art = await ArtworkExtractor.extractArtwork(from: fileURL) {
+                await MainActor.run { [weak self] in
+                    self?.currentArtwork = art
+                    NowPlayingManager.shared.updateArtwork(art)
+                }
+            }
+        }
+
         let selectedAudioIndex = AudioManager.shared.selectedTrack?.streamIndex
 
         // Execute Strategy
@@ -328,6 +341,18 @@ public final class MediaCoordinator: ObservableObject {
                 let extracted = try await YtDlpService.shared.extract(url: webURL)
                 self.extractedOnlineInfo = extracted
                 NowPlayingManager.shared.mediaItemDidChange()
+
+                if let thumb = extracted.thumbnailURL {
+                    Task.detached(priority: .utility) { [weak self] in
+                        if let (data, _) = try? await URLSession.shared.data(from: thumb),
+                           let img = NSImage(data: data) {
+                            await MainActor.run { [weak self] in
+                                self?.currentArtwork = img
+                                NowPlayingManager.shared.updateArtwork(img)
+                            }
+                        }
+                    }
+                }
                 if let d = extracted.duration, d > 0 {
                     PlayerController.shared.setKnownDuration(d)
                 }
@@ -701,6 +726,7 @@ public final class MediaCoordinator: ObservableObject {
         pipelineStats = nil
         activePlayableURL = nil
         activeStrategy = nil
+        currentArtwork = nil
         SubtitleManager.shared.reset()
         AudioManager.shared.reset()
         NowPlayingManager.shared.clear()

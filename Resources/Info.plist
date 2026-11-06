@@ -46,6 +46,25 @@
             <string>Viewer</string>
             <key>LSHandlerRank</key>
             <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>flac</string>
+                <string>mp3</string>
+                <string>m4a</string>
+                <string>wav</string>
+                <string>aac</string>
+                <string>ogg</string>
+                <string>opus</string>
+                <string>alac</string>
+                <string>aiff</string>
+                <string>mkv</string>
+                <string>mp4</string>
+                <string>mov</string>
+                <string>webm</string>
+                <string>avi</string>
+                <string>ts</string>
+                <string>m4v</string>
+            </array>
             <key>LSItemContentTypes</key>
             <array>
                 <string>public.movie</string>

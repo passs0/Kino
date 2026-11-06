@@ -79,6 +79,18 @@ public struct MediaProbeResult: Hashable, Sendable {
         primaryVideo == nil && primaryAudio != nil
     }
 
+    public var trackTitle: String? {
+        tags["title"] ?? tags["TITLE"] ?? tags["Title"]
+    }
+
+    public var trackArtist: String? {
+        tags["artist"] ?? tags["ARTIST"] ?? tags["Artist"]
+    }
+
+    public var trackAlbum: String? {
+        tags["album"] ?? tags["ALBUM"] ?? tags["Album"]
+    }
+
     public var audioStreams: [MediaStream] {
         streams.filter { $0.kind == .audio }
     }
