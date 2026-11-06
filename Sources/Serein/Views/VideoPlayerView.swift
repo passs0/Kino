@@ -912,6 +912,7 @@ struct TimelineScrubberShelf: View {
 
     @State private var isScrubberHovered = false
     @State private var isDraggingScrubber = false
+    @State private var wasPlayingBeforeScrub = false
     @State private var scrubTime: Double = 0
     @State private var hoverLocationX: CGFloat = 0
 
@@ -957,6 +958,26 @@ struct TimelineScrubberShelf: View {
                             .frame(width: max(currentHeight, playedWidth), height: currentHeight)
                     }
 
+                    // 4. Liquid Glass Thumb (morphs when scrubbing!)
+                    if isDraggingScrubber {
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white, Color(white: 0.90)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 14, height: 22)
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.white.opacity(0.80), lineWidth: 1)
+                            )
+                            .shadow(color: Color.black.opacity(0.45), radius: 6, x: 0, y: 3)
+                            .offset(x: max(0, min(width - 14, playedWidth - 7)))
+                            .transition(.scale.combined(with: .opacity))
+                    }
+
                     // Floating Hover Tooltip
                     if isScrubberHovered && !isDraggingScrubber && width > 0 {
                         let hoverFraction = max(0.0, min(1.0, hoverLocationX / width))
@@ -978,9 +999,16 @@ struct TimelineScrubberShelf: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
-                            isDraggingScrubber = true
+                            if !isDraggingScrubber {
+                                isDraggingScrubber = true
+                                wasPlayingBeforeScrub = PlayerController.shared.isPlaying
+                                if wasPlayingBeforeScrub {
+                                    PlayerController.shared.pause()
+                                }
+                            }
                             let fraction = max(0.0, min(1.0, value.location.x / width))
                             scrubTime = fraction * maxDuration
+                            onSeek(scrubTime)
                             onActivity()
                         }
                         .onEnded { value in
@@ -988,6 +1016,10 @@ struct TimelineScrubberShelf: View {
                             let target = fraction * maxDuration
                             onSeek(target)
                             isDraggingScrubber = false
+                            if wasPlayingBeforeScrub {
+                                PlayerController.shared.play()
+                                wasPlayingBeforeScrub = false
+                            }
                             onActivity()
                         }
                 )

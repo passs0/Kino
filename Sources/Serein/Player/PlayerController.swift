@@ -228,7 +228,7 @@ public final class PlayerController: ObservableObject {
     }
 
     public func seek(to seconds: Double) {
-        let maxD = PlayerTimeState.shared.duration
+        let maxD = max(PlayerTimeState.shared.duration, MediaCoordinator.shared.knownDuration ?? 0)
         let targetSec = max(0, min(seconds, maxD > 0 ? maxD : seconds))
         let relativeSec = max(0, targetSec - streamTimeOffset)
         let cmTime = CMTime(seconds: relativeSec, preferredTimescale: 600)
