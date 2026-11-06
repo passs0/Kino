@@ -327,6 +327,7 @@ public final class MediaCoordinator: ObservableObject {
             do {
                 let extracted = try await YtDlpService.shared.extract(url: webURL)
                 self.extractedOnlineInfo = extracted
+                NowPlayingManager.shared.mediaItemDidChange()
                 if let d = extracted.duration, d > 0 {
                     PlayerController.shared.setKnownDuration(d)
                 }
@@ -702,6 +703,7 @@ public final class MediaCoordinator: ObservableObject {
         activeStrategy = nil
         SubtitleManager.shared.reset()
         AudioManager.shared.reset()
+        NowPlayingManager.shared.clear()
         state = .idle
         log("Playback stopped and pipelines dismantled.", level: .info)
     }

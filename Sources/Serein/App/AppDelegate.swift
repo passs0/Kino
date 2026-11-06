@@ -8,6 +8,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
         TrafficLightManager.shared.install()
+        NowPlayingManager.shared.install()
         setupKeyboardShortcuts()
     }
 

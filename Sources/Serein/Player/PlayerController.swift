@@ -60,6 +60,7 @@ public final class PlayerController: ObservableObject {
         didSet {
             if isPlaying {
                 player.rate = playbackRate
+                NowPlayingManager.shared.updatePlaybackState(isPlaying: true, rate: playbackRate)
             }
         }
     }
@@ -156,6 +157,7 @@ public final class PlayerController: ObservableObject {
         player.rate = playbackRate
         player.play()
         isPlaying = true
+        NowPlayingManager.shared.mediaItemDidChange()
     }
 
     /// Explicitly updates duration from metadata (FFprobe or yt-dlp) when available.
@@ -163,18 +165,21 @@ public final class PlayerController: ObservableObject {
         guard seconds > 0, seconds.isFinite, !seconds.isNaN else { return }
         if PlayerTimeState.shared.duration <= 2.0 || PlayerTimeState.shared.duration < seconds {
             PlayerTimeState.shared.duration = seconds
+            NowPlayingManager.shared.updateNowPlayingInfo()
         }
     }
 
     public func play() {
         player.rate = playbackRate
         isPlaying = true
+        NowPlayingManager.shared.updatePlaybackState(isPlaying: true, rate: playbackRate)
     }
 
     public func pause() {
         player.pause()
         isPlaying = false
         saveCurrentPosition()
+        NowPlayingManager.shared.updatePlaybackState(isPlaying: false, rate: 0.0)
     }
 
     public func saveCurrentPosition() {
@@ -233,6 +238,7 @@ public final class PlayerController: ObservableObject {
         isSeeking = true
         seekTargetTime = targetSec
         PlayerTimeState.shared.currentTime = targetSec
+        NowPlayingManager.shared.updateElapsedTime(targetSec)
 
         seekTimeoutTask?.cancel()
         seekTimeoutTask = Task { @MainActor [weak self] in
@@ -322,6 +328,7 @@ public final class PlayerController: ObservableObject {
         SubtitleManager.shared.reset()
         PlayerTimeState.shared.reset()
         isPlaying = false
+        NowPlayingManager.shared.clear()
     }
 
     /// Smoothly fades out audio to zero before pausing and tearing down the player item to prevent CoreAudio clicks/pops on quit.
@@ -349,6 +356,7 @@ public final class PlayerController: ObservableObject {
         cleanupItemObservers()
         player.replaceCurrentItem(with: nil)
         isPlaying = false
+        NowPlayingManager.shared.clear()
     }
 
     // MARK: - Internal Observers
@@ -377,6 +385,7 @@ public final class PlayerController: ObservableObject {
 
                 PlayerTimeState.shared.currentTime = effectiveTime
                 SubtitleManager.shared.updateTime(effectiveTime)
+                NowPlayingManager.shared.periodicSync(currentTime: effectiveTime, duration: PlayerTimeState.shared.duration)
 
                 // Throttle saving playback position every 2.5 seconds
                 if abs(effectiveTime - self.lastSavedResumeTime) >= 2.5,
@@ -407,6 +416,7 @@ public final class PlayerController: ObservableObject {
                     let d = CMTimeGetSeconds(observedItem.duration)
                     if d.isFinite && !d.isNaN && d > 2.0 && d > PlayerTimeState.shared.duration {
                         PlayerTimeState.shared.duration = d
+                        NowPlayingManager.shared.updateNowPlayingInfo()
                     }
                     self.isBuffering = false
                     self.syncNativeSubtitleSelection(for: SubtitleManager.shared.selectedTrack)

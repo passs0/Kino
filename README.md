@@ -78,6 +78,11 @@ Serein treats subtitles as a first-class citizen using Apple's official `MediaAc
 - **Generous Traffic Light Breathing Room:** Swizzled window layout keeps macOS window controls comfortably placed at `18pt` left and `16pt` top margin across playback and resizing.
 - **Minimalist Liquid Level Sliders:** Continuous fluid level bars for volume and scrubbing with zero knob clutter.
 
+### 6. macOS Control Center & Now Playing Integration
+- **System-Wide Media Hub:** Seamlessly integrates with Apple's `MediaPlayer` framework (`MPNowPlayingInfoCenter` and `MPRemoteCommandCenter`).
+- **Live Metadata & Poster Artwork:** Broadcasts real-time video title, creator/channel, duration, elapsed position, and video thumbnail/poster frames to the macOS menu bar Control Center widget, Lock Screen, and Touch Bar.
+- **Hardware Media Key & Remote Commands:** Full native support for keyboard Play/Pause, Touch Bar scrubbing, headphone remotes, and `±5s` skip controls.
+
 ---
 
 ## ⚡️ Zero-Friction Setup: No Terminal Required
@@ -152,9 +157,9 @@ cd Serein
 - [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
 - [x] Multi-channel surround sound preservation (5.1 & 7.1 audio tracks & Dolby Atmos)
 - [x] Automated drag-and-drop macOS disk image (`.dmg`) packaging
+- [x] macOS Control Center & Now Playing widget integration (`MPNowPlayingInfoCenter` & `MPRemoteCommandCenter`)
 - [ ] **v0.2.0**: Dedicated Audio Mode & Floating Mini Player HUD
 - [ ] **v0.2.0**: Playlist Queue with drag-and-drop & continuous playback
-- [ ] **v0.2.0**: macOS Control Center (`MPNowPlayingInfoCenter`) & media key support
 - [ ] **v0.3.0**: Audio equalizer & CoreAudio visualizer
 
 ---
