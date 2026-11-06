@@ -6,9 +6,14 @@ cd "$SCRIPT_DIR"
 
 APP_NAME="Serein"
 VERSION="0.1.6"
-DMG_NAME="Serein-v${VERSION}-macOS.dmg"
+DMG_NAME="Serein-v${VERSION}.dmg"
 STAGING_DIR="/tmp/serein_dmg_staging"
 RW_DMG="/tmp/serein_rw.dmg"
+
+if [ ! -d "build/$APP_NAME.app" ]; then
+    echo "🔨 Building $APP_NAME.app first..."
+    ./build_app.sh
+fi
 
 echo "🧹 Cleaning previous staging..."
 rm -rf "$STAGING_DIR" "$RW_DMG" "$DMG_NAME"

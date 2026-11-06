@@ -33,6 +33,9 @@ swiftc \
     "${SWIFT_FILES[@]}" \
     -o "$MACOS_DIR/$APP_NAME"
 
+# Clean compiler cache to keep system lean
+rm -rf "$MODULE_CACHE"
+
 echo "📄 Copying Info.plist and AppIcon.icns..."
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 if [ -f "Resources/AppIcon.icns" ]; then
