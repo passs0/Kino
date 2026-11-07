@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 APP_NAME="Serein"
-VERSION="0.1.6"
+VERSION="0.1.7"
 DMG_NAME="Serein-v${VERSION}.dmg"
 STAGING_DIR="/tmp/serein_dmg_staging"
 RW_DMG="/tmp/serein_rw.dmg"
