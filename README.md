@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/passs0/Serein/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Serein?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
-  <img src="https://img.shields.io/badge/bundle-3.6%20MB-success" alt="Bundle Size" />
+  <img src="https://img.shields.io/badge/bundle-2.2%20MB-success" alt="Bundle Size" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
@@ -63,41 +63,48 @@ Serein includes a zero-bloat GPU video enhancement suite integrated directly via
 - **Edge & Outline Enhancer (`CIUnsharpMask`):** High-contrast edge restoration tuned with a tight radius for animation, cel-shading, cartoons, line art, and interface text.
 - **Noise & Grain Suppression (`CINoiseReduction`):** Spatial bilateral noise reduction smoothing macroblocking and sensor grain while keeping edge boundaries razor-sharp.
 - **Cinematic Contrast & Color:** Compound dynamic range filter combining luminance clarity with rich contrast and color vibrance.
-- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **3.6 MB**.
+- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **2.2 MB**.
 
 ### 3. Discrete Multi-Channel Surround Sound & Dolby Atmos
 - **Discrete 5.1 & 7.1 Preservation:** Retains discrete multi-channel surround tracks at high studio bitrates (384–640 kbps) without downmixing to stereo.
 - **Dolby Atmos & Spatial Audio:** Passes E-AC-3 JOC directly to macOS AudioToolbox, enabling native Spatial Audio with dynamic head tracking on AirPods and built-in Mac speaker arrays.
 - **Multi-Track Audio Switching:** Effortlessly switch between original audio tracks, commentary, and localized dubs from the Options menu (`...`).
 
-### 4. macOS System Settings Accessibility Captions
+### 4. macOS System Settings Accessibility Captions & Subtitle Engine
 Serein treats subtitles as a first-class citizen using Apple's official `MediaAccessibility` framework (`MACaptionAppearance`):
 - **System-Wide Consistency:** Subtitles dynamically adapt to your preferences in **System Settings ➔ Accessibility ➔ Captions** (e.g. *Transparent Background*, *Classic*, *Outline Text*, or *Large Text*).
 - **Responsive Subtitle Scaling:** Caption font size, padding, and line height dynamically scale with viewport height (`18 pt` to `48 pt`) when entering full screen.
+- **Automatic Sidecar Subtitle & Lyric Discovery:** Automatically detects `.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, and `.lrc` files located alongside media or in `Subs/` and `Subtitles/` subdirectories.
+- **Drag-and-Drop Subtitle Attachment:** Drop any external subtitle or lyric file directly onto the player window to immediately switch to that track without stopping the video.
+- **Remote Progressive Range Demuxing:** High-efficiency sparse demuxing for massive remote cloud containers (e.g. 15GB+ Matroska streams) with multi-byte UTF-8 split protection.
+- **Multi-Encoding Auto-Detection:** Seamlessly decodes UTF-8 (with or without BOM), UTF-16LE/BE, GB18030/GBK, and Windows CP1252 subtitles.
 - **Smart ASS/SSA Sanitization:** Automatically strips cluttered custom font/color overrides from anime and community subtitles while preserving semantic screen positioning (top, bottom, and center placement).
 - **Embedded Subtitle Extraction:** Automatically extracts container-embedded tracks (`mov_text`, `srt`, `ass`, `webvtt`) on-the-fly.
 
-### 5. Centered Media Statistics HUD & Liquid Glass Controls
+### 5. Apple AppKit Controls & QuickTime Optical Liquid Glass Thumb
+- **AppKit Native Controls:** Replaced custom slider widgets with Apple's first-party `NSSlider` AppKit controls for system-level precision and responsiveness.
+- **QuickTime Optical Liquid Glass Thumb:** Features true optical glass translucency, submerged core progress bar, and dynamic specular flare on scrubber drag and hover.
 - **Centered Floating Modal HUD (`⌘I`):** A centered floating diagnostic block presenting live playback strategy, active upscaling pipeline, audio codec channels, and stream probe metadata. Hugs content snugly and scrolls smoothly with high-contrast dark frosted glass (`black.opacity(0.95)`) and a 50% backdrop dimming scrim. Dismiss with `Esc` or a click outside.
+- **Media Statistics Menu Action:** Inspect real-time audio/video codecs, container bitrate, and hardware rendering stats with a single click in the Options menu.
 - **Generous Traffic Light Breathing Room:** Swizzled window layout keeps macOS window controls comfortably placed at `18pt` left and `16pt` top margin across playback and resizing.
-- **Minimalist Liquid Level Sliders:** Continuous fluid level bars for volume and scrubbing with zero knob clutter.
 
 ### 6. macOS Control Center & Now Playing Integration
 - **System-Wide Media Hub:** Seamlessly integrates with Apple's `MediaPlayer` framework (`MPNowPlayingInfoCenter` and `MPRemoteCommandCenter`).
 - **Live Metadata & Poster Artwork:** Broadcasts real-time video title, creator/channel, duration, elapsed position, and video thumbnail/poster frames to the macOS menu bar Control Center widget, Lock Screen, and Touch Bar.
 - **Hardware Media Key & Remote Commands:** Full native support for keyboard Play/Pause, Touch Bar scrubbing, headphone remotes, and `±5s` skip controls.
 
-### 7. Music Mode & Liquid Glass Compact MiniPlayer
+### 7. Unified Audio Mode & Clean Presentation
+- **Unified Player Architecture:** Audio mode and Video mode share the same refined control layout, shortcuts, and interaction model.
+- **Clean Minimalist Audio Canvas:** Clean, distraction-free display featuring high-resolution album artwork, track title, artist, and album typography.
 - **Lossless Audio Engine (0% CPU):** Direct hardware playback for `.flac`, `.alac`, `.m4a`, `.mp3`, `.wav`, and `.aiff`.
 - **Pure Swift Album Art Parser:** Extracts high-resolution embedded cover artwork directly from FLAC `METADATA_BLOCK_PICTURE` headers, MP3 ID3 APIC frames, and M4A `covr` atoms in `< 1ms` with zero subprocesses.
-- **Fluid Window Morphing (`⌥⌘M`):** Automatically detects audio files and smoothly transitions the window into a sleek, compact desktop card (`440×132 pt`) featuring cover art, title, artist, audio codec badge, and interactive scrubber.
-- **Desktop Always-On-Top Pinning (`⌥⌘P`):** Float the MiniPlayer above code editors, browsers, and terminal windows with a single click on the pin button (`📌`).
+- **Desktop Always-On-Top Pinning (`⌥⌘P`):** Float the player above code editors, browsers, and terminal windows with a single click on the pin button (`📌`).
 
 ---
 
 ## ⚡️ Zero-Friction Setup: No Terminal Required
 
-Unlike traditional players that demand manual command-line installations, Serein keeps the core application download ultra-compact (**~3.6 MB app, 1.5 MB .dmg**) and provides an **automated in-app engine installer**:
+Unlike traditional players that demand manual command-line installations, Serein keeps the core application download ultra-compact (**~2.2 MB app, 1.4 MB .dmg**) and provides an **automated in-app engine installer**:
 
 1. **Automatic Detection:** If you already have Homebrew (`brew install ffmpeg yt-dlp`), Serein detects and uses them immediately with zero configuration.
 2. **1-Click In-App Download:** On fresh Macs without Homebrew, Serein prompts you with a clean native setup sheet (`⌘,`) and downloads managed static binaries directly into `~/Library/Application Support/Serein/bin/`.
@@ -131,7 +138,7 @@ Unlike traditional players that demand manual command-line installations, Serein
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **[`Serein-v0.1.6.dmg`](https://github.com/passs0/Serein/releases/latest)** from [GitHub Releases](https://github.com/passs0/Serein/releases).
+1. Download **[`Serein-v0.1.7.dmg`](https://github.com/passs0/Serein/releases/latest)** from [GitHub Releases](https://github.com/passs0/Serein/releases).
 2. Open the downloaded `.dmg` and drag **`Serein.app`** directly into the **`Applications`** folder shortcut.
 3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
    - Right-click `Serein.app` ➔ **Open**, or run:
@@ -153,26 +160,41 @@ cd Serein
 
 ## 🗺️ Roadmap
 
-- [x] Native AVFoundation + VideoToolbox hybrid engine
-- [x] In-app automated media engine downloader & updater
-- [x] macOS Accessibility caption rendering
-- [x] Online streaming pipeline with original audio selection
-- [x] Native Picture-in-Picture (`AVPictureInPictureController`)
-- [x] Variable speed with CoreAudio pitch correction (`0.5×`–`2.0×`)
+### Core Playback & Codecs
+- [x] Native AVFoundation + VideoToolbox zero-copy hybrid engine
+- [x] In-app automated media engine downloader & updater (zero Terminal required)
+- [x] Universal container support (`.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, `.flac`, `.alac`)
 - [x] High-speed visionOS multi-variant HLS streaming with automated CDN fallback
+- [x] Variable speed playback with CoreAudio pitch correction (`0.5×`–`2.0×`)
+- [x] Native Picture-in-Picture (`AVPictureInPictureController`) with live subtitle overlay
+- [x] Display & system idle sleep prevention during active playback
+
+### Apple Design & Interface
 - [x] Apple Liquid Glass design & dynamic System Settings tint adjustment (`NSGlassTintAmount`)
-- [x] Minimalist thumbless liquid level sliders for volume & timeline
-- [x] Display & system idle sleep prevention during playback
-- [x] Sample-accurate WebVTT, SRT, and ASS/SSA subtitle synchronization on resume
-- [x] Centered Media Statistics HUD (`⌘I`) with content-adaptive sizing & high-contrast dark glass
-- [x] Native traffic light positioning with generous breathing room across playback & window resizing
-- [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
-- [x] Multi-channel surround sound preservation (5.1 & 7.1 audio tracks & Dolby Atmos)
-- [x] Automated drag-and-drop macOS disk image (`.dmg`) packaging
+- [x] Apple AppKit native `NSSlider` controls for volume & timeline scrubbing
+- [x] QuickTime optical liquid glass thumb with submerged core progress & specular edge lighting
+- [x] Unified Video & Audio player architecture with single cohesive control layout
+- [x] Clean Audio Mode with high-resolution album artwork, artist, and album typography
+- [x] Centered Media Statistics Technical Inspector (`⌘I`) with dark glass scrim
+- [x] Quick-access Media Statistics button in native Options menu
+- [x] Generous traffic light positioning with breathing room across playback & window resizing
 - [x] macOS Control Center & Now Playing widget integration (`MPNowPlayingInfoCenter` & `MPRemoteCommandCenter`)
-- [ ] **v0.2.0**: Dedicated Audio Mode & Floating Mini Player HUD
-- [ ] **v0.2.0**: Playlist Queue with drag-and-drop & continuous playback
-- [ ] **v0.3.0**: Audio equalizer & CoreAudio visualizer
+
+### Audio & Subtitles
+- [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
+- [x] Multi-channel surround sound preservation (discrete 5.1 & 7.1 tracks & Dolby Atmos)
+- [x] macOS Accessibility caption rendering (`MACaptionAppearance`) with responsive full-screen scaling
+- [x] Automatic sidecar subtitle & lyric discovery (`.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, `.lrc`)
+- [x] Drag-and-drop subtitle loading without stopping active video playback
+- [x] Remote MKV streaming progressive subtitle demuxing with sparse range tracking
+- [x] Multi-encoding subtitle decoder (UTF-8 with BOM, UTF-16, GB18030, CP1252)
+- [x] Manual "Load External Subtitles…" open panel in Options menu
+
+### Upcoming Milestones
+- [ ] **v0.2.0**: Playlist Queue with drag-and-drop, shuffle, repeat, & continuous playback
+- [ ] **v0.2.0**: Chapter markers navigation & thumbnail preview scrub tooltips
+- [ ] **v0.3.0**: Real-time 10-band audio equalizer & CoreAudio frequency visualizer
+- [ ] **v0.3.0**: Extended keyboard shortcut customization & vim-style navigation keys
 
 ---
 
