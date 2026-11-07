@@ -29,8 +29,13 @@ public struct SereinApp: App {
                 }
                 .keyboardShortcut(",", modifiers: .command)
 
-                Button("Safari Extension Preferences...") {
-                    SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.serein.player.safari-extension", completionHandler: nil)
+                Button("Safari Companion Extension...") {
+                    NotificationCenter.default.post(name: .openSafariExtensionSheetNotification, object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+
+                Button("Open Safari Extensions Preferences") {
+                    SafariExtensionManager.shared.openSafariExtensionsPreferences()
                 }
 
                 Button("Check for Engine Updates...") {
@@ -170,5 +175,6 @@ public struct SereinApp: App {
 public extension Notification.Name {
     static let openURLSheetNotification = Notification.Name("SereinOpenURLSheetNotification")
     static let openPrerequisitesSheetNotification = Notification.Name("SereinOpenPrerequisitesSheetNotification")
+    static let openSafariExtensionSheetNotification = Notification.Name("SereinOpenSafariExtensionSheetNotification")
     static let closeMediaNotification = Notification.Name("SereinCloseMediaNotification")
 }
