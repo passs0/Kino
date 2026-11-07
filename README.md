@@ -16,6 +16,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
+<p align="center">
+  <img src="assets/preview.png" width="720" alt="Serein Player Interface" />
+</p>
+
 ---
 
 > [!NOTE]
