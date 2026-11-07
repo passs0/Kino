@@ -93,26 +93,21 @@ public struct VideoPlayerView: View {
         coordinator.probeResult?.isAudioOnly == true || coordinator.currentSource?.isAudioTrack == true
     }
 
-    // MARK: - Player Canvas
+    // MARK: - Player Canvas (Unified Media Surface for Video and Audio)
 
     private var playerCanvas: some View {
-        Group {
-            if isAudioMode {
-                cleanAudioPlayerView
-            } else {
-                videoCanvasView
-            }
-        }
-    }
-
-    private var videoCanvasView: some View {
         GeometryReader { geo in
             ZStack {
-                // Layer 1: Hardware-Accelerated Video Surface
-                NativePlayerView(player: playerController.player) { droppedURL in
-                    coordinator.openLocalFile(url: droppedURL)
+                // Layer 1: Hardware-Accelerated Video Surface OR Dedicated Audio Presentation
+                if isAudioMode {
+                    audioArtworkAndMetadataView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                } else {
+                    NativePlayerView(player: playerController.player) { droppedURL in
+                        coordinator.openLocalFile(url: droppedURL)
+                    }
+                    .ignoresSafeArea()
                 }
-                .ignoresSafeArea()
 
                 // Layer 2: Background Tap Catch (only for empty canvas clicks, beneath interactive controls)
                 Color.clear
@@ -126,9 +121,11 @@ public struct VideoPlayerView: View {
                     }
 
                 // Layer 3: Subtitles / Captions (scales dynamically with screen/window size and follows ASS semantic position)
-                subtitlesOverlay(viewportSize: geo.size)
+                if !isAudioMode {
+                    subtitlesOverlay(viewportSize: geo.size)
+                }
 
-                // Layer 4: Floating Liquid Glass Controls Overlay
+                // Layer 4: Floating Liquid Glass Controls Overlay (Unified across Video & Audio)
                 controlsOverlay
                     .allowsHitTesting(showControls || !playerController.isPlaying)
                     .opacity(showControls || !playerController.isPlaying ? 1 : 0)
@@ -262,9 +259,10 @@ public struct VideoPlayerView: View {
 
     private var controlsOverlay: some View {
         VStack(spacing: 0) {
-            // TOP BAR: Left has close button (fullscreen) / clearance (windowed) + PiP & AirPlay Video; Middle has Title; Right has Sound & AirPlay Pill Control
+            // TOP BAR: Left has close button (fullscreen) / clearance (windowed) (+ PiP & AirPlay in video);
+            // Middle has Title (video mode); Right has Sound & AirPlay Pill Control
             HStack(spacing: 12) {
-                // In full screen mode: dedicated 'X' button to quit current video and return to welcome screen!
+                // In full screen mode: dedicated 'X' button to quit media and return to welcome screen!
                 if isFullScreen {
                     Button(action: {
                         quitVideoAndReturnToWelcome()
@@ -277,7 +275,7 @@ public struct VideoPlayerView: View {
                     }
                     .buttonStyle(.plain)
                     .glassEffect(glassSettings.glass, in: Circle())
-                    .help("Close Video and Return to Welcome Screen (Esc / ⌘W)")
+                    .help("Close and Return to Welcome Screen (Esc / ⌘W)")
                 } else {
                     // Inset clearance for standard macOS traffic lights (only when in windowed mode!)
                     Color.clear
@@ -285,50 +283,54 @@ public struct VideoPlayerView: View {
                         .transition(.opacity)
                 }
 
-                // Top-Left: PiP & AirPlay Video Capsule (Video mode)
-                HStack(spacing: 8) {
-                    // Native Picture in Picture Button
-                    Button(action: {
-                        playerController.togglePictureInPicture()
-                        registerUserActivity()
-                    }) {
-                        Image(systemName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 22, height: 22)
-                            .contentShape(Rectangle())
+                if !isAudioMode {
+                    // Top-Left: PiP & AirPlay Video Capsule (Video mode only)
+                    HStack(spacing: 8) {
+                        // Native Picture in Picture Button
+                        Button(action: {
+                            playerController.togglePictureInPicture()
+                            registerUserActivity()
+                        }) {
+                            Image(systemName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 22, height: 22)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Picture in Picture")
+
+                        GlassDivider(height: 14)
+
+                        // Native macOS AirPlay Video Route Picker (Apple TV / AirPlay Display)
+                        AirPlayRoutePicker(player: playerController.player, mode: .video)
+                            .frame(width: 24, height: 24)
+                            .help("AirPlay Video (Apple TV / External Display)")
                     }
-                    .buttonStyle(.plain)
-                    .help("Picture in Picture")
-
-                    GlassDivider(height: 14)
-
-                    // Native macOS AirPlay Video Route Picker (Apple TV / AirPlay Display)
-                    AirPlayRoutePicker(player: playerController.player, mode: .video)
-                        .frame(width: 24, height: 24)
-                        .help("AirPlay Video (Apple TV / External Display)")
-                }
-                .padding(.horizontal, 10)
-                .frame(height: 34)
-                .glassEffect(glassSettings.glass, in: Capsule())
-
-                Spacer(minLength: 12)
-
-                // Top-Middle: Clean Media Title Pill (Non-interactive)
-                Text(cleanMediaTitle)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 10)
                     .frame(height: 34)
                     .glassEffect(glassSettings.glass, in: Capsule())
-                    .frame(maxWidth: 420)
-                    .allowsHitTesting(false)
+                }
 
                 Spacer(minLength: 12)
 
-                // Top-Right: Sound & AirPlay Audio Pill Control (macOS Sequoia Control Center style)
+                if !isAudioMode {
+                    // Top-Middle: Clean Media Title Pill (Video mode only; in audio mode, title is centered under cover art)
+                    Text(cleanMediaTitle)
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                        .glassEffect(glassSettings.glass, in: Capsule())
+                        .frame(maxWidth: 420)
+                        .allowsHitTesting(false)
+
+                    Spacer(minLength: 12)
+                }
+
+                // Top-Right: Sound & AirPlay Audio Pill Control (macOS Sequoia Control Center style, shared across Video & Audio)
                 soundPillControl
             }
             .padding(.top, 16)
@@ -416,7 +418,7 @@ public struct VideoPlayerView: View {
         }
         .buttonStyle(.plain)
         .glassEffect(glassSettings.glass, in: Capsule())
-        .help("Playback Options (Subtitles, Speed, Media Statistics)")
+        .help(isAudioMode ? "Playback Options & Media Statistics (⌘I)" : "Playback Options (Subtitles, Speed, Media Statistics)")
     }
 
     private func formatRate(_ rate: Double) -> String {
@@ -584,51 +586,7 @@ public struct VideoPlayerView: View {
         playerController.reset()
     }
 
-    // MARK: - Clean Dedicated Audio Player View
-
-    private var cleanAudioPlayerView: some View {
-        GeometryReader { geo in
-            ZStack {
-                // Layer 1: Dedicated Audio Presentation (Cover Art + Title + Artist — Album)
-                audioArtworkAndMetadataView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-
-                // Layer 2: Background Tap Catch
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        toggleFullscreen()
-                    }
-                    .onTapGesture(count: 1) {
-                        playerController.togglePlayPause()
-                        registerUserActivity()
-                    }
-
-                // Layer 3: Original Liquid Glass Controls Overlay (fades out on inactivity during playback)
-                audioControlsOverlay
-                    .allowsHitTesting(showControls || !playerController.isPlaying)
-                    .opacity(showControls || !playerController.isPlaying ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.22), value: showControls || !playerController.isPlaying)
-
-                // Layer 4: Resume From Timestamp Toast Banner
-                resumeToastView
-
-                // Layer 5: On-Screen HUD Notification Banner
-                generalHUDView
-            }
-            .contentShape(Rectangle())
-            .onContinuousHover { phase in
-                switch phase {
-                case .active:
-                    registerUserActivity()
-                case .ended:
-                    if playerController.isPlaying {
-                        scheduleControlsFade(afterSeconds: 1.0)
-                    }
-                }
-            }
-        }
-    }
+    // MARK: - Audio Metadata & Presentation (Media Canvas Layer)
 
     private var audioArtworkAndMetadataView: some View {
         VStack(spacing: 18) {
@@ -686,100 +644,6 @@ public struct VideoPlayerView: View {
             }
         }
         .padding(.bottom, 24)
-    }
-
-    private var audioControlsOverlay: some View {
-        VStack(spacing: 0) {
-            // TOP BAR: Left has Close button (fullscreen) or traffic light clearance (windowed); Right has Sound Pill
-            HStack(spacing: 12) {
-                if isFullScreen {
-                    Button(action: quitVideoAndReturnToWelcome) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 34, height: 34)
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .glassEffect(glassSettings.glass, in: Circle())
-                    .help("Close Audio and Return to Welcome Screen (Esc / ⌘W)")
-                } else {
-                    Color.clear
-                        .frame(width: 68, height: 1)
-                }
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    // Media Statistics Button (Info / Music Codec Inspector)
-                    Button(action: {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                            coordinator.isInspectorPresented.toggle()
-                        }
-                        registerUserActivity()
-                    }) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 34, height: 34)
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .glassEffect(glassSettings.glass, in: Circle())
-                    .help("Media Statistics & Music Codec (⌘I)")
-
-                    // Top-Right: Sound & Audio AirPlay Pill Control (macOS Sequoia style with Apple NSSlider)
-                    soundPillControl
-                }
-            }
-            .padding(.top, 16)
-            .padding(.horizontal, 20)
-
-            Spacer()
-
-            // CENTER: Original Liquid Glass Circular Playback Controls
-            GlassEffectContainer {
-                HStack(spacing: 28) {
-                    LiquidCircleButton(icon: "gobackward.10", size: 54, iconSize: 20) {
-                        playerController.seekRelative(seconds: -10)
-                        registerUserActivity()
-                    }
-                    .help("Rewind 10 seconds (⌘←)")
-
-                    LiquidCircleButton(
-                        icon: playerController.isPlaying ? "pause.fill" : "play.fill",
-                        size: 80,
-                        iconSize: 32,
-                        isBold: true
-                    ) {
-                        playerController.togglePlayPause()
-                        registerUserActivity()
-                    }
-                    .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
-
-                    LiquidCircleButton(icon: "goforward.10", size: 54, iconSize: 20) {
-                        playerController.seekRelative(seconds: 10)
-                        registerUserActivity()
-                    }
-                    .help("Forward 10 seconds (⌘→)")
-                }
-            }
-
-            Spacer()
-
-            // BOTTOM: Native Scrubber Shelf
-            TimelineScrubberShelf(
-                onSeek: { target in
-                    playerController.seek(to: target)
-                },
-                onActivity: {
-                    registerUserActivity()
-                }
-            )
-            .padding(.horizontal, 20)
-            .padding(.bottom, 16)
-        }
-        .environment(\.colorScheme, .dark)
     }
 
     private var audioTrackTitle: String {
