@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import SafariServices
 
 public struct SereinApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -16,11 +17,7 @@ public struct SereinApp: App {
                 )
                 .onOpenURL { url in
                     Task { @MainActor in
-                        if url.isFileURL {
-                            MediaCoordinator.shared.openLocalFile(url: url)
-                        } else {
-                            MediaCoordinator.shared.openOnlineURL(string: url.absoluteString)
-                        }
+                        handleIncomingURL(url)
                     }
                 }
         }
@@ -31,6 +28,10 @@ public struct SereinApp: App {
                     NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
                 }
                 .keyboardShortcut(",", modifiers: .command)
+
+                Button("Safari Extension Preferences...") {
+                    SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.serein.player.safari-extension", completionHandler: nil)
+                }
 
                 Button("Check for Engine Updates...") {
                     NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
@@ -113,6 +114,45 @@ public struct SereinApp: App {
                 .keyboardShortcut("p", modifiers: [.command, .option])
             }
         }
+    }
+
+    @MainActor
+    private func handleIncomingURL(_ url: URL) {
+        NSApp.activate(ignoringOtherApps: true)
+        for window in NSApp.windows {
+            if window.canBecomeKey {
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
+
+        if url.isFileURL {
+            MediaCoordinator.shared.openLocalFile(url: url)
+            return
+        }
+
+        if url.scheme?.lowercased() == "serein" {
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                if components.host?.lowercased() == "open" {
+                    if let targetURL = components.queryItems?.first(where: { $0.name == "url" })?.value {
+                        let timeParam = components.queryItems?.first(where: { $0.name == "time" })?.value
+                        let initTime = timeParam.flatMap { Double($0) }
+                        MediaCoordinator.shared.openOnlineURL(string: targetURL, initialTime: initTime)
+                        return
+                    }
+                }
+            }
+
+            let absolute = url.absoluteString
+            if absolute.hasPrefix("serein://") {
+                let stripped = String(absolute.dropFirst("serein://".count))
+                if stripped.hasPrefix("http://") || stripped.hasPrefix("https://") {
+                    MediaCoordinator.shared.openOnlineURL(string: stripped)
+                    return
+                }
+            }
+        }
+
+        MediaCoordinator.shared.openOnlineURL(string: url.absoluteString)
     }
 
     private func openFileDialog() {

@@ -83,7 +83,9 @@ public struct MainWindowView: View {
             if let url = newURL {
                 if !playerController.isSeeking {
                     let expDuration = coordinator.knownDuration
-                    playerController.load(url: url, expectedDuration: expDuration)
+                    let initTime = coordinator.pendingInitialTime
+                    coordinator.pendingInitialTime = nil
+                    playerController.load(url: url, expectedDuration: expDuration, initialTime: initTime)
                 }
             } else {
                 playerController.reset()

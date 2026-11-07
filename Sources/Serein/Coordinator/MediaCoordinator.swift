@@ -46,6 +46,7 @@ public final class MediaCoordinator: ObservableObject {
     @Published public private(set) var pipelineStats: PipelineStats?
     @Published public private(set) var currentArtwork: NSImage?
     @Published public private(set) var logs: [CoordinatorLogItem] = []
+    @Published public var pendingInitialTime: Double? = nil
 
     @Published public var isInspectorPresented: Bool = false
 
@@ -133,13 +134,63 @@ public final class MediaCoordinator: ObservableObject {
         openSource(.local(url))
     }
 
-    public func openOnlineURL(string: String) {
-        guard let url = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+    public func openOnlineURL(string: String, initialTime: Double? = nil) {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed) else {
             state = .error("Invalid URL format.")
             log("Invalid URL provided: \(string)", level: .error)
             return
         }
-        openSource(.online(url: url, originalInput: string))
+
+        var targetTime = initialTime
+        if targetTime == nil || targetTime == 0 {
+            targetTime = extractTimeParameter(from: url)
+        }
+        self.pendingInitialTime = targetTime
+
+        if let t = targetTime, t > 0 {
+            log("⏱️ Initial playback timestamp requested: \(formatSeconds(t))", level: .info)
+        }
+
+        openSource(.online(url: url, originalInput: trimmed))
+    }
+
+    private func extractTimeParameter(from url: URL) -> Double? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        if let tStr = components.queryItems?.first(where: {
+            let n = $0.name.lowercased()
+            return n == "t" || n == "start" || n == "time_continue"
+        })?.value {
+            return parseTimeQueryString(tStr)
+        }
+        return nil
+    }
+
+    private func parseTimeQueryString(_ timeStr: String) -> Double? {
+        let trimmed = timeStr.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let directSec = Double(trimmed) {
+            return directSec
+        }
+        var total: Double = 0
+        var currentNum = ""
+        for char in trimmed {
+            if char.isNumber || char == "." {
+                currentNum.append(char)
+            } else if char == "h" {
+                if let val = Double(currentNum) { total += val * 3600 }
+                currentNum = ""
+            } else if char == "m" {
+                if let val = Double(currentNum) { total += val * 60 }
+                currentNum = ""
+            } else if char == "s" {
+                if let val = Double(currentNum) { total += val }
+                currentNum = ""
+            }
+        }
+        if let remaining = Double(currentNum), total == 0 {
+            return remaining
+        }
+        return total > 0 ? total : nil
     }
 
     private func processSource(_ source: MediaSource) async {
@@ -418,8 +469,13 @@ public final class MediaCoordinator: ObservableObject {
 
                 state = .preparingStream("Connecting online stream via yt-dlp & FFmpeg bridge...")
                 log("⚙️ Routing stream through yt-dlp ➔ FFmpeg pipeline...", level: .info)
-                let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL)
+                let initTime = self.pendingInitialTime ?? 0
+                let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: initTime > 0 ? initTime : nil)
                 self.activePlayableURL = streamURL
+                if initTime > 0 {
+                    self.pendingInitialTime = nil
+                    PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: extracted.duration, timeOffset: initTime)
+                }
                 self.state = .ready(strategy)
                 log("✨ Online stream connected to AVPlayer via local bridge.", level: .success)
                 return

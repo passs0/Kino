@@ -34,6 +34,7 @@ public final class PlayerController: ObservableObject {
     private var streamSeekTask: Task<Void, Never>?
 
     private var pendingResumeTime: Double? = nil
+    private var pendingInitialSeekTime: Double? = nil
     private var lastSavedResumeTime: Double = 0
     private var resumeToastTask: Task<Void, Never>?
 
@@ -130,9 +131,11 @@ public final class PlayerController: ObservableObject {
         player.pause()
 
         if let initTime = initialTime, initTime > 0 {
+            self.pendingInitialSeekTime = initTime
             PlayerTimeState.shared.currentTime = initTime
             self.pendingResumeTime = nil
         } else {
+            self.pendingInitialSeekTime = nil
             PlayerTimeState.shared.reset()
             // Check if there is a saved resume position for this media source
             if let src = MediaCoordinator.shared.currentSource,
@@ -442,8 +445,11 @@ public final class PlayerController: ObservableObject {
                         }
                     }
 
-                    // Perform auto-resume if saved position exists (> 4s)
-                    if let resumeSec = self.pendingResumeTime, resumeSec > 4.0 {
+                    // Perform initial seek or auto-resume
+                    if let initTime = self.pendingInitialSeekTime, initTime > 0 {
+                        self.pendingInitialSeekTime = nil
+                        self.seek(to: initTime)
+                    } else if let resumeSec = self.pendingResumeTime, resumeSec > 4.0 {
                         self.pendingResumeTime = nil
                         self.seek(to: resumeSec)
                         self.showResumeToast(time: resumeSec)

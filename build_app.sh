@@ -45,6 +45,33 @@ if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 
+# Build Companion Safari Web Extension
+EXT_NAME="Serein Safari Extension"
+PLUGINS_DIR="$CONTENTS_DIR/PlugIns"
+EXT_BUNDLE="$PLUGINS_DIR/$EXT_NAME.appex"
+EXT_CONTENTS="$EXT_BUNDLE/Contents"
+EXT_MACOS="$EXT_CONTENTS/MacOS"
+EXT_RESOURCES="$EXT_CONTENTS/Resources"
+
+echo "🧩 Building companion Safari Extension ($EXT_NAME)..."
+rm -rf "$EXT_BUNDLE"
+mkdir -p "$EXT_MACOS" "$EXT_RESOURCES"
+
+swiftc \
+    -target arm64-apple-macos26.0 \
+    -sdk "$SDK_PATH" \
+    -O \
+    SafariExtension/SafariWebExtensionHandler.swift \
+    -o "$EXT_MACOS/$EXT_NAME"
+
+strip -rSTx "$EXT_MACOS/$EXT_NAME"
+
+cp "SafariExtension/Info.plist" "$EXT_CONTENTS/Info.plist"
+cp -R SafariExtension/Resources/* "$EXT_RESOURCES/"
+
+echo "🔐 Ad-hoc code signing $EXT_NAME.appex..."
+codesign --force --sign - --entitlements SafariExtension/Extension.entitlements "$EXT_BUNDLE"
+
 # Clear quarantine and extended attributes
 xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
@@ -57,4 +84,8 @@ ls -ld "$APP_BUNDLE"
 echo "🚀 Installing cleanly to /Applications/$APP_NAME.app..."
 rm -rf "/Applications/$APP_NAME.app"
 cp -R "$APP_BUNDLE" "/Applications/$APP_NAME.app"
-echo "✨ Installed to /Applications/$APP_NAME.app"
+
+# Register URL scheme and PlugIn with LaunchServices
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/$APP_NAME.app" 2>/dev/null || true
+pluginkit -a "/Applications/$APP_NAME.app/Contents/PlugIns/$EXT_NAME.appex" 2>/dev/null || true
+echo "✨ Installed and registered to /Applications/$APP_NAME.app"
