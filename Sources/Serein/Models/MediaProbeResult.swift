@@ -53,6 +53,12 @@ public struct MediaStream: Identifiable, Hashable, Sendable {
         }
         return parts.joined(separator: ", ")
     }
+
+    public var isTextBasedSubtitle: Bool {
+        guard kind == .subtitle else { return false }
+        let lower = codecName.lowercased()
+        return !lower.contains("pgs") && !lower.contains("dvd") && !lower.contains("dvb") && !lower.contains("xsub") && !lower.contains("bitmap")
+    }
 }
 
 /// Comprehensive probe result analyzing the container format and all streams.

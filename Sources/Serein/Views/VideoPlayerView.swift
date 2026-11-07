@@ -62,7 +62,10 @@ public struct VideoPlayerView: View {
                 }
                 if let url = resolvedURL {
                     Task { @MainActor in
-                        if url.isFileURL {
+                        let subExts = ["srt", "vtt", "ass", "ssa", "sub", "lrc"]
+                        if url.isFileURL && subExts.contains(url.pathExtension.lowercased()) {
+                            SubtitleManager.shared.loadExternalSubtitle(from: url)
+                        } else if url.isFileURL {
                             coordinator.openLocalFile(url: url)
                         } else {
                             coordinator.openOnlineURL(string: url.absoluteString)
@@ -104,7 +107,12 @@ public struct VideoPlayerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 } else {
                     NativePlayerView(player: playerController.player) { droppedURL in
-                        coordinator.openLocalFile(url: droppedURL)
+                        let subExts = ["srt", "vtt", "ass", "ssa", "sub", "lrc"]
+                        if droppedURL.isFileURL && subExts.contains(droppedURL.pathExtension.lowercased()) {
+                            SubtitleManager.shared.loadExternalSubtitle(from: droppedURL)
+                        } else {
+                            coordinator.openLocalFile(url: droppedURL)
+                        }
                     }
                     .ignoresSafeArea()
                 }

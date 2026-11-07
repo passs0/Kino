@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Presents the native macOS WebKit HTML5 video options menu via NSMenu.
 /// This completely bypasses SwiftUI body invalidation during playback, eliminating menu blinking
@@ -75,22 +76,21 @@ public final class OptionsMenuPresenter: NSObject {
                 menu.addItem(audioItem)
             }
 
-            // 4. Subtitles / Lyrics Submenu (only if external/embedded lyric tracks exist)
+            // 4. Subtitles / Lyrics Submenu
+            let subsItem = NSMenuItem(title: "Subtitles / Lyrics", action: nil, keyEquivalent: "")
+            let subsMenu = NSMenu(title: "Subtitles / Lyrics")
+            subsMenu.autoenablesItems = false
+
+            let currentSub = SubtitleManager.shared.selectedTrack
+
+            let offItem = NSMenuItem(title: "Off", action: #selector(handleSelectSubOff), keyEquivalent: "")
+            offItem.target = self
+            offItem.state = (currentSub == nil) ? .on : .off
+            subsMenu.addItem(offItem)
+
             let subTracks = SubtitleManager.shared.availableTracks
             if !subTracks.isEmpty {
-                let subsItem = NSMenuItem(title: "Subtitles / Lyrics", action: nil, keyEquivalent: "")
-                let subsMenu = NSMenu(title: "Subtitles / Lyrics")
-                subsMenu.autoenablesItems = false
-
-                let currentSub = SubtitleManager.shared.selectedTrack
-
-                let offItem = NSMenuItem(title: "Off", action: #selector(handleSelectSubOff), keyEquivalent: "")
-                offItem.target = self
-                offItem.state = (currentSub == nil) ? .on : .off
-                subsMenu.addItem(offItem)
-
                 subsMenu.addItem(NSMenuItem.separator())
-
                 for track in subTracks {
                     let item = NSMenuItem(title: track.name, action: #selector(handleSelectTrack(_:)), keyEquivalent: "")
                     item.target = self
@@ -98,10 +98,15 @@ public final class OptionsMenuPresenter: NSObject {
                     item.state = (currentSub?.id == track.id) ? .on : .off
                     subsMenu.addItem(item)
                 }
-
-                subsItem.submenu = subsMenu
-                menu.addItem(subsItem)
             }
+
+            subsMenu.addItem(NSMenuItem.separator())
+            let loadAudioSubsItem = NSMenuItem(title: "Load External Lyrics/Subtitles…", action: #selector(handleLoadExternalSubtitles), keyEquivalent: "")
+            loadAudioSubsItem.target = self
+            subsMenu.addItem(loadAudioSubsItem)
+
+            subsItem.submenu = subsMenu
+            menu.addItem(subsItem)
 
             menu.addItem(NSMenuItem.separator())
 
@@ -161,6 +166,11 @@ public final class OptionsMenuPresenter: NSObject {
                 noneItem.isEnabled = false
                 subsMenu.addItem(noneItem)
             }
+
+            subsMenu.addItem(NSMenuItem.separator())
+            let loadExternalItem = NSMenuItem(title: "Load External Subtitles…", action: #selector(handleLoadExternalSubtitles), keyEquivalent: "")
+            loadExternalItem.target = self
+            subsMenu.addItem(loadExternalItem)
 
             subsMenu.addItem(NSMenuItem.separator())
 
@@ -328,6 +338,25 @@ public final class OptionsMenuPresenter: NSObject {
     @objc private func handleSelectTrack(_ sender: NSMenuItem) {
         if let track = sender.representedObject as? SubtitleTrack {
             SubtitleManager.shared.selectTrack(track)
+        }
+    }
+
+    @objc private func handleLoadExternalSubtitles() {
+        let panel = NSOpenPanel()
+        panel.title = "Load Subtitles or Lyrics"
+        panel.allowedContentTypes = [
+            UTType(filenameExtension: "srt") ?? .text,
+            UTType(filenameExtension: "vtt") ?? .text,
+            UTType(filenameExtension: "ass") ?? .text,
+            UTType(filenameExtension: "ssa") ?? .text,
+            UTType(filenameExtension: "sub") ?? .text,
+            UTType(filenameExtension: "lrc") ?? .text
+        ]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        if panel.runModal() == .OK, let url = panel.url {
+            SubtitleManager.shared.loadExternalSubtitle(from: url)
         }
     }
 

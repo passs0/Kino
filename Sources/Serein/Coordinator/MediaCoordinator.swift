@@ -171,8 +171,9 @@ public final class MediaCoordinator: ObservableObject {
                     log("🔊 Audio Stream #\(a.index): \(a.codecLongName) (\(a.audioCodec?.description ?? a.codecName)) [\(a.audioDetailsString ?? "")]", level: .info)
                 }
 
-                // Populate Subtitles
-                let localSubTracks = p.subtitles.map { sub -> SubtitleTrack in
+                // Populate Subtitles (Auto-detect sidecars + container tracks)
+                let sidecarTracks = findSidecarSubtitles(for: fileURL)
+                let localSubTracks = p.subtitles.filter { $0.isTextBasedSubtitle }.map { sub -> SubtitleTrack in
                     let name = sub.title ?? (sub.language != nil ? (Locale.current.localizedString(forLanguageCode: sub.language!) ?? sub.language!.uppercased()) : "Track \(sub.index)")
                     return SubtitleTrack(
                         id: "stream_\(sub.index)",
@@ -185,12 +186,23 @@ public final class MediaCoordinator: ObservableObject {
                         isDefault: sub.isDefault
                     )
                 }
-                SubtitleManager.shared.setAvailableTracks(localSubTracks)
-                if let initial = localSubTracks.first(where: { $0.isDefault }) ?? localSubTracks.first {
+
+                let allSubTracks = sidecarTracks + localSubTracks
+                SubtitleManager.shared.setAvailableTracks(allSubTracks)
+
+                let preferredLang = Locale.current.language.languageCode?.identifier.lowercased()
+                if let initial = allSubTracks.first(where: { $0.isDefault })
+                    ?? (preferredLang != nil ? allSubTracks.first(where: { $0.languageCode?.lowercased() == preferredLang }) : nil)
+                    ?? allSubTracks.first(where: { $0.languageCode?.lowercased() == "en" || $0.languageCode?.lowercased() == "eng" })
+                    ?? allSubTracks.first {
                     SubtitleManager.shared.selectTrack(initial)
                 }
+
+                if !sidecarTracks.isEmpty {
+                    log("💬 Found \(sidecarTracks.count) external sidecar subtitle file(s).", level: .info)
+                }
                 if !localSubTracks.isEmpty {
-                    log("💬 Detected \(localSubTracks.count) subtitle tracks in container.", level: .info)
+                    log("💬 Detected \(localSubTracks.count) text subtitle tracks in container.", level: .info)
                 }
 
                 // Populate Audio Tracks
@@ -451,7 +463,7 @@ public final class MediaCoordinator: ObservableObject {
                 if let a = p.primaryAudio {
                     log("🔊 Audio Stream #\(a.index): \(a.codecLongName) (\(a.audioCodec?.description ?? a.codecName))", level: .info)
                 }
-                let localSubTracks = p.subtitles.map { sub -> SubtitleTrack in
+                let localSubTracks = p.subtitles.filter { $0.isTextBasedSubtitle }.map { sub -> SubtitleTrack in
                     let name = sub.title ?? (sub.language != nil ? (Locale.current.localizedString(forLanguageCode: sub.language!) ?? sub.language!.uppercased()) : "Track \(sub.index)")
                     return SubtitleTrack(
                         id: "stream_\(sub.index)",
@@ -465,11 +477,16 @@ public final class MediaCoordinator: ObservableObject {
                     )
                 }
                 SubtitleManager.shared.setAvailableTracks(localSubTracks)
-                if let initial = localSubTracks.first(where: { $0.isDefault }) ?? localSubTracks.first {
+
+                let preferredLang = Locale.current.language.languageCode?.identifier.lowercased()
+                if let initial = localSubTracks.first(where: { $0.isDefault })
+                    ?? (preferredLang != nil ? localSubTracks.first(where: { $0.languageCode?.lowercased() == preferredLang }) : nil)
+                    ?? localSubTracks.first(where: { $0.languageCode?.lowercased() == "en" || $0.languageCode?.lowercased() == "eng" })
+                    ?? localSubTracks.first {
                     SubtitleManager.shared.selectTrack(initial)
                 }
                 if !localSubTracks.isEmpty {
-                    log("💬 Loaded \(localSubTracks.count) subtitle tracks in online stream.", level: .info)
+                    log("💬 Loaded \(localSubTracks.count) text subtitle tracks in online stream.", level: .info)
                 }
 
                 // Populate Audio Tracks for online stream
@@ -729,6 +746,80 @@ public final class MediaCoordinator: ObservableObject {
         } else {
             return String(format: "%02d:%02d", m, s)
         }
+    }
+
+    /// Automatically discovers external sidecar subtitle/lyric files (.srt, .vtt, .ass, .ssa, .sub, .lrc)
+    /// located in the video's folder or in standard Subs/ / Subtitles/ subdirectories.
+    private func findSidecarSubtitles(for fileURL: URL) -> [SubtitleTrack] {
+        let parentDir = fileURL.deletingLastPathComponent()
+        let baseName = fileURL.deletingPathExtension().lastPathComponent.lowercased()
+        let validExtensions = Set(["srt", "vtt", "ass", "ssa", "sub", "lrc"])
+        var sidecarURLs: [URL] = []
+        let fm = FileManager.default
+
+        // 1. Check parent directory for matching prefix
+        if let files = try? fm.contentsOfDirectory(at: parentDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+            for file in files {
+                let ext = file.pathExtension.lowercased()
+                guard validExtensions.contains(ext) else { continue }
+                let name = file.deletingPathExtension().lastPathComponent.lowercased()
+                if name == baseName || name.hasPrefix(baseName + ".") || name.hasPrefix(baseName + "_") || name.hasPrefix(baseName + "-") {
+                    sidecarURLs.append(file)
+                }
+            }
+        }
+
+        // 2. Check "Subs" and "Subtitles" folders in parent directory
+        for folder in ["Subs", "subs", "Subtitles", "subtitles"] {
+            let subDir = parentDir.appendingPathComponent(folder, isDirectory: true)
+            if let files = try? fm.contentsOfDirectory(at: subDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+                for file in files {
+                    let ext = file.pathExtension.lowercased()
+                    if validExtensions.contains(ext) {
+                        sidecarURLs.append(file)
+                    }
+                }
+            }
+        }
+
+        return sidecarURLs.map { url in
+            let filename = url.deletingPathExtension().lastPathComponent
+            let lang = extractLanguageToken(from: filename, baseName: baseName)
+            let langDisplay = lang != nil ? (Locale.current.localizedString(forLanguageCode: lang!) ?? lang!.uppercased()) : nil
+            let ext = url.pathExtension.uppercased()
+            let title = langDisplay != nil ? "\(langDisplay!) (\(ext)) - \(url.lastPathComponent)" : "\(url.lastPathComponent) (\(ext))"
+
+            return SubtitleTrack(
+                id: "sidecar_\(url.path)",
+                name: title,
+                languageCode: lang,
+                isAutoGenerated: false,
+                vttURL: url,
+                streamIndex: nil,
+                sourceURL: url,
+                isDefault: false
+            )
+        }
+    }
+
+    private func extractLanguageToken(from filename: String, baseName: String) -> String? {
+        let lower = filename.lowercased()
+        var suffix = lower
+        if lower.hasPrefix(baseName) {
+            suffix = String(lower.dropFirst(baseName.count)).trimmingCharacters(in: CharacterSet(charactersIn: "._- "))
+        }
+        let tokens = suffix.components(separatedBy: CharacterSet(charactersIn: "._- "))
+        let knownLangs = [
+            "en", "eng", "zh", "chi", "zho", "es", "spa", "fr", "fre", "fra",
+            "de", "ger", "deu", "ja", "jpn", "ko", "kor", "it", "ita", "ru",
+            "rus", "pt", "por", "ar", "ara"
+        ]
+        for token in tokens {
+            if knownLangs.contains(token) {
+                return token
+            }
+        }
+        return nil
     }
 
     public func stop() {

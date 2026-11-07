@@ -72,13 +72,72 @@ public struct SubtitleTrack: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Fast WebVTT, SRT, and ASS/SSA parser converting raw subtitle text into timestamped cues with semantic positioning.
+/// Fast WebVTT, SRT, ASS/SSA, and LRC parser converting raw subtitle text into timestamped cues with semantic positioning.
 public enum SubtitleParser {
     public static func parse(_ raw: String) -> [SubtitleCue] {
-        if raw.contains("[Events]") || raw.contains("\nDialogue:") || raw.hasPrefix("Dialogue:") {
-            return parseASS(raw)
+        var clean = raw
+        if clean.hasPrefix("\u{FEFF}") {
+            clean = String(clean.dropFirst())
         }
-        return parseWebVTT(raw)
+        clean = clean.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if clean.contains("[Events]") || clean.contains("\nDialogue:") || clean.hasPrefix("Dialogue:") {
+            return parseASS(clean)
+        }
+        if isLRCContent(clean) {
+            return parseLRC(clean)
+        }
+        return parseWebVTT(clean)
+    }
+
+    private static func isLRCContent(_ text: String) -> Bool {
+        // Quick check for LRC format [MM:SS.xx]
+        guard !text.contains("-->") && !text.contains("Dialogue:") else { return false }
+        return text.contains("[0") || text.contains("[1") || text.contains("[2") || text.contains("[3")
+    }
+
+    public static func parseLRC(_ raw: String) -> [SubtitleCue] {
+        var rawCues: [(time: Double, text: String)] = []
+        let lines = raw.components(separatedBy: .newlines)
+        let regex = try? NSRegularExpression(pattern: #"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]"#)
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed.hasPrefix("[ti:") || trimmed.hasPrefix("[ar:") || trimmed.hasPrefix("[al:") || trimmed.hasPrefix("[by:") {
+                continue
+            }
+
+            guard let regex = regex else { continue }
+            let matches = regex.matches(in: trimmed, range: NSRange(location: 0, length: trimmed.utf16.count))
+            guard !matches.isEmpty else { continue }
+
+            let lastMatch = matches.last!
+            let textStartIdx = trimmed.index(trimmed.startIndex, offsetBy: lastMatch.range.location + lastMatch.range.length)
+            let lyricText = String(trimmed[textStartIdx...]).trimmingCharacters(in: .whitespaces)
+            guard !lyricText.isEmpty else { continue }
+
+            for m in matches {
+                var mMin: Double = 0
+                var mSec: Double = 0
+                var mFrac: Double = 0
+                if let r = Range(m.range(at: 1), in: trimmed) { mMin = Double(trimmed[r]) ?? 0 }
+                if let r = Range(m.range(at: 2), in: trimmed) { mSec = Double(trimmed[r]) ?? 0 }
+                if m.range(at: 3).location != NSNotFound, let r = Range(m.range(at: 3), in: trimmed) {
+                    mFrac = Double("0." + trimmed[r]) ?? 0
+                }
+                let t = (mMin * 60.0) + mSec + mFrac
+                rawCues.append((time: t, text: lyricText))
+            }
+        }
+
+        rawCues.sort { $0.time < $1.time }
+        var cues: [SubtitleCue] = []
+        for (i, item) in rawCues.enumerated() {
+            let nextTime = (i + 1 < rawCues.count) ? rawCues[i + 1].time : (item.time + 6.0)
+            let endTime = min(item.time + 10.0, max(item.time + 1.0, nextTime))
+            cues.append(SubtitleCue(startTime: item.time, endTime: endTime, text: item.text, position: .bottom))
+        }
+        return cues
     }
 
     public static func parseASS(_ raw: String) -> [SubtitleCue] {
@@ -90,6 +149,7 @@ public enum SubtitleParser {
         var styleFormatColumns: [String] = []
         var eventFormatColumns: [String] = []
         var currentSection = ""
+        let defaultEventCols = ["layer", "start", "end", "style", "name", "marginl", "marginr", "marginv", "effect", "text"]
 
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -133,7 +193,7 @@ public enum SubtitleParser {
                         }
                     }
                 }
-            } else if currentSection == "[events]" {
+            } else if currentSection == "[events]" || trimmed.lowercased().hasPrefix("dialogue:") {
                 if trimmed.lowercased().hasPrefix("format:") {
                     let cols = trimmed.dropFirst("format:".count)
                     eventFormatColumns = cols.split(separator: ",").map {
@@ -141,12 +201,13 @@ public enum SubtitleParser {
                     }
                 } else if trimmed.lowercased().hasPrefix("dialogue:") {
                     let body = String(trimmed.dropFirst("dialogue:".count)).trimmingCharacters(in: .whitespaces)
-                    let expectedCols = max(eventFormatColumns.count, 10)
+                    let cols = eventFormatColumns.isEmpty ? defaultEventCols : eventFormatColumns
+                    let expectedCols = max(cols.count, 10)
                     let parts = splitASSText(body, maxSplits: expectedCols - 1)
-                    let startIdx = eventFormatColumns.firstIndex(of: "start") ?? 1
-                    let endIdx = eventFormatColumns.firstIndex(of: "end") ?? 2
-                    let styleIdx = eventFormatColumns.firstIndex(of: "style") ?? 3
-                    let textIdx = eventFormatColumns.firstIndex(of: "text") ?? (expectedCols - 1)
+                    let startIdx = cols.firstIndex(of: "start") ?? 1
+                    let endIdx = cols.firstIndex(of: "end") ?? 2
+                    let styleIdx = cols.firstIndex(of: "style") ?? 3
+                    let textIdx = cols.firstIndex(of: "text") ?? (expectedCols - 1)
 
                     guard parts.count > max(startIdx, endIdx, textIdx) else { continue }
                     guard let start = parseASSTimestamp(parts[startIdx]),
@@ -211,12 +272,19 @@ public enum SubtitleParser {
         var currentTextLines: [String] = []
 
         let timestampRegex = try? NSRegularExpression(
-            pattern: #"(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{3})"#
+            pattern: #"(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{1,4})\s*-->\s*(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{1,4})"#
         )
 
         func commitCue() {
             if let start = currentStart, let end = currentEnd, !currentTextLines.isEmpty {
-                let joined = currentTextLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                // Deduplicate identical adjacent lines (common in rolling WebVTT / auto-captions)
+                var dedupedLines: [String] = []
+                for line in currentTextLines {
+                    if dedupedLines.last != line {
+                        dedupedLines.append(line)
+                    }
+                }
+                let joined = dedupedLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
                 let (detectedPos, cleaned) = cleanSubtitleFormattingAndExtractPosition(joined, fallbackPosition: currentPosition)
                 if !cleaned.isEmpty {
                     cues.append(SubtitleCue(startTime: start, endTime: end, text: cleaned, position: detectedPos))
@@ -263,6 +331,11 @@ public enum SubtitleParser {
                 continue
             }
 
+            // Skip numeric cue indices in SRT format when not inside an active cue
+            if currentStart == nil, Int(trimmed) != nil {
+                continue
+            }
+
             // If we have an active timestamp, this is text content
             if currentStart != nil {
                 currentTextLines.append(trimmed)
@@ -292,12 +365,12 @@ public enum SubtitleParser {
         if sRange.location != NSNotFound, let r = Range(sRange, in: str) {
             seconds = Double(str[r]) ?? 0
         }
-        var ms: Double = 0
+        var msFraction: Double = 0
         if msRange.location != NSNotFound, let r = Range(msRange, in: str) {
-            ms = Double(str[r]) ?? 0
+            msFraction = Double("0." + str[r]) ?? 0
         }
 
-        return (hours * 3600.0) + (minutes * 60.0) + seconds + (ms / 1000.0)
+        return (hours * 3600.0) + (minutes * 60.0) + seconds + msFraction
     }
 
     /// Strips non-position ASS styles (font, size, color, borders, effects) and HTML entities,
