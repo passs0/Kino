@@ -119,7 +119,7 @@ public final class MediaCoordinator: ObservableObject {
 
         if source.isAudioTrack {
             Task { @MainActor in
-                WindowManager.shared.setMiniPlayer(true)
+                WindowManager.shared.transitionToMedia(isAudio: true)
             }
         }
 
@@ -229,6 +229,11 @@ public final class MediaCoordinator: ObservableObject {
         self.activeStrategy = strategy
         log("💡 Evaluated Strategy: [\(strategy.badgeLabel)] - \(strategy.strategyTitle)", level: .success)
         log("ℹ️ Rationale: \(strategy.explanation)", level: .info)
+
+        let isAudioOnly = probe?.isAudioOnly == true || self.currentSource?.isAudioTrack == true || MediaSource.local(fileURL).isAudioTrack
+        Task { @MainActor in
+            WindowManager.shared.transitionToMedia(isAudio: isAudioOnly)
+        }
 
         // Asynchronously extract embedded album/cover artwork
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -737,7 +742,7 @@ public final class MediaCoordinator: ObservableObject {
         AudioManager.shared.reset()
         NowPlayingManager.shared.clear()
         Task { @MainActor in
-            WindowManager.shared.setMiniPlayer(false)
+            WindowManager.shared.transitionToMedia(isAudio: false)
         }
         state = .idle
         log("Playback stopped and pipelines dismantled.", level: .info)

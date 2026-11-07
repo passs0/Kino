@@ -11,10 +11,8 @@ public struct SereinApp: App {
         WindowGroup {
             MainWindowView()
                 .frame(
-                    minWidth: windowManager.isMiniPlayer ? 420 : 720,
-                    maxWidth: windowManager.isMiniPlayer ? 620 : .infinity,
-                    minHeight: windowManager.isMiniPlayer ? 130 : 460,
-                    maxHeight: windowManager.isMiniPlayer ? 160 : .infinity
+                    minWidth: 380,
+                    minHeight: 400
                 )
                 .onOpenURL { url in
                     Task { @MainActor in
@@ -108,11 +106,6 @@ public struct SereinApp: App {
                 .keyboardShortcut("i", modifiers: .command)
 
                 Divider()
-
-                Button(windowManager.isMiniPlayer ? "Exit Compact MiniPlayer" : "Enter Compact MiniPlayer") {
-                    WindowManager.shared.toggleMiniPlayer()
-                }
-                .keyboardShortcut("m", modifiers: [.command, .option])
 
                 Button(windowManager.isPinnedAlwaysOnTop ? "Unpin from Always on Top" : "Keep Window Always on Top") {
                     WindowManager.shared.togglePinAlwaysOnTop()
