@@ -451,20 +451,23 @@ public struct VideoPlayerView: View {
             .buttonStyle(.plain)
             .help(playerController.isMuted ? "Unmute" : "Mute")
 
-            // Minimalist Thumbless Volume Slider
-            PillSlider(
+            // Apple Native AppKit Volume Slider
+            NativeSlider(
                 value: Binding(
                     get: { Double(playerController.isMuted ? 0 : playerController.volume) },
                     set: { newVal in
                         playerController.isMuted = false
                         playerController.volume = Float(newVal)
+                        registerUserActivity()
                     }
                 ),
-                trackHeight: 5.0,
-                interactiveTrackHeight: 7.0,
-                onActivity: { registerUserActivity() }
+                in: 0.0...1.0,
+                trackFillColor: .white,
+                onEditingChanged: { _ in
+                    registerUserActivity()
+                }
             )
-            .frame(width: 84)
+            .frame(width: 84, height: 20)
 
             GlassDivider(height: 14)
 
@@ -910,11 +913,9 @@ struct TimelineScrubberShelf: View {
     var onSeek: (Double) -> Void
     var onActivity: () -> Void
 
-    @State private var isScrubberHovered = false
     @State private var isDraggingScrubber = false
     @State private var wasPlayingBeforeScrub = false
     @State private var scrubTime: Double = 0
-    @State private var hoverLocationX: CGFloat = 0
 
     var body: some View {
         HStack(spacing: 12) {
@@ -924,103 +925,37 @@ struct TimelineScrubberShelf: View {
                 .foregroundColor(.white.opacity(0.85))
                 .frame(minWidth: 46, alignment: .leading)
 
-            // Interactive Progress Bar (Native QuickTime Scrubber)
-            GeometryReader { geo in
-                let width = geo.size.width
-                let maxDuration = max(timeState.duration, 1.0)
-                let currentVal = isDraggingScrubber ? scrubTime : timeState.currentTime
-                let playedFraction = max(0.0, min(1.0, currentVal / maxDuration))
-                let bufferFraction = max(0.0, min(1.0, timeState.loadedDuration / maxDuration))
-
-                let isInteracting = isScrubberHovered || isDraggingScrubber
-                let currentHeight: CGFloat = isInteracting ? 5.5 : 4.5
-                let playedWidth = width * playedFraction
-                let bufferWidth = width * bufferFraction
-
-                ZStack(alignment: .leading) {
-                    // 1. Continuous Background Rail (full width)
-                    Capsule()
-                        .fill(Color.white.opacity(0.22))
-                        .frame(width: width, height: currentHeight)
-
-                    // 2. Buffered Range Rail
-                    if bufferWidth > 0 {
-                        Capsule()
-                            .fill(Color.white.opacity(0.40))
-                            .frame(width: max(currentHeight, bufferWidth), height: currentHeight)
+            // Apple Native AppKit Timeline Scrubber
+            NativeSlider(
+                value: Binding(
+                    get: { isDraggingScrubber ? scrubTime : timeState.currentTime },
+                    set: { target in
+                        scrubTime = target
+                        onSeek(target)
+                        onActivity()
                     }
-
-                    // 3. Active Played Track (continuous liquid level)
-                    if playedWidth > 0 {
-                        let outerWidth = isDraggingScrubber ? max(currentHeight, playedWidth - 10) : max(currentHeight, playedWidth)
-                        Capsule()
-                            .fill(Color.white)
-                            .frame(width: outerWidth, height: currentHeight)
-                    }
-
-                    // 4. Native Apple Scrubber Thumb (Resting white capsule -> Scrubbing Liquid Glass Lens)
-                    if isInteracting {
-                        let thumbWidth: CGFloat = isDraggingScrubber ? 24.0 : 20.0
-                        NativeQuickTimeScrubberThumb(isScrubbing: isDraggingScrubber, trackHeight: currentHeight)
-                            .offset(x: max(0, min(width - thumbWidth, playedWidth - (thumbWidth / 2.0))))
-                            .transition(.opacity)
-                    }
-
-                    // Floating Hover Tooltip
-                    if isScrubberHovered && !isDraggingScrubber && width > 0 {
-                        let hoverFraction = max(0.0, min(1.0, hoverLocationX / width))
-                        let hoverSec = hoverFraction * maxDuration
-
-                        Text(formatTime(hoverSec))
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .glassEffect(LiquidGlassSettings.shared.glass, in: Capsule())
-                            .offset(x: max(0, min(width - 45, hoverLocationX - 22)), y: -24)
-                    }
-                }
-                .frame(maxHeight: .infinity, alignment: .center)
-                .animation(.spring(response: 0.22, dampingFraction: 0.80), value: isInteracting)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            if !isDraggingScrubber {
-                                isDraggingScrubber = true
-                                wasPlayingBeforeScrub = PlayerController.shared.isPlaying
-                                if wasPlayingBeforeScrub {
-                                    PlayerController.shared.pause()
-                                }
-                            }
-                            let fraction = max(0.0, min(1.0, value.location.x / width))
-                            scrubTime = fraction * maxDuration
-                            onSeek(scrubTime)
-                            onActivity()
+                ),
+                in: 0.0...max(timeState.duration, 1.0),
+                trackFillColor: .white,
+                onEditingChanged: { isEditing in
+                    if isEditing {
+                        isDraggingScrubber = true
+                        wasPlayingBeforeScrub = PlayerController.shared.isPlaying
+                        if wasPlayingBeforeScrub {
+                            PlayerController.shared.pause()
                         }
-                        .onEnded { value in
-                            let fraction = max(0.0, min(1.0, value.location.x / width))
-                            let target = fraction * maxDuration
-                            onSeek(target)
-                            isDraggingScrubber = false
-                            if wasPlayingBeforeScrub {
-                                PlayerController.shared.play()
-                                wasPlayingBeforeScrub = false
-                            }
-                            onActivity()
+                    } else {
+                        isDraggingScrubber = false
+                        onSeek(scrubTime)
+                        if wasPlayingBeforeScrub {
+                            PlayerController.shared.play()
+                            wasPlayingBeforeScrub = false
                         }
-                )
-                .onContinuousHover { phase in
-                    switch phase {
-                    case .active(let loc):
-                        isScrubberHovered = true
-                        hoverLocationX = loc.x
-                    case .ended:
-                        isScrubberHovered = false
                     }
+                    onActivity()
                 }
-            }
-            .frame(height: 24)
+            )
+            .frame(height: 20)
 
             // Remaining Time
             Text(formatRemainingTime())

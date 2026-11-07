@@ -10,6 +10,7 @@ public struct CompactPlayerView: View {
 
     @State private var isDraggingTimeline = false
     @State private var dragScrubTime: Double = 0
+    @State private var wasPlayingBeforeScrub = false
 
     public init(coordinator: MediaCoordinator, playerController: PlayerController) {
         self.coordinator = coordinator
@@ -167,19 +168,35 @@ public struct CompactPlayerView: View {
                                 .foregroundColor(.white.opacity(0.85))
                         }
 
-                        // Highly Responsive Native AppKit Timeline Scrubber
-                        MiniScrubberRepresentable(
-                            currentTime: activeCurrentTime,
-                            duration: activeDuration,
-                            onSeek: { target in
-                                playerController.seek(to: target)
-                            },
-                            onScrubbingChanged: { isScrubbing, time in
-                                isDraggingTimeline = isScrubbing
-                                dragScrubTime = time
+                        // Apple Native AppKit Timeline Slider
+                        NativeSlider(
+                            value: Binding(
+                                get: { isDraggingTimeline ? dragScrubTime : activeCurrentTime },
+                                set: { target in
+                                    dragScrubTime = target
+                                    playerController.seek(to: target)
+                                }
+                            ),
+                            in: 0.0...max(activeDuration, 1.0),
+                            trackFillColor: .white,
+                            onEditingChanged: { isEditing in
+                                if isEditing {
+                                    isDraggingTimeline = true
+                                    wasPlayingBeforeScrub = playerController.isPlaying
+                                    if wasPlayingBeforeScrub {
+                                        playerController.pause()
+                                    }
+                                } else {
+                                    isDraggingTimeline = false
+                                    playerController.seek(to: dragScrubTime)
+                                    if wasPlayingBeforeScrub {
+                                        playerController.play()
+                                        wasPlayingBeforeScrub = false
+                                    }
+                                }
                             }
                         )
-                        .frame(height: 24)
+                        .frame(height: 20)
 
                         // Transport Controls Row
                         HStack(spacing: 14) {
@@ -236,15 +253,19 @@ public struct CompactPlayerView: View {
                                 }
                                 .buttonStyle(.plain)
 
-                                MiniVolumeSliderRepresentable(
-                                    volume: playerController.volume,
-                                    isMuted: playerController.isMuted,
-                                    onVolumeChanged: { newVol in
-                                        playerController.volume = newVol
-                                        if playerController.isMuted { playerController.isMuted = false }
-                                    }
+                                // Apple Native AppKit Volume Slider
+                                NativeSlider(
+                                    value: Binding(
+                                        get: { Double(playerController.isMuted ? 0 : playerController.volume) },
+                                        set: { newVol in
+                                            playerController.volume = Float(newVol)
+                                            if playerController.isMuted { playerController.isMuted = false }
+                                        }
+                                    ),
+                                    in: 0.0...1.0,
+                                    trackFillColor: .white
                                 )
-                                .frame(width: 44, height: 18)
+                                .frame(width: 64, height: 20)
                             }
                         }
                     }
@@ -276,209 +297,4 @@ public struct CompactPlayerView: View {
     }
 }
 
-// MARK: - Native AppKit Mini Scrubber (Immune to Window Background Dragging)
 
-public struct MiniScrubberRepresentable: NSViewRepresentable {
-    var currentTime: Double
-    var duration: Double
-    var onSeek: (Double) -> Void
-    var onScrubbingChanged: ((Bool, Double) -> Void)?
-
-    public func makeNSView(context: Context) -> MiniScrubberNSView {
-        let view = MiniScrubberNSView()
-        view.currentTime = currentTime
-        view.duration = duration
-        view.onSeek = onSeek
-        view.onScrubbingChanged = onScrubbingChanged
-        return view
-    }
-
-    public func updateNSView(_ nsView: MiniScrubberNSView, context: Context) {
-        nsView.currentTime = currentTime
-        nsView.duration = duration
-        nsView.onSeek = onSeek
-        nsView.onScrubbingChanged = onScrubbingChanged
-        nsView.needsDisplay = true
-    }
-}
-
-public final class MiniScrubberNSView: NSView {
-    public var currentTime: Double = 0
-    public var duration: Double = 0
-    public var onSeek: ((Double) -> Void)?
-    public var onScrubbingChanged: ((Bool, Double) -> Void)?
-
-    private var isDragging = false
-    private var dragTime: Double = 0
-    private var wasPlayingBeforeScrub = false
-
-    // Prevent macOS from intercepting timeline scrubbing as a window drag
-    public override var mouseDownCanMoveWindow: Bool { false }
-
-    public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    public override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
-    }
-
-    public override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        guard bounds.width > 0, bounds.height > 0 else { return }
-
-        let trackHeight: CGFloat = 5.5
-        let trackY = (bounds.height - trackHeight) / 2.0
-        let trackRect = CGRect(x: 0, y: trackY, width: bounds.width, height: trackHeight)
-
-        // 1. Unplayed continuous background rail
-        let bgPath = CGPath(roundedRect: trackRect, cornerWidth: trackHeight / 2, cornerHeight: trackHeight / 2, transform: nil)
-        ctx.setFillColor(NSColor.white.withAlphaComponent(0.18).cgColor)
-        ctx.addPath(bgPath)
-        ctx.fillPath()
-
-        // 2. Played rail
-        let activeTime = isDragging ? dragTime : currentTime
-        let progress = duration > 0 ? max(0, min(1.0, activeTime / duration)) : 0
-        let playedWidth = bounds.width * CGFloat(progress)
-
-        let thumbWidth: CGFloat = isDragging ? 24.0 : 20.0
-        let thumbHeight: CGFloat = isDragging ? 19.5 : 16.0
-        let thumbX = max(0, min(bounds.width - thumbWidth, playedWidth - (thumbWidth / 2.0)))
-        let thumbY = (bounds.height - thumbHeight) / 2.0
-        let thumbRect = CGRect(x: thumbX, y: thumbY, width: thumbWidth, height: thumbHeight)
-
-        if playedWidth > 0 {
-            // When scrubbing, outer played rail terminates cleanly at left edge of thumb
-            let playedOuterWidth = isDragging ? min(playedWidth, thumbX + 2) : playedWidth
-            let playedRect = CGRect(x: 0, y: trackY, width: max(trackHeight, playedOuterWidth), height: trackHeight)
-            let playedPath = CGPath(roundedRect: playedRect, cornerWidth: trackHeight / 2, cornerHeight: trackHeight / 2, transform: nil)
-            ctx.setFillColor(NSColor.white.cgColor)
-            ctx.addPath(playedPath)
-            ctx.fillPath()
-        }
-
-        // 3. Native Apple Scrubber Thumb (Resting white capsule -> Scrubbing Liquid Glass Lens)
-        QuickTimeLiquidGlassRenderer.draw(
-            in: ctx,
-            isScrubbing: isDragging,
-            thumbRect: thumbRect,
-            trackY: trackY,
-            trackHeight: trackHeight
-        )
-    }
-
-    public override func mouseDown(with event: NSEvent) {
-        if !isDragging {
-            wasPlayingBeforeScrub = PlayerController.shared.isPlaying
-            if wasPlayingBeforeScrub {
-                PlayerController.shared.pause()
-            }
-        }
-        updateFromEvent(event, isFinal: false)
-    }
-
-    public override func mouseDragged(with event: NSEvent) {
-        updateFromEvent(event, isFinal: false)
-    }
-
-    public override func mouseUp(with event: NSEvent) {
-        updateFromEvent(event, isFinal: true)
-        if wasPlayingBeforeScrub {
-            PlayerController.shared.play()
-            wasPlayingBeforeScrub = false
-        }
-    }
-
-    private func updateFromEvent(_ event: NSEvent, isFinal: Bool) {
-        let loc = convert(event.locationInWindow, from: nil)
-        let pct = max(0, min(1.0, Double(loc.x / bounds.width)))
-        let targetTime = pct * (duration > 0 ? duration : 1.0)
-
-        if !isFinal {
-            isDragging = true
-            dragTime = targetTime
-            onScrubbingChanged?(true, targetTime)
-            onSeek?(targetTime)
-            needsDisplay = true
-        } else {
-            isDragging = false
-            onScrubbingChanged?(false, targetTime)
-            onSeek?(targetTime)
-            needsDisplay = true
-        }
-    }
-}
-
-// MARK: - Native AppKit Mini Volume Slider (Immune to Window Background Dragging)
-
-public struct MiniVolumeSliderRepresentable: NSViewRepresentable {
-    var volume: Float
-    var isMuted: Bool
-    var onVolumeChanged: (Float) -> Void
-
-    public func makeNSView(context: Context) -> MiniVolumeSliderNSView {
-        let view = MiniVolumeSliderNSView()
-        view.volume = volume
-        view.isMuted = isMuted
-        view.onVolumeChanged = onVolumeChanged
-        return view
-    }
-
-    public func updateNSView(_ nsView: MiniVolumeSliderNSView, context: Context) {
-        nsView.volume = volume
-        nsView.isMuted = isMuted
-        nsView.onVolumeChanged = onVolumeChanged
-        nsView.needsDisplay = true
-    }
-}
-
-public final class MiniVolumeSliderNSView: NSView {
-    public var volume: Float = 1.0
-    public var isMuted: Bool = false
-    public var onVolumeChanged: ((Float) -> Void)?
-
-    public override var mouseDownCanMoveWindow: Bool { false }
-    public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    public override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
-    }
-
-    public override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard bounds.width > 0, bounds.height > 0 else { return }
-
-        let trackHeight: CGFloat = 3.5
-        let trackY = (bounds.height - trackHeight) / 2.0
-        let trackRect = NSRect(x: 0, y: trackY, width: bounds.width, height: trackHeight)
-
-        let bgPath = NSBezierPath(roundedRect: trackRect, xRadius: trackHeight / 2, yRadius: trackHeight / 2)
-        NSColor.white.withAlphaComponent(0.18).setFill()
-        bgPath.fill()
-
-        let activeVol = isMuted ? 0 : CGFloat(volume)
-        let volWidth = bounds.width * max(0, min(1.0, activeVol))
-        if volWidth > 0 {
-            let volRect = NSRect(x: 0, y: trackY, width: max(trackHeight, volWidth), height: trackHeight)
-            let volPath = NSBezierPath(roundedRect: volRect, xRadius: trackHeight / 2, yRadius: trackHeight / 2)
-            NSColor.white.setFill()
-            volPath.fill()
-        }
-    }
-
-    public override func mouseDown(with event: NSEvent) {
-        updateFromEvent(event)
-    }
-
-    public override func mouseDragged(with event: NSEvent) {
-        updateFromEvent(event)
-    }
-
-    private func updateFromEvent(_ event: NSEvent) {
-        let loc = convert(event.locationInWindow, from: nil)
-        let pct = Float(max(0, min(1.0, loc.x / bounds.width)))
-        volume = pct
-        onVolumeChanged?(pct)
-        needsDisplay = true
-    }
-}
