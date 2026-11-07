@@ -587,181 +587,178 @@ public struct VideoPlayerView: View {
     // MARK: - Clean Dedicated Audio Player View
 
     private var cleanAudioPlayerView: some View {
-        ZStack {
-            // Background Tap Catch for Play/Pause toggle
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture(count: 1) {
-                    playerController.togglePlayPause()
-                    registerUserActivity()
-                }
+        GeometryReader { geo in
+            ZStack {
+                // Layer 1: Dedicated Audio Presentation (Cover Art + Title + Artist — Album)
+                audioArtworkAndMetadataView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
-            VStack(spacing: 0) {
-                // Top Header Row: Traffic Lights clearance on left, Sound Pill on right
-                HStack {
-                    if isFullScreen {
-                        Button(action: quitVideoAndReturnToWelcome) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(width: 28, height: 28)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(glassSettings.glass, in: Circle())
-                        .help("Close Audio (Esc / ⌘W)")
+                // Layer 2: Background Tap Catch
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        toggleFullscreen()
                     }
-
-                    Spacer()
-
-                    // Necessary Control: Sound & AirPlay Audio Control Pill
-                    soundPillControl
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-
-                Spacer(minLength: 12)
-
-                // Center: Unobscured Album Artwork & Track Metadata
-                VStack(spacing: 16) {
-                    // 1. Cover Art (200x200, rounded continuous, subtle border & shadow)
-                    ZStack {
-                        if let art = coordinator.currentArtwork {
-                            Image(nsImage: art)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 200, height: 200)
-                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                                )
-                                .shadow(color: Color.black.opacity(0.55), radius: 26, x: 0, y: 10)
-                        } else {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue.opacity(0.35), Color.purple.opacity(0.25), Color.black.opacity(0.60)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 200, height: 200)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                                )
-                                .shadow(color: Color.blue.opacity(0.20), radius: 24, x: 0, y: 8)
-                                .overlay(
-                                    Image(systemName: "music.note")
-                                        .font(.system(size: 56, weight: .semibold))
-                                        .foregroundColor(.white.opacity(0.85))
-                                )
-                        }
-                    }
-
-                    // 2. Track Metadata: Title, Artist — Album, Codec Details
-                    VStack(spacing: 5) {
-                        Text(audioTrackTitle)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .padding(.horizontal, 24)
-
-                        if let artistAlbum = audioArtistAndAlbumString {
-                            Text(artistAlbum)
-                                .font(.system(size: 13.5, weight: .medium))
-                                .foregroundColor(.white.opacity(0.72))
-                                .lineLimit(1)
-                                .padding(.horizontal, 24)
-                        }
-
-                        if let probe = coordinator.probeResult {
-                            HStack(spacing: 6) {
-                                Text(probe.containerFormat.description)
-                                    .font(.system(size: 9.5, weight: .bold))
-                                    .padding(.horizontal, 5.5)
-                                    .padding(.vertical, 2)
-                                    .background(Color.white.opacity(0.18))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(4)
-
-                                if let audio = probe.primaryAudio {
-                                    Text(audio.audioDetailsString ?? audio.codecName.uppercased())
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.white.opacity(0.55))
-                                }
-                            }
-                            .padding(.top, 3)
-                        }
-                    }
-                }
-
-                Spacer(minLength: 14)
-
-                // Transport Controls: [Rewind 10] [Play / Pause] [Forward 10]
-                HStack(spacing: 28) {
-                    Button(action: {
-                        playerController.seekRelative(seconds: -10)
-                        registerUserActivity()
-                    }) {
-                        Image(systemName: "gobackward.10")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 48, height: 48)
-                            .background(Color.white.opacity(0.12))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Rewind 10s (⌘←)")
-
-                    Button(action: {
+                    .onTapGesture(count: 1) {
                         playerController.togglePlayPause()
                         registerUserActivity()
-                    }) {
-                        Image(systemName: playerController.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(.black)
-                            .frame(width: 64, height: 64)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(color: Color.white.opacity(0.28), radius: 14, x: 0, y: 4)
                     }
-                    .buttonStyle(.plain)
-                    .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
 
-                    Button(action: {
-                        playerController.seekRelative(seconds: 10)
-                        registerUserActivity()
-                    }) {
-                        Image(systemName: "goforward.10")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 48, height: 48)
-                            .background(Color.white.opacity(0.12))
-                            .clipShape(Circle())
+                // Layer 3: Original Liquid Glass Controls Overlay (fades out on inactivity during playback)
+                audioControlsOverlay
+                    .allowsHitTesting(showControls || !playerController.isPlaying)
+                    .opacity(showControls || !playerController.isPlaying ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.22), value: showControls || !playerController.isPlaying)
+
+                // Layer 4: Resume From Timestamp Toast Banner
+                resumeToastView
+
+                // Layer 5: On-Screen HUD Notification Banner
+                generalHUDView
+            }
+            .contentShape(Rectangle())
+            .onContinuousHover { phase in
+                switch phase {
+                case .active:
+                    registerUserActivity()
+                case .ended:
+                    if playerController.isPlaying {
+                        scheduleControlsFade(afterSeconds: 1.0)
                     }
-                    .buttonStyle(.plain)
-                    .help("Forward 10s (⌘→)")
                 }
+            }
+        }
+    }
 
-                Spacer(minLength: 16)
-
-                // Bottom Timeline Scrubber Shelf
-                TimelineScrubberShelf(
-                    onSeek: { target in
-                        playerController.seek(to: target)
-                    },
-                    onActivity: {
-                        registerUserActivity()
-                    }
-                )
-                .padding(.horizontal, 22)
-                .padding(.bottom, 20)
+    private var audioArtworkAndMetadataView: some View {
+        VStack(spacing: 18) {
+            // Album Artwork (210x210, rounded corners, subtle glass border & soft elevation shadow)
+            ZStack {
+                if let art = coordinator.currentArtwork {
+                    Image(nsImage: art)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 210, height: 210)
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.55), radius: 28, x: 0, y: 12)
+                } else {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.35), Color.purple.opacity(0.25), Color.black.opacity(0.60)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 210, height: 210)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                        .shadow(color: Color.blue.opacity(0.20), radius: 24, x: 0, y: 8)
+                        .overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: 58, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.85))
+                        )
+                }
             }
 
-            // Resume & HUD Overlays
-            resumeToastView
-            generalHUDView
+            // Track Title and Artist — Album (Clean typography, no codec badge)
+            VStack(spacing: 5) {
+                Text(audioTrackTitle)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .padding(.horizontal, 28)
+
+                if let artistAlbum = audioArtistAndAlbumString {
+                    Text(artistAlbum)
+                        .font(.system(size: 13.5, weight: .medium))
+                        .foregroundColor(.white.opacity(0.72))
+                        .lineLimit(1)
+                        .padding(.horizontal, 28)
+                }
+            }
+        }
+        .padding(.bottom, 24)
+    }
+
+    private var audioControlsOverlay: some View {
+        VStack(spacing: 0) {
+            // TOP BAR: Left has Close button (fullscreen) or traffic light clearance (windowed); Right has Sound Pill
+            HStack(spacing: 12) {
+                if isFullScreen {
+                    Button(action: quitVideoAndReturnToWelcome) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 34, height: 34)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(glassSettings.glass, in: Circle())
+                    .help("Close Audio and Return to Welcome Screen (Esc / ⌘W)")
+                } else {
+                    Color.clear
+                        .frame(width: 68, height: 1)
+                }
+
+                Spacer()
+
+                // Top-Right: Sound & Audio AirPlay Pill Control (macOS Sequoia style with Apple NSSlider)
+                soundPillControl
+            }
+            .padding(.top, 16)
+            .padding(.horizontal, 20)
+
+            Spacer()
+
+            // CENTER: Original Liquid Glass Circular Playback Controls
+            GlassEffectContainer {
+                HStack(spacing: 28) {
+                    LiquidCircleButton(icon: "gobackward.10", size: 54, iconSize: 20) {
+                        playerController.seekRelative(seconds: -10)
+                        registerUserActivity()
+                    }
+                    .help("Rewind 10 seconds (⌘←)")
+
+                    LiquidCircleButton(
+                        icon: playerController.isPlaying ? "pause.fill" : "play.fill",
+                        size: 80,
+                        iconSize: 32,
+                        isBold: true
+                    ) {
+                        playerController.togglePlayPause()
+                        registerUserActivity()
+                    }
+                    .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
+
+                    LiquidCircleButton(icon: "goforward.10", size: 54, iconSize: 20) {
+                        playerController.seekRelative(seconds: 10)
+                        registerUserActivity()
+                    }
+                    .help("Forward 10 seconds (⌘→)")
+                }
+            }
+
+            Spacer()
+
+            // BOTTOM: Native Scrubber Shelf
+            TimelineScrubberShelf(
+                onSeek: { target in
+                    playerController.seek(to: target)
+                },
+                onActivity: {
+                    registerUserActivity()
+                }
+            )
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
         }
         .environment(\.colorScheme, .dark)
     }
