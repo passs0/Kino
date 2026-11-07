@@ -24,19 +24,23 @@ public class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             components?.queryItems = queryItems
 
             if let openURL = components?.url {
+                let sema = DispatchSemaphore(value: 0)
                 DispatchQueue.main.async {
                     if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.serein.player") {
                         let config = NSWorkspace.OpenConfiguration()
                         config.activates = true
                         NSWorkspace.shared.open([openURL], withApplicationAt: appURL, configuration: config) { _, error in
                             if error != nil {
-                                NSWorkspace.shared.open(openURL)
+                                _ = NSWorkspace.shared.open(openURL)
                             }
+                            sema.signal()
                         }
                     } else {
-                        NSWorkspace.shared.open(openURL)
+                        _ = NSWorkspace.shared.open(openURL)
+                        sema.signal()
                     }
                 }
+                _ = sema.wait(timeout: .now() + 2.0)
                 responsePayload["success"] = true
             }
         }
