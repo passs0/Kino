@@ -69,14 +69,14 @@ strip -rSTx "$EXT_MACOS/$EXT_NAME"
 cp "SafariExtension/Info.plist" "$EXT_CONTENTS/Info.plist"
 cp -R SafariExtension/Resources/* "$EXT_RESOURCES/"
 
-echo "🔐 Ad-hoc code signing $EXT_NAME.appex..."
-codesign --force --sign - --entitlements SafariExtension/Extension.entitlements "$EXT_BUNDLE"
-
-# Clear quarantine and extended attributes
+# Clear quarantine and extended attributes before signing
 xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
+echo "🔐 Ad-hoc code signing $EXT_NAME.appex with sandbox entitlements..."
+codesign --force --sign - --entitlements SafariExtension/Extension.entitlements "$EXT_BUNDLE"
+
 echo "🔐 Ad-hoc code signing $APP_NAME.app..."
-codesign --force --deep --sign - "$APP_BUNDLE"
+codesign --force --sign - "$APP_BUNDLE"
 
 echo "✅ Successfully built $APP_BUNDLE"
 ls -ld "$APP_BUNDLE"
