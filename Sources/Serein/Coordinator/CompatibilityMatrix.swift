@@ -35,7 +35,7 @@ public struct CompatibilityMatrix: Sendable {
         let rawExt = source.fileExtension.lowercased()
         let recognizedExts = [
             "mp4", "mov", "m4v", "mkv", "webm", "avi", "ts", "flv", "m3u8",
-            "flac", "mp3", "m4a", "aac", "wav", "wave", "aiff", "aif", "ogg", "oga", "opus"
+            "flac", "mp3", "m4a", "aac", "wav", "wave", "aiff", "aif", "ogg", "oga", "opus", "thd", "truehd", "mlp"
         ]
         let hasRecognizedExtension = recognizedExts.contains(rawExt) && !rawExt.isEmpty
 

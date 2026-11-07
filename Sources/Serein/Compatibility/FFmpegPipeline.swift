@@ -109,28 +109,28 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         switch mode {
         case .remuxCopy:
-            // Zero video re-encoding: stream copy video, preserve multichannel audio in high-fidelity AAC
+            // Zero video re-encoding: stream copy video, preserve multichannel audio in studio-grade high-fidelity AAC
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-b:a", "384k",
+                "-b:a", "640k",
                 "-ar", "48000"
             ])
         case .audioTranscodeOnly:
-            // Copy native video stream, transcode audio to high-fidelity AAC preserving multichannel audio
+            // Copy native video stream, transcode audio to studio-grade high-fidelity AAC preserving multichannel audio
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-b:a", "384k",
+                "-b:a", "640k",
                 "-ar", "48000"
             ])
         case .fullHardwareTranscode:
             // Hardware accelerated Apple Silicon VideoToolbox encoding.
-            // Preserves high-fidelity audio up to multichannel surround.
+            // Preserves studio-grade high-fidelity audio up to multichannel surround.
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
@@ -138,7 +138,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-pix_fmt", "yuv420p",
                 "-b:v", "6000k",
                 "-c:a", "aac",
-                "-b:a", "384k",
+                "-b:a", "640k",
                 "-ar", "48000"
             ])
         }

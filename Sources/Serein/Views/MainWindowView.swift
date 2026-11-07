@@ -126,7 +126,9 @@ public struct MainWindowView: View {
             UTType(filenameExtension: "avi") ?? .data,
             UTType(filenameExtension: "ts") ?? .data,
             UTType(filenameExtension: "flv") ?? .data,
-            UTType(filenameExtension: "m4v") ?? .data
+            UTType(filenameExtension: "m4v") ?? .data,
+            UTType(filenameExtension: "thd") ?? .data,
+            UTType(filenameExtension: "truehd") ?? .data
         ]
 
         if panel.runModal() == .OK, let url = panel.url {

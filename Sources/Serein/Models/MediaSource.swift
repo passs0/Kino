@@ -58,7 +58,7 @@ public enum MediaSource: Identifiable, Hashable, Sendable {
     }
 
     public var isAudioTrack: Bool {
-        let audioExts: Set<String> = ["flac", "alac", "mp3", "m4a", "wav", "aac", "ogg", "opus", "aiff"]
+        let audioExts: Set<String> = ["flac", "alac", "mp3", "m4a", "wav", "aac", "ogg", "opus", "aiff", "thd", "truehd", "mlp"]
         return audioExts.contains(fileExtension)
     }
 

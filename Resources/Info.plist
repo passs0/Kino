@@ -64,6 +64,8 @@
                 <string>avi</string>
                 <string>ts</string>
                 <string>m4v</string>
+                <string>thd</string>
+                <string>truehd</string>
             </array>
             <key>LSItemContentTypes</key>
             <array>
