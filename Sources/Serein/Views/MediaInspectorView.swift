@@ -51,7 +51,9 @@ public struct MediaInspectorView: View {
                         strategySection(strategy)
                     }
 
-                    videoEnhancementSection
+                    if coordinator.probeResult?.isAudioOnly != true && coordinator.currentSource?.isAudioTrack != true {
+                        videoEnhancementSection
+                    }
 
                     if let stats = coordinator.pipelineStats {
                         livePipelineSection(stats)
@@ -60,7 +62,9 @@ public struct MediaInspectorView: View {
                     if let probe = coordinator.probeResult {
                         sourceSection(probe)
                         compatibilityMatrixSection(probe)
-                        videoStreamsSection(probe)
+                        if probe.primaryVideo != nil {
+                            videoStreamsSection(probe)
+                        }
                         audioStreamsSection(probe)
                         if !probe.subtitles.isEmpty {
                             subtitleSection(probe.subtitles)

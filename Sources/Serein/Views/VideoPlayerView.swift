@@ -710,8 +710,27 @@ public struct VideoPlayerView: View {
 
                 Spacer()
 
-                // Top-Right: Sound & Audio AirPlay Pill Control (macOS Sequoia style with Apple NSSlider)
-                soundPillControl
+                HStack(spacing: 8) {
+                    // Media Statistics Button (Info / Music Codec Inspector)
+                    Button(action: {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            coordinator.isInspectorPresented.toggle()
+                        }
+                        registerUserActivity()
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 34, height: 34)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(glassSettings.glass, in: Circle())
+                    .help("Media Statistics & Music Codec (⌘I)")
+
+                    // Top-Right: Sound & Audio AirPlay Pill Control (macOS Sequoia style with Apple NSSlider)
+                    soundPillControl
+                }
             }
             .padding(.top, 16)
             .padding(.horizontal, 20)
