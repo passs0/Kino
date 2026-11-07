@@ -36,6 +36,9 @@ swiftc \
 # Clean compiler cache to keep system lean
 rm -rf "$MODULE_CACHE"
 
+# Strip unneeded local debug symbols and symbol tables before signing
+strip -rSTx "$MACOS_DIR/$APP_NAME"
+
 echo "📄 Copying Info.plist and AppIcon.icns..."
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 if [ -f "Resources/AppIcon.icns" ]; then
