@@ -36,7 +36,7 @@ For decades, **QuickTime Player** has set the standard for macOS media playback:
 
 **Serein is the modern successor:**
 - **QuickTime Aesthetics & Efficiency:** Native Cocoa chrome, fluid animations, and 0% CPU consumption on standard formats.
-- **Universal Codec & Container Support:** Plays `.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, VP9, AV1, and Opus seamlessly.
+- **Universal Codec & Container Support:** Plays `.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, `.flac`, `.alac`, `.thd`, `.mlp`, VP9, AV1, Opus, and Dolby TrueHD seamlessly.
 - **Pure Apple Native Video Enhancement:** Built-in Apple MetalFX Spatial Super-Resolution and CoreImage GPU filters with zero file bloat.
 - **Multi-Channel Surround Audio:** Preserves discrete 5.1 and 7.1 audio tracks and Dolby Atmos Spatial Audio pass-through.
 - **Zero-Friction In-App Engine Setup:** Automatically manages helper engines with 1 click in user space—no Terminal commands, no Homebrew, and no `sudo` required!
@@ -68,6 +68,7 @@ Serein includes a zero-bloat GPU video enhancement suite integrated directly via
 ### 3. Discrete Multi-Channel Surround Sound & Dolby Atmos
 - **Discrete 5.1 & 7.1 Preservation:** Retains discrete multi-channel surround tracks at high studio bitrates (384–640 kbps) without downmixing to stereo.
 - **Dolby Atmos & Spatial Audio:** Passes E-AC-3 JOC directly to macOS AudioToolbox, enabling native Spatial Audio with dynamic head tracking on AirPods and built-in Mac speaker arrays.
+- **Dolby TrueHD & MLP Lossless Decoding:** Dynamic container demuxing and high-bandwidth pipeline preserving high-resolution multi-channel audio tracks.
 - **Multi-Track Audio Switching:** Effortlessly switch between original audio tracks, commentary, and localized dubs from the Options menu (`...`).
 
 ### 4. macOS System Settings Accessibility Captions & Subtitle Engine
@@ -138,7 +139,7 @@ Unlike traditional players that demand manual command-line installations, Serein
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **[`Serein-v0.1.7.dmg`](https://github.com/passs0/Serein/releases/latest)** from [GitHub Releases](https://github.com/passs0/Serein/releases).
+1. Download **[`Serein-v0.1.8.dmg`](https://github.com/passs0/Serein/releases/latest)** from [GitHub Releases](https://github.com/passs0/Serein/releases).
 2. Open the downloaded `.dmg` and drag **`Serein.app`** directly into the **`Applications`** folder shortcut.
 3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
    - Right-click `Serein.app` ➔ **Open**, or run:
@@ -163,7 +164,7 @@ cd Serein
 ### Core Playback & Codecs
 - [x] Native AVFoundation + VideoToolbox zero-copy hybrid engine
 - [x] In-app automated media engine downloader & updater (zero Terminal required)
-- [x] Universal container support (`.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, `.flac`, `.alac`)
+- [x] Universal container support (`.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, `.flac`, `.alac`, `.thd`, `.mlp`)
 - [x] High-speed visionOS multi-variant HLS streaming with automated CDN fallback
 - [x] Variable speed playback with CoreAudio pitch correction (`0.5×`–`2.0×`)
 - [x] Native Picture-in-Picture (`AVPictureInPictureController`) with live subtitle overlay
@@ -175,6 +176,7 @@ cd Serein
 - [x] QuickTime optical liquid glass thumb with submerged core progress & specular edge lighting
 - [x] Unified Video & Audio player architecture with single cohesive control layout
 - [x] Clean Audio Mode with high-resolution album artwork, artist, and album typography
+- [x] Minimalist Welcome Screen with floating squircle app icon & direct open actions
 - [x] Centered Media Statistics Technical Inspector (`⌘I`) with dark glass scrim
 - [x] Quick-access Media Statistics button in native Options menu
 - [x] Generous traffic light positioning with breathing room across playback & window resizing
@@ -183,6 +185,7 @@ cd Serein
 ### Audio & Subtitles
 - [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
 - [x] Multi-channel surround sound preservation (discrete 5.1 & 7.1 tracks & Dolby Atmos)
+- [x] Dolby TrueHD & MLP lossless multi-channel container demuxing & high-bitrate streaming pipeline
 - [x] macOS Accessibility caption rendering (`MACaptionAppearance`) with responsive full-screen scaling
 - [x] Automatic sidecar subtitle & lyric discovery (`.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, `.lrc`)
 - [x] Drag-and-drop subtitle loading without stopping active video playback
