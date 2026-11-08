@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import SafariServices
 
 public struct SereinApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -28,15 +27,6 @@ public struct SereinApp: App {
                     NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
                 }
                 .keyboardShortcut(",", modifiers: .command)
-
-                Button("Safari Companion Extension...") {
-                    NotificationCenter.default.post(name: .openSafariExtensionSheetNotification, object: nil)
-                }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
-
-                Button("Open Safari Extensions Preferences") {
-                    SafariExtensionManager.shared.openSafariExtensionsPreferences()
-                }
 
                 Button("Check for Engine Updates...") {
                     NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
@@ -175,6 +165,5 @@ public struct SereinApp: App {
 public extension Notification.Name {
     static let openURLSheetNotification = Notification.Name("SereinOpenURLSheetNotification")
     static let openPrerequisitesSheetNotification = Notification.Name("SereinOpenPrerequisitesSheetNotification")
-    static let openSafariExtensionSheetNotification = Notification.Name("SereinOpenSafariExtensionSheetNotification")
     static let closeMediaNotification = Notification.Name("SereinCloseMediaNotification")
 }

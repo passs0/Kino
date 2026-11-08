@@ -37,19 +37,6 @@
         <key>NSAllowsLocalNetworking</key>
         <true/>
     </dict>
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
-            <key>CFBundleURLName</key>
-            <string>com.serein.player</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>serein</string>
-            </array>
-        </dict>
-    </array>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/passs0/Serein/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Serein?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
-  <img src="https://img.shields.io/badge/bundle-2.3%20MB-success" alt="Bundle Size" />
+  <img src="https://img.shields.io/badge/bundle-2.2%20MB-success" alt="Bundle Size" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
@@ -99,13 +99,6 @@ Serein treats subtitles as a first-class citizen using Apple's official `MediaAc
 - **Lossless Audio Engine (0% CPU):** Direct hardware playback for `.flac`, `.alac`, `.m4a`, `.mp3`, `.wav`, and `.aiff`.
 - **Pure Swift Album Art Parser:** Extracts high-resolution embedded cover artwork directly from FLAC `METADATA_BLOCK_PICTURE` headers, MP3 ID3 APIC frames, and M4A `covr` atoms in `< 1ms` with zero subprocesses.
 - **Desktop Always-On-Top Pinning (`⌥⌘P`):** Float the player above code editors, browsers, and terminal windows with a single click on the pin button (`📌`).
-
-### 8. Companion Safari Web Extension ("Play in Serein")
-- **1-Click Web Playback:** Click the Serein toolbar button in Safari to immediately open the active webpage in Serein.
-- **Smart Video Detection & Time Sync:** Scans the active web page for HTML5 videos, pauses the browser player to eliminate audio clash, and transfers the playback timestamp (`currentTime`) directly into Serein.
-- **Context Menus:** Right-click any hyperlink, embedded video, or web page and select **Play in Serein** or **Play Link in Serein**.
-- **Embedded & Bundled:** Packaged directly inside `Serein.app/Contents/PlugIns/` as a native Safari App Extension with zero external dependencies.
-- **Quick-Access Setup:** Open **Serein ➔ Safari Extension Preferences...** to jump straight to Safari Settings and enable the extension.
 
 ---
 
@@ -199,10 +192,6 @@ cd Serein
 
 ### macOS Integration & Ecosystem
 - [x] macOS Control Center & Now Playing widget integration (`MPNowPlayingInfoCenter` & `MPRemoteCommandCenter`)
-- [x] Custom URL scheme integration (`serein://open?url=...&time=...`)
-- [x] Companion Safari Web Extension (`Play in Serein`) with 1-click video detection & timestamp sync
-- [x] Safari context menu shortcuts for hyperlinks and HTML5 video streams
-- [x] One-click Safari Extension preferences launcher via `SFSafariApplication`
 
 ### Upcoming Milestones
 - [ ] **v0.2.0**: Playlist Queue with drag-and-drop, shuffle, repeat, & continuous playback

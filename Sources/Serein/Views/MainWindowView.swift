@@ -10,7 +10,6 @@ public struct MainWindowView: View {
 
     @State private var showURLSheet = false
     @State private var showPrerequisitesSheet = false
-    @State private var showSafariExtensionSheet = false
 
     public init() {}
 
@@ -66,17 +65,11 @@ public struct MainWindowView: View {
         .sheet(isPresented: $showPrerequisitesSheet) {
             PrerequisiteInstallSheet()
         }
-        .sheet(isPresented: $showSafariExtensionSheet) {
-            SafariExtensionSheet()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .openURLSheetNotification)) { _ in
             showURLSheet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
             showPrerequisitesSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openSafariExtensionSheetNotification)) { _ in
-            showSafariExtensionSheet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
             if coordinator.state != .idle {
