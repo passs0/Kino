@@ -858,62 +858,65 @@ public struct VideoPlayerView: View {
 
     // MARK: - Minimalist Idle State (Centered Native Window Background + Apple Minimalism)
 
-    private var idleStateView: some View {
-        VStack(spacing: 20) {
-            // Elegant Liquid Glass Play Orb (System Neutral, No hardcoded blue ball)
-            ZStack {
-                Circle()
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.45))
-                    .frame(width: 62, height: 62)
+    private var appIconImage: NSImage? {
+        if let path = Bundle.main.path(forResource: "AppIcon", ofType: "png") ?? Bundle.main.path(forResource: "AppIcon", ofType: "icns"),
+           let img = NSImage(contentsOfFile: path) {
+            return img
+        }
+        return NSApp.applicationIconImage
+    }
 
-                Image(systemName: "play.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .offset(x: 2)
+    private var idleStateView: some View {
+        VStack(spacing: 16) {
+            // App Icon
+            if let icon = appIconImage {
+                Image(nsImage: icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 80, height: 80)
+                    .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 5)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.05, green: 0.50, blue: 1.0), Color(red: 0.0, green: 0.35, blue: 0.90)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(.white)
+                        .offset(x: 2)
+                }
+                .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 5)
             }
-            .glassEffect(glassSettings.glass, in: Circle())
-            .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 3)
 
             VStack(spacing: 4) {
                 Text("Serein")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
 
-                Text("Universal Hardware-Accelerated Video Player")
-                    .font(.system(size: 12, weight: .regular))
+                Text("Drop media here to play")
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.secondary)
             }
 
-            // Minimalist Drop Target Card
-            VStack(spacing: 12) {
-                Image(systemName: "arrow.down.circle")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Text("Drop Any Video Here")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.primary)
-
-                Text("MKV · MP4 · MOV · WebM · AVI · TS · HLS · Streams")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 12) {
-                    Button(action: onOpenFile) {
-                        Label("Open File…", systemImage: "folder")
-                    }
-                    .buttonStyle(LiquidCapsuleButtonStyle(isProminent: false))
-
-                    Button(action: onOpenURL) {
-                        Label("Open URL…", systemImage: "globe")
-                    }
-                    .buttonStyle(LiquidCapsuleButtonStyle(isProminent: false))
+            HStack(spacing: 12) {
+                Button(action: onOpenFile) {
+                    Label("Open File…", systemImage: "folder")
                 }
-                .padding(.top, 4)
+                .buttonStyle(LiquidCapsuleButtonStyle(isProminent: false))
+
+                Button(action: onOpenURL) {
+                    Label("Open URL…", systemImage: "globe")
+                }
+                .buttonStyle(LiquidCapsuleButtonStyle(isProminent: false))
             }
-            .padding(.horizontal, 36)
-            .padding(.vertical, 20)
-            .glassEffect(glassSettings.glass, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .padding(24)
