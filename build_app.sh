@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-APP_NAME="Serein"
+APP_NAME="Kino"
 BUILD_DIR="$SCRIPT_DIR/build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
@@ -22,7 +22,7 @@ SDK_PATH="$(xcrun --show-sdk-path)"
 SWIFT_FILES=()
 while IFS= read -r file; do
     SWIFT_FILES+=("$file")
-done < <(find Sources/Serein -name "*.swift")
+done < <(find Sources/Kino -name "*.swift")
 
 echo "📦 Compiling ${#SWIFT_FILES[@]} Swift source files..."
 swiftc \

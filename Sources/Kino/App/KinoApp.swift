@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-public struct SereinApp: App {
+public struct KinoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @ObservedObject var windowManager = WindowManager.shared
 
@@ -181,7 +181,8 @@ public struct SereinApp: App {
             return
         }
 
-        if url.scheme?.lowercased() == "serein" {
+        let scheme = url.scheme?.lowercased() ?? ""
+        if scheme == "kino" || scheme == "serein" {
             if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
                 if components.host?.lowercased() == "open" {
                     if let targetURL = components.queryItems?.first(where: { $0.name == "url" })?.value {
@@ -194,11 +195,13 @@ public struct SereinApp: App {
             }
 
             let absolute = url.absoluteString
-            if absolute.hasPrefix("serein://") {
-                let stripped = String(absolute.dropFirst("serein://".count))
-                if stripped.hasPrefix("http://") || stripped.hasPrefix("https://") {
-                    MediaCoordinator.shared.openOnlineURL(string: stripped)
-                    return
+            for prefix in ["kino://", "serein://"] {
+                if absolute.hasPrefix(prefix) {
+                    let stripped = String(absolute.dropFirst(prefix.count))
+                    if stripped.hasPrefix("http://") || stripped.hasPrefix("https://") {
+                        MediaCoordinator.shared.openOnlineURL(string: stripped)
+                        return
+                    }
                 }
             }
         }
@@ -219,7 +222,7 @@ public struct SereinApp: App {
 }
 
 public extension Notification.Name {
-    static let openURLSheetNotification = Notification.Name("SereinOpenURLSheetNotification")
-    static let openPrerequisitesSheetNotification = Notification.Name("SereinOpenPrerequisitesSheetNotification")
-    static let closeMediaNotification = Notification.Name("SereinCloseMediaNotification")
+    static let openURLSheetNotification = Notification.Name("KinoOpenURLSheetNotification")
+    static let openPrerequisitesSheetNotification = Notification.Name("KinoOpenPrerequisitesSheetNotification")
+    static let closeMediaNotification = Notification.Name("KinoCloseMediaNotification")
 }

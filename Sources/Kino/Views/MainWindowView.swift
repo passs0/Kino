@@ -121,7 +121,7 @@ public struct MainWindowView: View {
                 windowManager.setMediaDocument(url: nil, title: s.displayName)
             }
         } else {
-            windowManager.setMediaDocument(url: nil, title: "Serein")
+            windowManager.setMediaDocument(url: nil, title: "Kino")
         }
     }
 

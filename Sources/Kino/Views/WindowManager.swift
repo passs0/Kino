@@ -28,7 +28,7 @@ public final class WindowManager: ObservableObject {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenPrimary]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
-        window.title = "Serein"
+        window.title = "Kino"
         if MediaCoordinator.shared.state == .idle {
             transitionToWelcome(animated: false)
         }
@@ -100,7 +100,7 @@ public final class WindowManager: ObservableObject {
         window.minSize = CGSize(width: 440, height: 320)
         window.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         window.representedURL = nil
-        window.title = "Serein"
+        window.title = "Kino"
         updateTitlebarVisibility(visible: true, animated: animated)
 
         let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
@@ -117,7 +117,7 @@ public final class WindowManager: ObservableObject {
     public func setMediaDocument(url: URL?, title: String?) {
         guard let window = mainWindow else { return }
         window.representedURL = url
-        window.title = title ?? (url?.deletingPathExtension().lastPathComponent ?? "Serein")
+        window.title = title ?? (url?.deletingPathExtension().lastPathComponent ?? "Kino")
     }
 
     /// Fades the titlebar in or out with QuickTime-style timing.

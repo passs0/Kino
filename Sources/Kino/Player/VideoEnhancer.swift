@@ -5,13 +5,14 @@ import Combine
 import Metal
 import MetalFX
 
-/// Real-time GPU video upscaling and enhancement engine for Serein.
+/// Real-time GPU video upscaling and enhancement engine for Kino.
 /// Leverages macOS native CoreAnimation, CoreImage, and Apple MetalFX hardware pipelines
 /// for zero-battery-drain, zero-file-bloat spatial sharpening and super-resolution.
 @MainActor
 public final class VideoEnhancer: ObservableObject {
     public static let shared = VideoEnhancer()
-    private static let userDefaultsKey = "Serein_VideoEnhancementMode"
+    private static let userDefaultsKey = "Kino_VideoEnhancementMode"
+    private static let legacyUserDefaultsKey = "Serein_VideoEnhancementMode"
 
     public enum EnhancementMode: String, CaseIterable, Identifiable, Sendable {
         case off = "Native Hardware (Default)"
@@ -68,7 +69,7 @@ public final class VideoEnhancer: ObservableObject {
     private weak var activePlayerLayer: AVPlayerLayer?
 
     private init() {
-        if let savedRaw = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
+        if let savedRaw = UserDefaults.standard.string(forKey: Self.userDefaultsKey) ?? UserDefaults.standard.string(forKey: Self.legacyUserDefaultsKey),
            let savedMode = EnhancementMode(rawValue: savedRaw) {
             self.activeMode = savedMode
         } else {

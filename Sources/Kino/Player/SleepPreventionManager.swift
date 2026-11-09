@@ -12,7 +12,7 @@ public final class SleepPreventionManager {
     private init() {}
 
     /// Enables or disables display sleep prevention.
-    public func setSleepDisabled(_ disabled: Bool, reason: String = "Serein Video Playback") {
+    public func setSleepDisabled(_ disabled: Bool, reason: String = "Kino Video Playback") {
         if disabled {
             if assertionID == 0 {
                 let success = IOPMAssertionCreateWithName(

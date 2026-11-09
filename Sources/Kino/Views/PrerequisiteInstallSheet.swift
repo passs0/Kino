@@ -25,7 +25,7 @@ public struct PrerequisiteInstallSheet: View {
                 Text("Modern Codecs & Media Engines")
                     .font(.system(size: 18, weight: .bold))
 
-                Text("Serein is engineered as the modern successor to QuickTime Player. To stream web media and play modern containers (MKV, WebM, Opus, ASS subtitles) with hardware acceleration, Serein uses lightweight helper engines.")
+                Text("Kino is engineered as the modern successor to QuickTime Player. To stream web media and play modern containers (MKV, WebM, Opus, ASS subtitles) with hardware acceleration, Kino uses lightweight helper engines.")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

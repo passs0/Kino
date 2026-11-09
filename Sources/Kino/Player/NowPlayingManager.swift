@@ -166,7 +166,7 @@ public final class NowPlayingManager: ObservableObject {
             info[MPMediaItemPropertyArtist] = online.uploader ?? "Web Stream"
         } else {
             info[MPMediaItemPropertyTitle] = source.displayName
-            info[MPMediaItemPropertyArtist] = "Serein"
+            info[MPMediaItemPropertyArtist] = "Kino"
         }
 
         info[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.video.rawValue

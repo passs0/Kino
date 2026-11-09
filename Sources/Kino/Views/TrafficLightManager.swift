@@ -68,7 +68,7 @@ public final class TrafficLightManager: @unchecked Sendable {
 
     private func swizzleLayout(on titlebarClass: AnyClass) {
         let origSelector = #selector(NSView.layout)
-        let swizzSelector = #selector(NSView.serein_titlebarLayout)
+        let swizzSelector = #selector(NSView.kino_titlebarLayout)
 
         guard let origMethod = class_getInstanceMethod(titlebarClass, origSelector),
               let swizzMethod = class_getInstanceMethod(NSView.self, swizzSelector) else {
@@ -80,8 +80,8 @@ public final class TrafficLightManager: @unchecked Sendable {
 }
 
 extension NSView {
-    @objc func serein_titlebarLayout() {
-        self.serein_titlebarLayout()
+    @objc func kino_titlebarLayout() {
+        self.kino_titlebarLayout()
 
         guard let win = self.window, !win.styleMask.contains(.fullScreen) else { return }
         let buttonTypes: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Represents the origin of a media asset in Serein.
+/// Represents the origin of a media asset in Kino.
 public enum MediaSource: Identifiable, Hashable, Sendable {
     case local(URL)
     case online(url: URL, originalInput: String)

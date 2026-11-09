@@ -2,20 +2,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "Serein",
+    name: "Kino",
     platforms: [
-        .macOS("26.0")
+        .macOS(.v13)
     ],
     products: [
         .executable(
-            name: "Serein",
-            targets: ["Serein"]
+            name: "Kino",
+            targets: ["Kino"]
         )
     ],
     targets: [
         .executableTarget(
-            name: "Serein",
-            path: "Sources/Serein"
+            name: "Kino",
+            path: "Sources/Kino"
         )
     ]
 )

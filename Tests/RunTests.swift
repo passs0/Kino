@@ -4,7 +4,7 @@ import Foundation
 struct TestMain {
     static func main() async {
         print("========================================")
-        print("🧪 Serein Architecture & Engine Verification")
+        print("🧪 Kino Architecture & Engine Verification")
         print("========================================")
 
         // 1. Tool Locator Check
@@ -16,9 +16,15 @@ struct TestMain {
         }
 
         // 2. FFprobe Deep Inspection Test
-        let testMP4 = URL(fileURLWithPath: "/tmp/serein_sample_native.mp4")
-        let testMKV = URL(fileURLWithPath: "/tmp/serein_sample_remux.mkv")
-        let testWebM = URL(fileURLWithPath: "/tmp/serein_sample_transcode.webm")
+        let testMP4 = FileManager.default.fileExists(atPath: "/tmp/kino_sample_native.mp4")
+            ? URL(fileURLWithPath: "/tmp/kino_sample_native.mp4")
+            : URL(fileURLWithPath: "/tmp/serein_sample_native.mp4")
+        let testMKV = FileManager.default.fileExists(atPath: "/tmp/kino_sample_remux.mkv")
+            ? URL(fileURLWithPath: "/tmp/kino_sample_remux.mkv")
+            : URL(fileURLWithPath: "/tmp/serein_sample_remux.mkv")
+        let testWebM = FileManager.default.fileExists(atPath: "/tmp/kino_sample_transcode.webm")
+            ? URL(fileURLWithPath: "/tmp/kino_sample_transcode.webm")
+            : URL(fileURLWithPath: "/tmp/serein_sample_transcode.webm")
 
         do {
             print("\n--- Testing FFprobe on Native MP4 ---")

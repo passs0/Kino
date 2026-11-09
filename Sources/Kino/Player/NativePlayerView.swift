@@ -64,7 +64,7 @@ private struct PiPSubtitleOverlayView: View {
 }
 
 /// Custom AppKit view combining AVPlayerLayer with macOS drag-and-drop support and native PiP.
-public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDelegate {
+public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegate {
     public let playerLayer = AVPlayerLayer()
     public var pipController: AVPictureInPictureController?
     public var onFileDropped: ((URL) -> Void)?
@@ -257,15 +257,15 @@ public struct NativePlayerView: NSViewRepresentable {
         self.onFileDropped = onFileDropped
     }
 
-    public func makeNSView(context: Context) -> SereinPlayerNSView {
-        let view = SereinPlayerNSView()
+    public func makeNSView(context: Context) -> KinoPlayerNSView {
+        let view = KinoPlayerNSView()
         view.playerLayer.player = player
         view.onFileDropped = onFileDropped
         PlayerController.shared.activePlayerNSView = view
         return view
     }
 
-    public func updateNSView(_ nsView: SereinPlayerNSView, context: Context) {
+    public func updateNSView(_ nsView: KinoPlayerNSView, context: Context) {
         if nsView.playerLayer.player !== player {
             nsView.playerLayer.player = player
         }

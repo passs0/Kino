@@ -46,9 +46,11 @@ public final class ProcessRunner: @unchecked Sendable {
             process.arguments = arguments
 
             var env = ProcessInfo.processInfo.environment
-            // Ensure managed Serein/bin, homebrew, and local bin are always in PATH for sub-commands
-            let managedBin = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path ?? ""
-            let extraPaths = "\(managedBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+            // Ensure managed Kino/bin (and legacy Serein/bin), homebrew, and local bin are always in PATH for sub-commands
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            let kinoBin = appSupport?.appendingPathComponent("Kino/bin").path ?? ""
+            let sereinBin = appSupport?.appendingPathComponent("Serein/bin").path ?? ""
+            let extraPaths = "\(kinoBin):\(sereinBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
             env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "")"
             if let customEnv = environment {
                 for (k, v) in customEnv { env[k] = v }
@@ -62,7 +64,7 @@ public final class ProcessRunner: @unchecked Sendable {
 
             var stdoutData = Data()
             var stderrData = Data()
-            let queue = DispatchQueue(label: "serein.process.io")
+            let queue = DispatchQueue(label: "kino.process.io")
 
             outPipe.fileHandleForReading.readabilityHandler = { handle in
                 let chunk = handle.availableData
@@ -118,8 +120,10 @@ public final class ProcessRunner: @unchecked Sendable {
         process.arguments = arguments
 
         var env = ProcessInfo.processInfo.environment
-        let managedBin = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path ?? ""
-        let extraPaths = "\(managedBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let kinoBin = appSupport?.appendingPathComponent("Kino/bin").path ?? ""
+        let sereinBin = appSupport?.appendingPathComponent("Serein/bin").path ?? ""
+        let extraPaths = "\(kinoBin):\(sereinBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
         env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "")"
         if let customEnv = environment {
             for (k, v) in customEnv { env[k] = v }
@@ -133,8 +137,8 @@ public final class ProcessRunner: @unchecked Sendable {
         process.standardOutput = outPipe
         process.standardError = errPipe
 
-        let outQueue = DispatchQueue(label: "serein.process.streaming.out")
-        let errQueue = DispatchQueue(label: "serein.process.streaming.err")
+        let outQueue = DispatchQueue(label: "kino.process.streaming.out")
+        let errQueue = DispatchQueue(label: "kino.process.streaming.err")
 
         var outBuffer = ""
         outPipe.fileHandleForReading.readabilityHandler = { handle in

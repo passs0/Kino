@@ -5,7 +5,7 @@ import Network
 public final class LocalStreamingServer: @unchecked Sendable {
     private var listener: NWListener?
     private var baseDirectory: URL?
-    private let queue = DispatchQueue(label: "serein.local.http.server", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "kino.local.http.server", qos: .userInitiated)
     private var activePort: UInt16 = 0
 
     public init() {}

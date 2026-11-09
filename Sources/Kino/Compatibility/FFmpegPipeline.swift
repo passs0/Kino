@@ -40,7 +40,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
     private var activeYtDlpProcess: Process?
     private var sessionDir: URL?
     private let streamingServer = LocalStreamingServer()
-    private let syncQueue = DispatchQueue(label: "serein.pipeline.sync")
+    private let syncQueue = DispatchQueue(label: "kino.pipeline.sync")
 
     public var onStatsUpdated: (@Sendable (PipelineStats) -> Void)?
     public var onLogLine: (@Sendable (String) -> Void)?
@@ -65,7 +65,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         // Create isolated session directory in /tmp
         let sessionID = UUID().uuidString.prefix(8)
-        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("serein_stream_\(sessionID)")
+        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("kino_stream_\(sessionID)")
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         } catch {
@@ -192,7 +192,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         stop()
 
         let sessionID = UUID().uuidString.prefix(8)
-        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("serein_hls_\(sessionID)")
+        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("kino_hls_\(sessionID)")
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         } catch {
@@ -221,7 +221,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         let sessionID = UUID().uuidString.prefix(8)
-        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("serein_stream_\(sessionID)")
+        let tempDir = URL(fileURLWithPath: "/tmp").appendingPathComponent("kino_stream_\(sessionID)")
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         } catch {
@@ -234,8 +234,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
         let segmentPattern = tempDir.appendingPathComponent("segment_%03d.ts").path
 
         var env = ProcessInfo.processInfo.environment
-        let managedBin = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Serein/bin").path ?? ""
-        env["PATH"] = "\(managedBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let kinoBin = appSupport?.appendingPathComponent("Kino/bin").path ?? ""
+        let sereinBin = appSupport?.appendingPathComponent("Serein/bin").path ?? ""
+        env["PATH"] = "\(kinoBin):\(sereinBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
 
         // yt-dlp extraction process outputting to pipe:
         let ytProc = Process()

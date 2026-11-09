@@ -1072,7 +1072,7 @@ public struct VideoPlayerView: View {
             }
 
             VStack(spacing: 5) {
-                Text("Serein")
+                Text("Kino")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.primary)
 

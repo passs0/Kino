@@ -7,13 +7,13 @@
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleExecutable</key>
-    <string>Serein</string>
+    <string>Kino</string>
     <key>CFBundleIdentifier</key>
-    <string>com.serein.player</string>
+    <string>com.kino.player</string>
     <key>CFBundleName</key>
-    <string>Serein</string>
+    <string>Kino</string>
     <key>CFBundleDisplayName</key>
-    <string>Serein</string>
+    <string>Kino</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -21,9 +21,9 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.8</string>
+    <string>1.0.0</string>
     <key>CFBundleVersion</key>
-    <string>8</string>
+    <string>1</string>
     <key>LSMinimumSystemVersion</key>
     <string>26.0</string>
     <key>NSHighResolutionCapable</key>
@@ -37,6 +37,18 @@
         <key>NSAllowsLocalNetworking</key>
         <true/>
     </dict>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.kino.player.url</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>kino</string>
+                <string>serein</string>
+            </array>
+        </dict>
+    </array>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>

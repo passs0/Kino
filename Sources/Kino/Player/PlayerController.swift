@@ -10,7 +10,7 @@ public final class PlayerController: ObservableObject {
     public static let shared = PlayerController()
 
     public let player = AVPlayer()
-    public weak var activePlayerNSView: SereinPlayerNSView?
+    public weak var activePlayerNSView: KinoPlayerNSView?
 
     @Published public private(set) var isPlaying: Bool = false {
         didSet {

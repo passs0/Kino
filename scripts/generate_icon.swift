@@ -59,7 +59,7 @@ func renderMacIcon(srcPath: String, outMaster: String, outIcns: String) throws {
     print("✅ Master macOS icon written to \(outMaster)")
 
     // Generate iconset
-    let tempIconset = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Serein_\(UUID().uuidString).iconset")
+    let tempIconset = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Kino_\(UUID().uuidString).iconset")
     let fm = FileManager.default
     try fm.createDirectory(at: tempIconset, withIntermediateDirectories: true)
 

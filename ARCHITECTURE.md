@@ -1,6 +1,6 @@
-# Serein — Architecture & Maintenance Guide
+# Kino — Architecture & Maintenance Guide
 
-This document serves as the technical reference for future maintenance, enhancements, and contributions to **Serein**.
+This document serves as the technical reference for future maintenance, enhancements, and contributions to **Kino**.
 
 ---
 
@@ -45,10 +45,10 @@ This document serves as the technical reference for future maintenance, enhancem
 ## 2. Directory Structure
 
 ```
-Serein/
+Kino/
 ├── LICENSE                       # MIT License
 ├── Package.swift                 # SPM manifest
-├── Makefile                      # Make targets for build, clean, test
+├── Makefile                      # Make targets for build, clean, test, dmg
 ├── build_app.sh                  # Native compilation script via swiftc & codesign
 ├── assets/
 │   └── icon.png                  # 512x512 README application icon
@@ -56,11 +56,11 @@ Serein/
 │   ├── Info.plist                # App bundle metadata & UTI document bindings
 │   └── AppIcon.icns              # Multi-resolution macOS squircle application icon
 ├── Sources/
-│   └── Serein/
+│   └── Kino/
 │       ├── main.swift                  # Application entry point
 │       ├── App/
 │       │   ├── AppDelegate.swift       # Global key event monitors, file open handlers
-│       │   └── SereinApp.swift         # SwiftUI App lifecycle, commands, menus
+│       │   └── KinoApp.swift           # SwiftUI App lifecycle, commands, menus
 │       ├── Compatibility/
 │       │   ├── FFmpegPipeline.swift    # Subprocess coordinator for local HLS server
 │       │   ├── FFprobeService.swift    # JSON probe parsing for media streams
@@ -92,6 +92,7 @@ Serein/
 │           ├── MediaInspectorView.swift# Technical HUD (⌘I) for stream metrics
 │           ├── OptionsMenuPresenter.swift # Native AppKit options popup menu (...)
 │           ├── PrerequisiteInstallSheet.swift # 1-click helper engine downloader sheet
+│           ├── TrafficLightManager.swift # macOS 26 squircle titlebar & traffic light alignment
 │           ├── URLInputSheet.swift     # Online URL input sheet (⌘U)
 │           └── VideoPlayerView.swift   # Canvas, controls overlay, responsive subtitles
 └── Tests/
@@ -103,13 +104,14 @@ Serein/
 ## 3. Key Subsystems & Design Choices
 
 ### A. PrerequisiteManager & On-Demand Engines
-- **Location**: Helper binaries are installed into `~/Library/Application Support/Serein/bin/`.
+- **Location**: Helper binaries are installed into `~/Library/Application Support/Kino/bin/` (with automatic fallback migration from legacy `Serein/bin/`).
 - **Search Order**:
-  1. `~/Library/Application Support/Serein/bin/` (Managed)
-  2. `/opt/homebrew/bin/` (Homebrew ARM64)
-  3. `/usr/local/bin/` (Homebrew Intel)
-  4. Standard `$PATH`
-- **Integrity**: Keeping helper binaries in user Application Support avoids breaking Gatekeeper code signatures on `Serein.app` when updating `yt-dlp` (`yt-dlp -U`).
+  1. `~/Library/Application Support/Kino/bin/` (Managed)
+  2. `~/Library/Application Support/Serein/bin/` (Legacy managed fallback)
+  3. `/opt/homebrew/bin/` (Homebrew ARM64)
+  4. `/usr/local/bin/` (Homebrew Intel)
+  5. Standard `$PATH`
+- **Integrity**: Keeping helper binaries in user Application Support avoids breaking Gatekeeper code signatures on `Kino.app` when updating `yt-dlp` (`yt-dlp -U`).
 
 ### B. Subtitles & MediaAccessibility
 - Subtitle visual appearance adheres strictly to macOS system accessibility settings via `MediaAccessibility` framework (`MACaptionAppearanceCopy*`).
@@ -119,22 +121,22 @@ Serein/
 
 ### C. Playback Pipeline & Zero-Copy Remux
 - When playing `.mkv` or `.webm` files containing native H.264/HEVC video, `FFmpegPipeline` uses `-c:v copy` to repackage streams into fragmented HLS on a local loopback (`127.0.0.1`) HTTP server. This achieves `< 100ms` startup latency with **0% video re-encoding CPU load**.
-- When online CDN links reject direct AVPlayer requests with HTTP 403 Forbidden, Serein pipes `yt-dlp` output directly into `ffmpeg` stdin to authenticate and stream simultaneously.
+- When online CDN links reject direct AVPlayer requests with HTTP 403 Forbidden, Kino pipes `yt-dlp` output directly into `ffmpeg` stdin to authenticate and stream simultaneously.
 
 ---
 
 ## 4. Maintenance Commands
 
 ```zsh
-# Build Serein.app
+# Build Kino.app
 ./build_app.sh
 
 # Run clean build
 rm -rf build /tmp/swift-cache && ./build_app.sh
 
 # Re-install to system Applications
-cp -R build/Serein.app /Applications/
-xattr -cr /Applications/Serein.app
-codesign --force --deep --sign - /Applications/Serein.app
-touch /Applications/Serein.app
+cp -R build/Kino.app /Applications/
+xattr -cr /Applications/Kino.app
+codesign --force --deep --sign - /Applications/Kino.app
+touch /Applications/Kino.app
 ```

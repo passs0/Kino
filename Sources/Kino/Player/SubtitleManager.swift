@@ -11,12 +11,13 @@ public final class SubtitleManager: ObservableObject {
     @Published public private(set) var currentCueText: String? = nil
     @Published public private(set) var currentCuePosition: SubtitlePosition = .bottom
 
-    private static let placementDefaultsKey = "SereinSubtitlePlacement"
+    private static let placementDefaultsKey = "KinoSubtitlePlacement"
+    private static let legacyPlacementDefaultsKey = "SereinSubtitlePlacement"
 
     /// Subtitle layout positioning: .letterbox (sits according to display height in black bar)
     /// vs .mediaFrame (sits according to media height inside the video picture).
     @Published public private(set) var placement: SubtitlePlacement = {
-        if let saved = UserDefaults.standard.string(forKey: placementDefaultsKey),
+        if let saved = UserDefaults.standard.string(forKey: placementDefaultsKey) ?? UserDefaults.standard.string(forKey: legacyPlacementDefaultsKey),
            let p = SubtitlePlacement(rawValue: saved) {
             return p
         }
@@ -253,7 +254,7 @@ public final class SubtitleManager: ObservableObject {
             // Fast local file extraction
             downloadTask = Task { [weak self] in
                 guard let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else { return }
-                let tempSub = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("serein_sub_\(UUID().uuidString).ass")
+                let tempSub = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("kino_sub_\(UUID().uuidString).ass")
                 let baseArgs: [String] = [
                     "-nostdin", "-y",
                     "-discard:v", "all",

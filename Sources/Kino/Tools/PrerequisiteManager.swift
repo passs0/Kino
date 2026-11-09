@@ -7,11 +7,16 @@ import Combine
 public final class PrerequisiteManager: ObservableObject {
     public static let shared = PrerequisiteManager()
 
-    /// Standard user Application Support directory for Serein helper binaries:
-    /// ~/Library/Application Support/Serein/bin/
+    /// Standard user Application Support directory for Kino helper binaries:
+    /// ~/Library/Application Support/Kino/bin/
     public static var managedBinDirectory: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("Serein/bin", isDirectory: true)
+        let kinoBin = appSupport.appendingPathComponent("Kino/bin", isDirectory: true)
+        let legacyBin = appSupport.appendingPathComponent("Serein/bin", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: kinoBin.path) && FileManager.default.fileExists(atPath: legacyBin.path) {
+            try? FileManager.default.copyItem(at: legacyBin, to: kinoBin)
+        }
+        return kinoBin
     }
 
     @Published public private(set) var isDownloading: Bool = false
@@ -40,7 +45,7 @@ public final class PrerequisiteManager: ObservableObject {
 
     // MARK: - Download & Installation
 
-    /// Downloads and installs missing helper engines into ~/Library/Application Support/Serein/bin/
+    /// Downloads and installs missing helper engines into ~/Library/Application Support/Kino/bin/
     public func downloadAndInstallComponents() async {
         guard !isDownloading else { return }
 
@@ -95,7 +100,7 @@ public final class PrerequisiteManager: ObservableObject {
 
             guard isAllInstalled else {
                 throw NSError(
-                    domain: "Serein",
+                    domain: "Kino",
                     code: -2,
                     userInfo: [NSLocalizedDescriptionKey: "Engine verification failed after download."]
                 )
@@ -123,7 +128,7 @@ public final class PrerequisiteManager: ObservableObject {
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             try? fm.removeItem(at: tempURL)
             throw NSError(
-                domain: "Serein",
+                domain: "Kino",
                 code: http.statusCode,
                 userInfo: [NSLocalizedDescriptionKey: "Download failed with HTTP \(http.statusCode) for \(url.lastPathComponent)"]
             )
