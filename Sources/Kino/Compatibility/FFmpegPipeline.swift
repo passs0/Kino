@@ -76,7 +76,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
         // Attempt starting local HTTP server (falls back seamlessly to native file:// HLS)
         _ = try? streamingServer.start(serving: tempDir)
         let playlistFile = tempDir.appendingPathComponent("playlist.m3u8")
-        let segmentPattern = tempDir.appendingPathComponent("segment_%03d.ts").path
+        let segmentPattern = tempDir.appendingPathComponent("segment_%03d.m4s").path
+        let initFileName = "init.mp4"
 
         // Build FFmpeg arguments based on requested mode
         var args: [String] = [
@@ -143,14 +144,13 @@ public final class FFmpegPipeline: @unchecked Sendable {
             ])
         }
 
-        // HLS segmentation parameters for fast startup
+        // HLS segmentation parameters for fast startup (using modern Apple fMP4/CMAF)
         args.append(contentsOf: [
             "-f", "hls",
             "-hls_time", "2",
-            "-hls_list_size", "0"
-        ])
-
-        args.append(contentsOf: [
+            "-hls_list_size", "0",
+            "-hls_segment_type", "fmp4",
+            "-hls_fmp4_init_filename", initFileName,
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
         ])
@@ -174,7 +174,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         // Wait until playlist.m3u8 exists and has at least one segment
-        let timeoutSec: Double = inputURL.isFileURL ? 8.0 : 22.0
+        let timeoutSec: Double = inputURL.isFileURL ? 10.0 : 35.0
         let ready = await waitForFirstSegment(playlistURL: playlistFile, timeout: timeoutSec)
         guard ready else {
             stop()
@@ -409,7 +409,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         while Date() < deadline {
             if fm.fileExists(atPath: playlistURL.path) {
                 if let content = try? String(contentsOf: playlistURL, encoding: .utf8),
-                   content.contains(".ts") {
+                   (content.contains(".m4s") || content.contains(".ts")) {
                     return true
                 }
             }

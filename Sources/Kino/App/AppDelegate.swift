@@ -212,6 +212,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func performShutdown() {
         PlayerController.shared.shutdownOnQuit()
         SleepPreventionManager.shared.setSleepDisabled(false)
+        SubtitleManager.shared.reset()
         MediaCoordinator.shared.stop()
     }
 }

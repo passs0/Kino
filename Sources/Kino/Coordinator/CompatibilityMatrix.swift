@@ -30,26 +30,8 @@ public struct CompatibilityMatrix: Sendable {
 
         let rawURL = source.rawURL
 
-        // Streams or files without a file extension cannot be safely opened or demuxed by AVPlayer.
-        // Force streams without an extension directly through hardware transcoding for guaranteed playback.
-        let rawExt = source.fileExtension.lowercased()
-        let recognizedExts = [
-            "mp4", "mov", "m4v", "mkv", "webm", "avi", "ts", "flv", "m3u8",
-            "flac", "mp3", "m4a", "aac", "wav", "wave", "aiff", "aif", "ogg", "oga", "opus", "thd", "truehd", "mlp"
-        ]
-        let hasRecognizedExtension = recognizedExts.contains(rawExt) && !rawExt.isEmpty
-
-        if !hasRecognizedExtension || rawExt.isEmpty {
-            return .fullTranscode(
-                inputURL: rawURL,
-                streamURL: rawURL,
-                reason: "Stream without extension detected. Forcing Apple Silicon hardware transcoding bridge for guaranteed playback."
-            )
-        }
-
-        // Local file evaluation
+        // Fallback heuristics ONLY when probe is unavailable
         guard let p = probe else {
-            // Fallback heuristics when probe is unavailable
             let ext = source.fileExtension.lowercased()
             if ["mp4", "mov", "m4v", "flac", "mp3", "m4a", "aac", "wav", "aiff", "aif"].contains(ext) && !source.isOnline {
                 return .directNative(playableURL: rawURL, reason: "Native container detected (\(ext.uppercased())). Attempting direct hardware playback.")
@@ -85,17 +67,16 @@ public struct CompatibilityMatrix: Sendable {
             )
         }
 
-        // In MPEG-TS HLS remuxing, Apple AVFoundation strictly requires H.264 (AVC) video.
-        // HEVC, VP9, and AV1 in MPEG-TS are rejected by AVKit's demuxer and must be transcoded via VideoToolbox.
-        let isMpegTsCompatibleVideo = vStream == nil || vStream?.videoCodec == .h264
+        // Modern Apple fMP4 HLS supports bit-for-bit stream-copy of any codec natively decodable on Apple Silicon (H.264, HEVC / H.265, ProRes).
+        let isStreamCopyableVideo = vStream == nil || vStream?.videoCodec?.isNativelyDecodable == true
 
-        // Case 2: H.264 video and native audio, but non-native container or cloud download URL requiring local HLS packaging
-        if isMpegTsCompatibleVideo && audioNative {
-            let vName = vStream?.videoCodec?.description ?? "H.264 Video"
+        // Case 2: Native video (H.264/HEVC) and native audio, but non-native container or cloud download URL requiring local fMP4 HLS packaging
+        if isStreamCopyableVideo && audioNative {
+            let vName = vStream?.videoCodec?.description ?? "Video"
             let aName = aStream?.audioCodec?.description ?? "Audio"
             let reasonStr = source.isOnline
-                ? "Cloud Stream Copy: Demuxing remote \(p.containerFormat) stream with FFmpeg and packaging into local HLS in real-time. Zero video quality loss, 0% CPU."
-                : "Fast Stream Copy: \(p.containerFormat) container rejected by AVPlayer, but contains native \(vName) & \(aName). Remuxing on-the-fly to HLS in < 100ms with zero video quality loss."
+                ? "Cloud Stream Copy: Demuxing remote \(p.containerFormat) stream with FFmpeg and packaging into local fMP4 HLS in real-time. Zero video quality loss, 0% CPU."
+                : "Fast Stream Copy: \(p.containerFormat) container rejected by AVPlayer, but contains native \(vName) & \(aName). Remuxing on-the-fly to fMP4 HLS in < 100ms with zero video quality loss."
             return .remuxOnly(
                 inputURL: rawURL,
                 streamURL: rawURL,
@@ -103,22 +84,23 @@ public struct CompatibilityMatrix: Sendable {
             )
         }
 
-        // Case 3: H.264 video, but audio requires transcoding (e.g. MKV with H.264 + DTS/Opus/TrueHD)
-        if isMpegTsCompatibleVideo && !audioNative {
+        // Case 3: Native video (H.264/HEVC), but audio requires transcoding (e.g. MKV with DTS, TrueHD, FLAC, Opus)
+        if isStreamCopyableVideo && !audioNative {
+            let vName = vStream?.videoCodec?.description ?? "Video"
             let aName = aStream?.audioCodec?.description ?? aStream?.codecName ?? "Incompatible Audio"
             return .audioTranscodeOnly(
                 inputURL: rawURL,
                 streamURL: rawURL,
-                reason: "Video-Copy & Audio Transcode: H.264 video is copied bit-for-bit with 0% CPU loss. Incompatible audio (\(aName)) is transcoded in real-time (>30x speed) to high-fidelity AAC."
+                reason: "Zero-Copy Video & Audio Transcode: \(vName) video is stream-copied bit-for-bit with 0% CPU loss. Incompatible audio (\(aName)) is transcoded in real-time to studio-grade multichannel AAC in fMP4 HLS."
             )
         }
 
-        // Case 4: Video codec requires hardware transcode to compliant H.264 (e.g. VP9, VP8, AV1, HEVC in MKV, MPEG-2)
+        // Case 4: Video codec is truly incompatible with macOS hardware decoders (e.g. VP9, VP8, AV1, MPEG-2, VC-1)
         let vName = vStream?.videoCodec?.description ?? vStream?.codecName ?? "Unsupported Video"
         return .fullTranscode(
             inputURL: rawURL,
             streamURL: rawURL,
-            reason: "Hardware VideoToolbox Transcode: Video codec (\(vName)) requires hardware transcoding to compliant H.264 for AVPlayer. Real-time Apple Silicon VideoToolbox engaged."
+            reason: "Hardware VideoToolbox Transcode: Video codec (\(vName)) requires hardware transcoding to compliant format for AVPlayer. Real-time Apple Silicon VideoToolbox engaged."
         )
     }
 }

@@ -243,6 +243,7 @@ public final class SubtitleManager: ObservableObject {
         downloadTask = nil
         if let proc = activeFFmpegProcess, proc.isRunning {
             proc.terminate()
+            kill(proc.processIdentifier, SIGKILL)
         }
         activeFFmpegProcess = nil
     }
