@@ -94,14 +94,14 @@ public struct MediaInspectorView: View {
         }
         .frame(minWidth: 320, maxWidth: 440)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: Color.black.opacity(0.50), radius: 24, x: 0, y: 10)
         .environment(\.colorScheme, .dark)
     }
@@ -232,10 +232,10 @@ public struct MediaInspectorView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.white.opacity(0.08))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
         )
@@ -460,10 +460,10 @@ public struct MediaInspectorView: View {
     // MARK: - Helpers
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Color.white.opacity(0.06))
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.white.opacity(0.10), lineWidth: 1)
             )
     }

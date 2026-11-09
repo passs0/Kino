@@ -83,7 +83,13 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
     private func setup() {
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
+        layer?.cornerRadius = 26
+        layer?.cornerCurve = .continuous
+        layer?.masksToBounds = true
 
+        playerLayer.cornerRadius = 26
+        playerLayer.cornerCurve = .continuous
+        playerLayer.masksToBounds = true
         playerLayer.videoGravity = PlayerController.shared.isLetterboxed ? .resizeAspect : .resizeAspectFill
         layer?.addSublayer(playerLayer)
 
@@ -100,6 +106,16 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
     public override func layout() {
         super.layout()
         playerLayer.frame = bounds
+        updateCornerRadius()
+    }
+
+    public func updateCornerRadius() {
+        let isFS = window?.styleMask.contains(.fullScreen) ?? false
+        let radius: CGFloat = isFS ? 0 : 26
+        playerLayer.cornerRadius = radius
+        layer?.cornerRadius = radius
+        playerLayer.masksToBounds = !isFS
+        layer?.masksToBounds = !isFS
     }
 
     public override func viewDidMoveToWindow() {
@@ -112,6 +128,16 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .visible
         PlayerController.shared.activePlayerNSView = self
+        updateCornerRadius()
+
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didEnterFullScreenNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didExitFullScreenNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleFullScreenChange), name: NSWindow.didEnterFullScreenNotification, object: win)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleFullScreenChange), name: NSWindow.didExitFullScreenNotification, object: win)
+    }
+
+    @objc private func handleFullScreenChange() {
+        updateCornerRadius()
     }
 
     @discardableResult

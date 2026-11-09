@@ -10,18 +10,30 @@ public struct MainWindowView: View {
 
     @State private var showURLSheet = false
     @State private var showPrerequisitesSheet = false
+    @State private var isFullScreen = false
 
     public init() {}
 
     public var body: some View {
         mainContent
             .frame(minWidth: 440, minHeight: 320)
+            .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? 0 : 26, style: .continuous))
             .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
             .sheet(isPresented: $showURLSheet) {
                 URLInputSheet(coordinator: coordinator)
             }
             .sheet(isPresented: $showPrerequisitesSheet) {
                 PrerequisiteInstallSheet()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isFullScreen = true
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isFullScreen = false
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .openURLSheetNotification)) { _ in
                 showURLSheet = true
@@ -191,6 +203,13 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.titleVisibility = isIdle ? .hidden : .visible
             window.styleMask.insert([.fullSizeContentView])
             window.isMovableByWindowBackground = true
+
+            // macOS 26 corner radius physics
+            let isFS = window.styleMask.contains(.fullScreen)
+            window.contentView?.wantsLayer = true
+            window.contentView?.layer?.cornerRadius = isFS ? 0 : 26
+            window.contentView?.layer?.cornerCurve = .continuous
+            window.contentView?.layer?.masksToBounds = !isFS
         }
     }
 }

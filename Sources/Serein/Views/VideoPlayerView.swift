@@ -171,7 +171,7 @@ public struct VideoPlayerView: View {
 
                         quickTimeFloatingHUD
                             .padding(.horizontal, 24)
-                            .padding(.bottom, 22)
+                            .padding(.bottom, 24)
                     }
                     .allowsHitTesting(showControls || !playerController.isPlaying)
                     .opacity(showControls || !playerController.isPlaying ? 1.0 : 0.0)
@@ -466,14 +466,14 @@ public struct VideoPlayerView: View {
             }
         }
         .padding(.horizontal, 14)
-        .frame(height: 46)
+        .frame(height: 50)
         .frame(minWidth: 480, maxWidth: 680)
         .background(
-            Capsule()
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            Capsule()
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(0.40), radius: 20, x: 0, y: 8)
@@ -606,14 +606,14 @@ public struct VideoPlayerView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 220, height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
                                 .stroke(Color.white.opacity(0.12), lineWidth: 1)
                         )
                         .shadow(color: Color.black.opacity(0.40), radius: 24, x: 0, y: 10)
                 } else {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [Color.blue.opacity(0.40), Color.purple.opacity(0.30), Color.black.opacity(0.60)],
@@ -623,7 +623,7 @@ public struct VideoPlayerView: View {
                         )
                         .frame(width: 220, height: 220)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
                                 .stroke(Color.white.opacity(0.12), lineWidth: 1)
                         )
                         .shadow(color: Color.blue.opacity(0.20), radius: 20, x: 0, y: 8)
@@ -975,11 +975,11 @@ public struct VideoPlayerView: View {
             .padding(.horizontal, 28)
             .padding(.vertical, 22)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.50), radius: 20, x: 0, y: 8)
@@ -1016,11 +1016,11 @@ public struct VideoPlayerView: View {
             }
             .padding(28)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.50), radius: 20, x: 0, y: 8)
@@ -1049,7 +1049,7 @@ public struct VideoPlayerView: View {
                     .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
             } else {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [Color(red: 0.05, green: 0.50, blue: 1.0), Color(red: 0.0, green: 0.35, blue: 0.90)],
@@ -1118,9 +1118,9 @@ public struct VideoPlayerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .padding(32)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                .padding(16)
+                .padding(6)
                 .opacity(isDropTargeted ? 1.0 : 0.0)
                 .animation(.easeInOut(duration: 0.2), value: isDropTargeted)
         )
