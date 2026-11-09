@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/passs0/kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
+  <a href="https://github.com/passs0/Kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0" />
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
   <img src="https://img.shields.io/badge/bundle-2.8%20MB-success" alt="Bundle Size" />
@@ -142,7 +142,7 @@ Unlike traditional players that demand manual command-line installations, Kino k
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **[`Kino-v1.0.0.dmg`](https://github.com/passs0/kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/kino/releases).
+1. Download **[`Kino-v1.0.0.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
 2. Open the downloaded `.dmg` and drag **`Kino.app`** directly into the **`Applications`** folder shortcut.
 3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
    - Right-click `Kino.app` ➔ **Open**, or run:
@@ -153,7 +153,7 @@ Unlike traditional players that demand manual command-line installations, Kino k
 
 ### Option 2: Build from Source
 ```zsh
-git clone https://github.com/passs0/kino.git
+git clone https://github.com/passs0/Kino.git
 cd kino
 ./build_app.sh
 ```
