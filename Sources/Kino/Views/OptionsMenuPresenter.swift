@@ -314,11 +314,11 @@ public final class OptionsMenuPresenter: NSObject {
         }
 
         // Pop up the menu at the cursor event position
-        if let ev = event ?? NSApp.currentEvent, let win = NSApp.keyWindow {
+        if let ev = event, (ev.type == .rightMouseDown || ev.type == .leftMouseDown), let win = NSApp.keyWindow ?? NSApp.windows.first {
             let targetView = view ?? win.contentView ?? NSView()
             NSMenu.popUpContextMenu(menu, with: ev, for: targetView)
-        } else if let win = NSApp.keyWindow, let cv = win.contentView {
-            let pt = win.mouseLocationOutsideOfEventStream
+        } else if let win = NSApp.keyWindow ?? NSApp.windows.first, let cv = view ?? win.contentView {
+            let pt = cv.convert(win.mouseLocationOutsideOfEventStream, from: nil)
             menu.popUp(positioning: nil, at: pt, in: cv)
         }
     }

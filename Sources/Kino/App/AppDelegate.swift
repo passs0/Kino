@@ -165,6 +165,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func application(_ sender: NSApplication, openFile filename: String) -> Bool {
         let url = URL(fileURLWithPath: filename)
         Task { @MainActor in
+            if sender.windows.count > 1, let main = WindowManager.shared.mainWindow {
+                for win in sender.windows where win !== main {
+                    win.close()
+                }
+            }
             MediaCoordinator.shared.openLocalFile(url: url)
             WindowManager.shared.mainWindow?.makeKeyAndOrderFront(nil)
         }

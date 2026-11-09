@@ -8,7 +8,7 @@ public struct KinoApp: App {
     public init() {}
 
     public var body: some Scene {
-        WindowGroup {
+        Window("Kino", id: "main") {
             MainWindowView()
                 .onOpenURL { url in
                     Task { @MainActor in

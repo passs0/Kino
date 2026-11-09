@@ -17,6 +17,7 @@ public struct VideoPlayerView: View {
     var onOpenURL: () -> Void
 
     @State private var showControls = true
+    @State private var isHoveringOverControls = false
     @State private var hideTimer: Task<Void, Never>?
     @State private var isFullScreen = false
     @State private var isDraggingScrubber = false
@@ -168,11 +169,13 @@ public struct VideoPlayerView: View {
                 if !isAudioMode {
                     VStack {
                         Spacer()
+                            .allowsHitTesting(false)
 
                         quickTimeFloatingHUD
                             .padding(.horizontal, 24)
                             .padding(.bottom, 24)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .allowsHitTesting(showControls || !playerController.isPlaying)
                     .opacity(showControls || !playerController.isPlaying ? 1.0 : 0.0)
                     .animation(.easeInOut(duration: 0.22), value: showControls || !playerController.isPlaying)
@@ -190,8 +193,8 @@ public struct VideoPlayerView: View {
                 case .active:
                     registerUserActivity()
                 case .ended:
-                    if playerController.isPlaying && !isAudioMode {
-                        scheduleControlsFade(afterSeconds: 1.0)
+                    if playerController.isPlaying && !isAudioMode && !isHoveringOverControls {
+                        scheduleControlsFade(afterSeconds: 1.5)
                     }
                 }
             }
@@ -296,52 +299,80 @@ public struct VideoPlayerView: View {
         return 0
     }
 
+    // MARK: - Reusable Apple-Grade HUD Icon Button
+
+    private struct HUDIconButton: View {
+        let iconName: String
+        var size: CGFloat = 13.5
+        var weight: Font.Weight = .semibold
+        var frameSize: CGFloat = 30
+        var helpText: String
+        var isSelected: Bool = false
+        var xOffset: CGFloat = 0
+        let action: () -> Void
+
+        @State private var isHovered = false
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: iconName)
+                    .font(.system(size: size, weight: weight))
+                    .foregroundColor(isSelected ? .cyan : .white)
+                    .offset(x: xOffset)
+                    .frame(width: frameSize, height: frameSize)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(isHovered ? 0.16 : 0.0))
+                    )
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
+            .help(helpText)
+            .onHover { isHovered = $0 }
+        }
+    }
+
     // MARK: - Apple QuickTime Player Unified Floating HUD Bar
 
     private var quickTimeFloatingHUD: some View {
         HStack(spacing: 10) {
             // 1. Transport Controls: [Rewind 10] [Play / Pause] [Forward 10]
-            HStack(spacing: 6) {
-                Button(action: {
+            HStack(spacing: 4) {
+                HUDIconButton(
+                    iconName: "gobackward.10",
+                    size: 14,
+                    weight: .semibold,
+                    frameSize: 30,
+                    helpText: "Rewind 10 seconds (⌘←)"
+                ) {
                     playerController.seekRelative(seconds: -10)
                     registerUserActivity()
-                }) {
-                    Image(systemName: "gobackward.10")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Circle())
                 }
-                .buttonStyle(.plain)
-                .help("Rewind 10 seconds (⌘←)")
 
-                Button(action: {
+                HUDIconButton(
+                    iconName: playerController.isPlaying ? "pause.fill" : "play.fill",
+                    size: 17,
+                    weight: .bold,
+                    frameSize: 34,
+                    helpText: playerController.isPlaying ? "Pause (Space)" : "Play (Space)",
+                    xOffset: playerController.isPlaying ? 0 : 1
+                ) {
                     playerController.togglePlayPause()
                     registerUserActivity()
                     showTransientFeedback(isPlaying: playerController.isPlaying)
-                }) {
-                    Image(systemName: playerController.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .contentShape(Circle())
-                        .offset(x: playerController.isPlaying ? 0 : 1)
                 }
-                .buttonStyle(.plain)
-                .help(playerController.isPlaying ? "Pause (Space)" : "Play (Space)")
 
-                Button(action: {
+                HUDIconButton(
+                    iconName: "goforward.10",
+                    size: 14,
+                    weight: .semibold,
+                    frameSize: 30,
+                    helpText: "Forward 10 seconds (⌘→)"
+                ) {
                     playerController.seekRelative(seconds: 10)
                     registerUserActivity()
-                }) {
-                    Image(systemName: "goforward.10")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Circle())
                 }
-                .buttonStyle(.plain)
-                .help("Forward 10 seconds (⌘→)")
             }
 
             hudDivider
@@ -382,7 +413,7 @@ public struct VideoPlayerView: View {
                     }
                 )
                 .frame(minWidth: 100, maxWidth: .infinity)
-                .frame(height: 16)
+                .frame(height: 22)
 
                 Text(formatRemainingTime())
                     .font(.system(size: 11.5, weight: .medium))
@@ -395,17 +426,16 @@ public struct VideoPlayerView: View {
 
             // 3. Volume Control
             HStack(spacing: 4) {
-                Button(action: {
+                HUDIconButton(
+                    iconName: volumeIconName,
+                    size: 13,
+                    weight: .semibold,
+                    frameSize: 28,
+                    helpText: playerController.isMuted ? "Unmute (M)" : "Mute (M)"
+                ) {
                     playerController.toggleMute()
                     registerUserActivity()
-                }) {
-                    Image(systemName: volumeIconName)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 22, height: 22)
                 }
-                .buttonStyle(.plain)
-                .help(playerController.isMuted ? "Unmute (M)" : "Mute (M)")
 
                 NativeSlider(
                     value: Binding(
@@ -420,51 +450,50 @@ public struct VideoPlayerView: View {
                     trackFillColor: .white,
                     onEditingChanged: { _ in registerUserActivity() }
                 )
-                .frame(width: 58, height: 16)
+                .frame(width: 60, height: 22)
             }
 
             hudDivider
 
             // 4. Auxiliary & Route Actions: [Options] [PiP] [AirPlay] [Fullscreen]
-            HStack(spacing: 6) {
-                Button(action: {
+            HStack(spacing: 4) {
+                HUDIconButton(
+                    iconName: "ellipsis",
+                    size: 13.5,
+                    weight: .semibold,
+                    frameSize: 28,
+                    helpText: "Playback Options (Subtitles, Speed, Audio Tracks, Statistics)"
+                ) {
                     OptionsMenuPresenter.shared.show()
                     registerUserActivity()
-                }) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
                 }
-                .buttonStyle(.plain)
-                .help("Playback Options (Subtitles, Speed, Audio Tracks, Statistics)")
 
-                Button(action: {
+                HUDIconButton(
+                    iconName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter",
+                    size: 13,
+                    weight: .semibold,
+                    frameSize: 28,
+                    helpText: "Picture in Picture",
+                    isSelected: playerController.isPictureInPictureActive
+                ) {
                     playerController.togglePictureInPicture()
                     registerUserActivity()
-                }) {
-                    Image(systemName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter")
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
                 }
-                .buttonStyle(.plain)
-                .help("Picture in Picture")
 
                 AirPlayRoutePicker(player: playerController.player, mode: .video)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 24, height: 24)
                     .help("AirPlay Video (Apple TV / External Display)")
 
-                Button(action: {
+                HUDIconButton(
+                    iconName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
+                    size: 12.5,
+                    weight: .semibold,
+                    frameSize: 28,
+                    helpText: isFullScreen ? "Exit Full Screen (^⌘F)" : "Enter Full Screen (^⌘F)"
+                ) {
                     toggleFullscreen()
-                }) {
-                    Image(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
+                    registerUserActivity()
                 }
-                .buttonStyle(.plain)
-                .help(isFullScreen ? "Exit Full Screen (^⌘F)" : "Enter Full Screen (^⌘F)")
             }
         }
         .padding(.horizontal, 14)
@@ -473,12 +502,31 @@ public struct VideoPlayerView: View {
         .background(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(.ultraThinMaterial)
+                .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .onTapGesture {
+                    // Absorb background clicks on the pill so they never reach the video canvas play/pause
+                    registerUserActivity()
+                }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                .allowsHitTesting(false)
         )
         .shadow(color: Color.black.opacity(0.40), radius: 20, x: 0, y: 8)
+        .onHover { hovering in
+            isHoveringOverControls = hovering
+            if hovering {
+                hideTimer?.cancel()
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    showControls = true
+                }
+            } else {
+                if playerController.isPlaying && !isAudioMode {
+                    scheduleControlsFade(afterSeconds: 2.5)
+                }
+            }
+        }
     }
 
     private var hudDivider: some View {
@@ -549,11 +597,13 @@ public struct VideoPlayerView: View {
         WindowManager.shared.updateTitlebarVisibility(visible: true)
 
         hideTimer?.cancel()
+        guard !isHoveringOverControls else { return }
+
         hideTimer = Task {
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                if playerController.isPlaying && !isAudioMode {
+                if playerController.isPlaying && !isAudioMode && !isHoveringOverControls {
                     withAnimation(.easeInOut(duration: 0.35)) {
                         showControls = false
                     }
@@ -565,12 +615,13 @@ public struct VideoPlayerView: View {
     }
 
     private func scheduleControlsFade(afterSeconds: Double) {
+        guard !isHoveringOverControls else { return }
         hideTimer?.cancel()
         hideTimer = Task {
             try? await Task.sleep(nanoseconds: UInt64(afterSeconds * 1_000_000_000))
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                if playerController.isPlaying && !isAudioMode {
+                if playerController.isPlaying && !isAudioMode && !isHoveringOverControls {
                     withAnimation(.easeInOut(duration: 0.35)) {
                         showControls = false
                     }
@@ -913,11 +964,12 @@ public struct VideoPlayerView: View {
                 )
                 .shadow(color: .black.opacity(0.40), radius: 12, x: 0, y: 4)
                 .padding(.top, 24)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .zIndex(150)
-
                 Spacer()
+                    .allowsHitTesting(false)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .zIndex(150)
         }
     }
 
