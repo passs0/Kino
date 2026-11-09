@@ -94,9 +94,16 @@ public final class FFmpegPipeline: @unchecked Sendable {
         if !inputURL.isFileURL {
             args.append(contentsOf: [
                 "-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+                "-multiple_requests", "1",
+                "-seekable", "1",
                 "-reconnect", "1",
                 "-reconnect_streamed", "1",
                 "-reconnect_delay_max", "5",
+                "-reconnect_on_network_error", "1",
+                "-reconnect_on_http_error", "4xx,5xx",
+                "-rw_timeout", "15000000",
+                "-recv_buffer_size", "16777216",
+                "-tcp_nodelay", "1",
                 "-analyzeduration", "10000000",
                 "-probesize", "10000000"
             ])
@@ -116,7 +123,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-b:a", "640k",
+                "-b:a", "384k",
                 "-ar", "48000"
             ])
         case .audioTranscodeOnly:
@@ -126,7 +133,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-map", audioMap,
                 "-c:v", "copy",
                 "-c:a", "aac",
-                "-b:a", "640k",
+                "-b:a", "384k",
                 "-ar", "48000"
             ])
         case .fullHardwareTranscode:

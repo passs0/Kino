@@ -84,6 +84,21 @@ extension NSView {
         self.kino_titlebarLayout()
 
         guard let win = self.window, !win.styleMask.contains(.fullScreen) else { return }
+
+        // Clear any default background or visual effect views so the titlebar blends 100% seamlessly
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.clear.cgColor
+        if let container = self.superview {
+            container.wantsLayer = true
+            container.layer?.backgroundColor = NSColor.clear.cgColor
+            for sub in container.subviews {
+                if let effect = sub as? NSVisualEffectView {
+                    effect.isHidden = true
+                    effect.alphaValue = 0.0
+                }
+            }
+        }
+
         let buttonTypes: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
 
         let btnHeight: CGFloat = 14.0

@@ -300,9 +300,12 @@ public final class SubtitleManager: ObservableObject {
                     "-nostdin", "-y",
                     "-loglevel", "error",
                     "-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+                    "-multiple_requests", "1",
+                    "-seekable", "1",
                     "-reconnect", "1",
                     "-reconnect_streamed", "1",
-                    "-reconnect_delay_max", "5"
+                    "-reconnect_delay_max", "5",
+                    "-rw_timeout", "15000000"
                 ]
 
                 if seekOffset > 5.0 {
@@ -310,6 +313,7 @@ public final class SubtitleManager: ObservableObject {
                 }
 
                 args.append(contentsOf: [
+                    "-t", "300",
                     "-discard:v", "all",
                     "-discard:a", "all",
                     "-i", sourceURL.absoluteString,

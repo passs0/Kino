@@ -535,12 +535,11 @@ public final class MediaCoordinator: ObservableObject {
                 }
                 SubtitleManager.shared.setAvailableTracks(localSubTracks)
 
-                let preferredLang = Locale.current.language.languageCode?.identifier.lowercased()
-                if let initial = localSubTracks.first(where: { $0.isDefault })
-                    ?? (preferredLang != nil ? localSubTracks.first(where: { $0.languageCode?.lowercased() == preferredLang }) : nil)
-                    ?? localSubTracks.first(where: { $0.languageCode?.lowercased() == "en" || $0.languageCode?.lowercased() == "eng" })
-                    ?? localSubTracks.first {
+                // Auto-select subtitle only if explicitly marked as default in the stream
+                if let initial = localSubTracks.first(where: { $0.isDefault }) {
                     SubtitleManager.shared.selectTrack(initial)
+                } else {
+                    SubtitleManager.shared.selectTrack(nil)
                 }
                 if !localSubTracks.isEmpty {
                     log("💬 Loaded \(localSubTracks.count) text subtitle tracks in online stream.", level: .info)

@@ -10,6 +10,7 @@ public struct KinoApp: App {
     public var body: some Scene {
         Window("Kino", id: "main") {
             MainWindowView()
+                .ignoresSafeArea()
                 .onOpenURL { url in
                     Task { @MainActor in
                         handleIncomingURL(url)

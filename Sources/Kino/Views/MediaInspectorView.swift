@@ -206,15 +206,37 @@ public struct MediaInspectorView: View {
     // MARK: - Live Pipeline Section
 
     private func livePipelineSection(_ stats: PipelineStats) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("LIVE COMPATIBILITY PIPELINE")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(Color.white.opacity(0.65))
+        let isHardware: Bool = {
+            if case .fullTranscode = coordinator.activeStrategy { return true }
+            return false
+        }()
+        let speedTitle = isHardware ? "TRANSCODE SPEED" : "STREAM SPEED"
+        let timeTitle = isHardware ? "TIME ENCODED" : "TIME BUFFERED"
+        let isRemote = coordinator.currentSource?.isOnline == true
+        let speedNum = Double(stats.speedFactor.replacingOccurrences(of: "x", with: "")) ?? 1.0
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(isHardware ? "LIVE HARDWARE ENCODING PIPELINE" : "LIVE COMPATIBILITY PIPELINE")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(Color.white.opacity(0.65))
+
+                if !isHardware && isRemote && speedNum < 1.0 {
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "network")
+                            .font(.system(size: 8, weight: .semibold))
+                        Text("Server bandwidth limited (< 1.0x)")
+                            .font(.system(size: 8.5, weight: .medium))
+                    }
+                    .foregroundColor(.orange.opacity(0.9))
+                }
+            }
 
             HStack(spacing: 10) {
-                metricBox(title: "TRANSCODE SPEED", value: stats.speedFactor, icon: "gauge.with.needle")
+                metricBox(title: speedTitle, value: stats.speedFactor, icon: isHardware ? "gauge.with.needle" : "network")
                 metricBox(title: "FPS", value: String(format: "%.1f", stats.fps), icon: "film")
-                metricBox(title: "TIME ENCODED", value: stats.currentTime, icon: "clock")
+                metricBox(title: timeTitle, value: stats.currentTime, icon: "clock")
             }
         }
     }

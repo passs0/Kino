@@ -4,6 +4,9 @@ import UniformTypeIdentifiers
 
 /// Minimalist Liquid Glass Main Window (macOS 26+)
 public struct MainWindowView: View {
+    public static let idleBackgroundColor = Color(red: 0.118, green: 0.118, blue: 0.118)
+    public static let idleNSBackgroundColor = NSColor(calibratedRed: 0.118, green: 0.118, blue: 0.118, alpha: 1.0)
+
     @StateObject private var coordinator = MediaCoordinator.shared
     @StateObject private var playerController = PlayerController.shared
     @StateObject private var windowManager = WindowManager.shared
@@ -16,6 +19,7 @@ public struct MainWindowView: View {
 
     public var body: some View {
         mainContent
+            .ignoresSafeArea()
             .frame(minWidth: 440, minHeight: 320)
             .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? 0 : 26, style: .continuous))
             .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
@@ -62,7 +66,7 @@ public struct MainWindowView: View {
 
     private var mainContent: some View {
         ZStack(alignment: .center) {
-            (coordinator.state == .idle ? Color(NSColor.windowBackgroundColor) : Color.black)
+            (coordinator.state == .idle ? MainWindowView.idleBackgroundColor : Color.black)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.25), value: coordinator.state == .idle)
 
@@ -199,9 +203,10 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             guard let window = nsView.window else { return }
             WindowManager.shared.register(window: window)
             window.isOpaque = true
-            window.backgroundColor = isIdle ? .windowBackgroundColor : .black
+            window.backgroundColor = isIdle ? MainWindowView.idleNSBackgroundColor : .black
             window.hasShadow = true
             window.titlebarAppearsTransparent = true
+            window.titlebarSeparatorStyle = .none
             window.titleVisibility = isIdle ? .hidden : .visible
             window.styleMask.insert([.fullSizeContentView])
             window.isMovableByWindowBackground = true
@@ -212,6 +217,22 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.contentView?.layer?.cornerRadius = isFS ? 0 : 26
             window.contentView?.layer?.cornerCurve = .continuous
             window.contentView?.layer?.masksToBounds = !isFS
+
+            // Clear any AppKit titlebar materials or visual effect backdrops so the window is 100% unified
+            if let titlebar = window.standardWindowButton(.closeButton)?.superview {
+                titlebar.wantsLayer = true
+                titlebar.layer?.backgroundColor = NSColor.clear.cgColor
+                if let container = titlebar.superview {
+                    container.wantsLayer = true
+                    container.layer?.backgroundColor = NSColor.clear.cgColor
+                    for sub in container.subviews {
+                        if let effect = sub as? NSVisualEffectView {
+                            effect.isHidden = true
+                            effect.alphaValue = 0.0
+                        }
+                    }
+                }
+            }
 
             TrafficLightManager.shared.repositionTrafficLights(for: window)
         }

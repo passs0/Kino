@@ -21,45 +21,12 @@ public final class OptionsMenuPresenter: NSObject {
             || MediaCoordinator.shared.currentSource?.isAudioTrack == true
 
         if isAudio {
-            // MARK: - Audio Mode (Simplified Options Menu)
+            // MARK: - Audio Mode (Spacious & Clean Options Menu)
 
-            // 1. Media Statistics & Music Codec Inspector
-            let isInspectorOpen = MediaCoordinator.shared.isInspectorPresented
-            let statsItem = NSMenuItem(
-                title: isInspectorOpen ? "Hide Media Statistics" : "Show Media Statistics",
-                action: #selector(handleToggleStats),
-                keyEquivalent: "i"
-            )
-            statsItem.target = self
-            statsItem.keyEquivalentModifierMask = [.command]
-            statsItem.state = isInspectorOpen ? .on : .off
-            menu.addItem(statsItem)
-
-            menu.addItem(NSMenuItem.separator())
-
-            // 2. Playback Speed Submenu
-            let speedItem = NSMenuItem(title: "Playback Speed", action: nil, keyEquivalent: "")
-            let speedMenu = NSMenu(title: "Playback Speed")
-            speedMenu.autoenablesItems = false
-
-            let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-            let currentRate = PlayerController.shared.playbackRate
-            for r in rates {
-                let label = r == 1.0 ? "1x" : "\(formatRate(Double(r)))x"
-                let item = NSMenuItem(title: label, action: #selector(handleSelectSpeed(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = r
-                item.state = (abs(currentRate - r) < 0.01) ? .on : .off
-                speedMenu.addItem(item)
-            }
-
-            speedItem.submenu = speedMenu
-            menu.addItem(speedItem)
-
-            // 3. Audio Track Submenu (if multiple streams available)
+            // 1. Audio Tracks Submenu (if multiple streams available)
             let audioTracks = AudioManager.shared.availableTracks
             if audioTracks.count > 1 {
-                let audioItem = NSMenuItem(title: "Audio Track", action: nil, keyEquivalent: "")
+                let audioItem = createMenuItem(title: "Audio Track", systemImage: "waveform")
                 let audioMenu = NSMenu(title: "Audio Track")
                 audioMenu.autoenablesItems = false
                 let currentAudio = AudioManager.shared.selectedTrack
@@ -76,8 +43,8 @@ public final class OptionsMenuPresenter: NSObject {
                 menu.addItem(audioItem)
             }
 
-            // 4. Subtitles / Lyrics Submenu
-            let subsItem = NSMenuItem(title: "Subtitles / Lyrics", action: nil, keyEquivalent: "")
+            // 2. Subtitles / Lyrics Submenu
+            let subsItem = createMenuItem(title: "Subtitles / Lyrics", systemImage: "quote.bubble")
             let subsMenu = NSMenu(title: "Subtitles / Lyrics")
             subsMenu.autoenablesItems = false
 
@@ -101,8 +68,7 @@ public final class OptionsMenuPresenter: NSObject {
             }
 
             subsMenu.addItem(NSMenuItem.separator())
-            let loadAudioSubsItem = NSMenuItem(title: "Load External Lyrics/Subtitles…", action: #selector(handleLoadExternalSubtitles), keyEquivalent: "")
-            loadAudioSubsItem.target = self
+            let loadAudioSubsItem = createMenuItem(title: "Load External Lyrics/Subtitles…", systemImage: "folder", action: #selector(handleLoadExternalSubtitles))
             subsMenu.addItem(loadAudioSubsItem)
 
             subsItem.submenu = subsMenu
@@ -110,21 +76,52 @@ public final class OptionsMenuPresenter: NSObject {
 
             menu.addItem(NSMenuItem.separator())
 
+            // 3. Playback Speed Submenu
+            let speedItem = createMenuItem(title: "Playback Speed", systemImage: "gauge.with.needle")
+            let speedMenu = NSMenu(title: "Playback Speed")
+            speedMenu.autoenablesItems = false
+
+            let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+            let currentRate = PlayerController.shared.playbackRate
+            for r in rates {
+                let label = r == 1.0 ? "1x" : "\(formatRate(Double(r)))x"
+                let item = NSMenuItem(title: label, action: #selector(handleSelectSpeed(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = r
+                item.state = (abs(currentRate - r) < 0.01) ? .on : .off
+                speedMenu.addItem(item)
+            }
+
+            speedItem.submenu = speedMenu
+            menu.addItem(speedItem)
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 4. Media Statistics & Codec Inspector
+            let isInspectorOpen = MediaCoordinator.shared.isInspectorPresented
+            let statsItem = createMenuItem(
+                title: isInspectorOpen ? "Hide Media Statistics" : "Show Media Statistics",
+                systemImage: "chart.bar.xaxis",
+                action: #selector(handleToggleStats),
+                keyEquivalent: "i"
+            )
+            statsItem.state = isInspectorOpen ? .on : .off
+            menu.addItem(statsItem)
+
             // 5. Media Engines & Codecs Setup
-            let enginesItem = NSMenuItem(
+            let enginesItem = createMenuItem(
                 title: "Media Engines & Codecs...",
+                systemImage: "gearshape",
                 action: #selector(handleOpenEngines),
                 keyEquivalent: ","
             )
-            enginesItem.target = self
-            enginesItem.keyEquivalentModifierMask = [.command]
             menu.addItem(enginesItem)
 
         } else {
-            // MARK: - Video Mode (Full Options Menu)
+            // MARK: - Video Mode (Spacious & Clean Options Menu)
 
             // 1. Subtitles Submenu
-            let subsItem = NSMenuItem(title: "Subtitles", action: nil, keyEquivalent: "")
+            let subsItem = createMenuItem(title: "Subtitles", systemImage: "captions.bubble")
             let subsMenu = NSMenu(title: "Subtitles")
             subsMenu.autoenablesItems = false
 
@@ -168,14 +165,13 @@ public final class OptionsMenuPresenter: NSObject {
             }
 
             subsMenu.addItem(NSMenuItem.separator())
-            let loadExternalItem = NSMenuItem(title: "Load External Subtitles…", action: #selector(handleLoadExternalSubtitles), keyEquivalent: "")
-            loadExternalItem.target = self
+            let loadExternalItem = createMenuItem(title: "Load External Subtitles…", systemImage: "folder", action: #selector(handleLoadExternalSubtitles))
             subsMenu.addItem(loadExternalItem)
 
             subsMenu.addItem(NSMenuItem.separator())
 
             // Subtitle Placement Submenu (Display Height vs Media Height)
-            let placementItem = NSMenuItem(title: "Placement", action: nil, keyEquivalent: "")
+            let placementItem = createMenuItem(title: "Placement", systemImage: "arrow.up.and.down.text.horizontal")
             let placementMenu = NSMenu(title: "Placement")
             placementMenu.autoenablesItems = false
 
@@ -206,7 +202,7 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(subsItem)
 
             // 2. Audio Track Submenu
-            let audioItem = NSMenuItem(title: "Audio Track", action: nil, keyEquivalent: "")
+            let audioItem = createMenuItem(title: "Audio Track", systemImage: "waveform")
             let audioMenu = NSMenu(title: "Audio Track")
             audioMenu.autoenablesItems = false
 
@@ -231,8 +227,10 @@ public final class OptionsMenuPresenter: NSObject {
             audioItem.submenu = audioMenu
             menu.addItem(audioItem)
 
+            menu.addItem(NSMenuItem.separator())
+
             // 3. Playback Speed Submenu
-            let speedItem = NSMenuItem(title: "Playback Speed", action: nil, keyEquivalent: "")
+            let speedItem = createMenuItem(title: "Playback Speed", systemImage: "gauge.with.needle")
             let speedMenu = NSMenu(title: "Playback Speed")
             speedMenu.autoenablesItems = false
 
@@ -251,7 +249,7 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(speedItem)
 
             // 4. Aspect Ratio Submenu
-            let aspectItem = NSMenuItem(title: "Aspect Ratio", action: nil, keyEquivalent: "")
+            let aspectItem = createMenuItem(title: "Aspect Ratio", systemImage: "aspectratio")
             let aspectMenu = NSMenu(title: "Aspect Ratio")
             aspectMenu.autoenablesItems = false
 
@@ -271,7 +269,7 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(aspectItem)
 
             // 5. Video Upscaler & Enhancer Submenu (GPU-accelerated native upscaling)
-            let enhanceItem = NSMenuItem(title: "Video Upscaler & Enhancer", action: nil, keyEquivalent: "")
+            let enhanceItem = createMenuItem(title: "Video Upscaler & Enhancer", systemImage: "sparkles")
             let enhanceMenu = NSMenu(title: "Video Upscaler & Enhancer")
             enhanceMenu.autoenablesItems = false
 
@@ -292,35 +290,54 @@ public final class OptionsMenuPresenter: NSObject {
 
             // 6. Media Statistics (Canonical access point for media information & technical inspector)
             let isInspectorOpen = MediaCoordinator.shared.isInspectorPresented
-            let statsItem = NSMenuItem(
+            let statsItem = createMenuItem(
                 title: isInspectorOpen ? "Hide Media Statistics" : "Show Media Statistics",
+                systemImage: "chart.bar.xaxis",
                 action: #selector(handleToggleStats),
                 keyEquivalent: "i"
             )
-            statsItem.target = self
-            statsItem.keyEquivalentModifierMask = [.command]
             statsItem.state = isInspectorOpen ? .on : .off
             menu.addItem(statsItem)
 
             // 7. Media Engines & Codecs Setup
-            let enginesItem = NSMenuItem(
+            let enginesItem = createMenuItem(
                 title: "Media Engines & Codecs...",
+                systemImage: "gearshape",
                 action: #selector(handleOpenEngines),
                 keyEquivalent: ","
             )
-            enginesItem.target = self
-            enginesItem.keyEquivalentModifierMask = [.command]
             menu.addItem(enginesItem)
         }
 
-        // Pop up the menu at the cursor event position
+        // Pop up the menu at the cursor event position or comfortably above the HUD pill
         if let ev = event, (ev.type == .rightMouseDown || ev.type == .leftMouseDown), let win = NSApp.keyWindow ?? NSApp.windows.first {
             let targetView = view ?? win.contentView ?? NSView()
             NSMenu.popUpContextMenu(menu, with: ev, for: targetView)
         } else if let win = NSApp.keyWindow ?? NSApp.windows.first, let cv = view ?? win.contentView {
-            let pt = cv.convert(win.mouseLocationOutsideOfEventStream, from: nil)
+            let mousePt = cv.convert(win.mouseLocationOutsideOfEventStream, from: nil)
+            // Position comfortably above HUD pill so bottom shadow doesn't overlap the ellipsis button
+            let pt = NSPoint(x: mousePt.x, y: max(mousePt.y + 22, 78))
             menu.popUp(positioning: nil, at: pt, in: cv)
         }
+    }
+
+    private func createMenuItem(
+        title: String,
+        systemImage: String? = nil,
+        action: Selector? = nil,
+        keyEquivalent: String = "",
+        modifierMask: NSEvent.ModifierFlags = [.command]
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        item.target = self
+        if !keyEquivalent.isEmpty {
+            item.keyEquivalentModifierMask = modifierMask
+        }
+        if let icon = systemImage, let img = NSImage(systemSymbolName: icon, accessibilityDescription: title) {
+            img.isTemplate = true
+            item.image = img
+        }
+        return item
     }
 
     @objc private func handleSelectSubOff() {
