@@ -9,7 +9,7 @@
     <key>CFBundleExecutable</key>
     <string>Kino</string>
     <key>CFBundleIdentifier</key>
-    <string>com.kino.player</string>
+    <string>com.kino.app</string>
     <key>CFBundleName</key>
     <string>Kino</string>
     <key>CFBundleDisplayName</key>
@@ -41,7 +41,7 @@
     <array>
         <dict>
             <key>CFBundleURLName</key>
-            <string>com.kino.player.url</string>
+            <string>com.kino.app.url</string>
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>kino</string>
