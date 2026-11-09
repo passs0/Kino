@@ -4,16 +4,16 @@ import ObjectiveC
 /// Enforces generous breathing room for macOS standard window buttons (traffic lights)
 /// tailored for windows with large corner radii (such as 26pt continuous squircles).
 /// Consistently insets the close, minimize, and zoom controls away from the corner curve
-/// across all states: welcome idle screen, video playback, audio playback, window resizing,
-/// and full-screen transitions.
+/// and ensures the window title and document proxy icon are strictly in line on the
+/// exact same horizontal center axis across all states.
 public final class TrafficLightManager: @unchecked Sendable {
     public static let shared = TrafficLightManager()
 
     /// Offset from left edge of window (26pt clears the 26pt corner arc completely)
     public static let xOffset: CGFloat = 26.0
 
-    /// Offset from top edge of window
-    public static let yOffset: CGFloat = 18.0
+    /// Offset from top edge of window to the top of the traffic light buttons
+    public static let yOffset: CGFloat = 16.0
 
     /// Inter-button spacing between close, minimize, and zoom
     public static let buttonSpacing: CGFloat = 8.0
@@ -85,31 +85,48 @@ extension NSView {
 
         guard let win = self.window, !win.styleMask.contains(.fullScreen) else { return }
         let buttonTypes: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
-        var currentX = TrafficLightManager.xOffset
 
+        let btnHeight: CGFloat = 14.0
+        // Target vertical center for all titlebar elements (traffic lights, doc proxy, and title text)
+        let targetCenterY: CGFloat = bounds.height - TrafficLightManager.yOffset - (btnHeight / 2.0)
+        let btnY = round(targetCenterY - (btnHeight / 2.0))
+
+        var currentX = TrafficLightManager.xOffset
         for type in buttonTypes {
             if let btn = win.standardWindowButton(type), btn.superview == self {
-                let btnY = max(0, bounds.height - btn.frame.height - TrafficLightManager.yOffset)
                 btn.setFrameOrigin(NSPoint(x: currentX, y: btnY))
                 currentX += btn.frame.width + TrafficLightManager.buttonSpacing
             }
         }
 
-        // Adjust document proxy icon and title text field to follow the shifted traffic lights
-        let gap: CGFloat = 8.0
+        // Locate document proxy button and title text field
+        var docButton: NSButton? = nil
+        var titleField: NSTextField? = nil
+
         for sub in subviews {
-            if let docBtn = sub as? NSButton, !buttonTypes.contains(where: { win.standardWindowButton($0) == docBtn }) {
-                if docBtn.frame.origin.x < currentX + gap {
-                    let docY = max(0, bounds.height - docBtn.frame.height - TrafficLightManager.yOffset)
-                    docBtn.setFrameOrigin(NSPoint(x: currentX + gap, y: docY))
-                    currentX = docBtn.frame.maxX
-                }
+            if let btn = sub as? NSButton, !buttonTypes.contains(where: { win.standardWindowButton($0) == btn }) {
+                docButton = btn
             } else if let tf = sub as? NSTextField {
-                if tf.frame.origin.x < currentX + gap {
-                    let tfY = max(0, bounds.height - tf.frame.height - TrafficLightManager.yOffset + 1)
-                    tf.setFrameOrigin(NSPoint(x: currentX + gap, y: tfY))
-                }
+                titleField = tf
             }
+        }
+
+        let leadingGap: CGFloat = 12.0
+
+        // Position document proxy icon perfectly in line with traffic lights
+        if let doc = docButton {
+            let docX = currentX + leadingGap
+            let docY = round(targetCenterY - (doc.frame.height / 2.0))
+            doc.setFrameOrigin(NSPoint(x: docX, y: docY))
+            currentX = doc.frame.maxX
+        }
+
+        // Position window title text field perfectly in line with traffic lights
+        if let tf = titleField {
+            let tfGap: CGFloat = (docButton != nil) ? 4.0 : leadingGap
+            let tfX = currentX + tfGap
+            let tfY = round(targetCenterY - (tf.frame.height / 2.0))
+            tf.setFrameOrigin(NSPoint(x: tfX, y: tfY))
         }
     }
 }
