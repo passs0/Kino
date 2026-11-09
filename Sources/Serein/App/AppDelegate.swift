@@ -70,18 +70,50 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 return nil
             }
 
-            // Plus / Equals / Keypad Plus (keyCode 24, 69, or char "+", "="): Volume Up
-            if keyCode == 24 || keyCode == 69 || chars == "+" || chars == "=" {
+            // Plus / Equals / Up Arrow (keyCode 24, 69, 126, or char "+", "="): Volume Up
+            if keyCode == 24 || keyCode == 69 || keyCode == 126 || chars == "+" || chars == "=" {
                 Task { @MainActor in
                     PlayerController.shared.adjustVolume(by: 0.1)
                 }
                 return nil
             }
 
-            // Minus / Dash / Keypad Minus (keyCode 27, 78, or char "-", "_"): Volume Down
-            if keyCode == 27 || keyCode == 78 || chars == "-" || chars == "_" {
+            // Minus / Dash / Down Arrow (keyCode 27, 78, 125, or char "-", "_"): Volume Down
+            if keyCode == 27 || keyCode == 78 || keyCode == 125 || chars == "-" || chars == "_" {
                 Task { @MainActor in
                     PlayerController.shared.adjustVolume(by: -0.1)
+                }
+                return nil
+            }
+
+            // J / j (keyCode 38 or char "j"): Rewind 10s
+            if keyCode == 38 || chars == "j" {
+                Task { @MainActor in
+                    PlayerController.shared.seekRelative(seconds: -10.0)
+                }
+                return nil
+            }
+
+            // K / k (keyCode 40 or char "k"): Play / Pause
+            if keyCode == 40 || chars == "k" {
+                Task { @MainActor in
+                    PlayerController.shared.togglePlayPause()
+                }
+                return nil
+            }
+
+            // L / l (keyCode 37 or char "l"): Forward 10s
+            if keyCode == 37 || chars == "l" {
+                Task { @MainActor in
+                    PlayerController.shared.seekRelative(seconds: 10.0)
+                }
+                return nil
+            }
+
+            // F / f (keyCode 3 or char "f"): Toggle Full Screen
+            if keyCode == 3 || chars == "f" {
+                Task { @MainActor in
+                    NSApp.keyWindow?.toggleFullScreen(nil)
                 }
                 return nil
             }
@@ -118,16 +150,44 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let first = filenames.first else { return }
         let url = URL(fileURLWithPath: first)
         Task { @MainActor in
+            if application.windows.count > 1, let main = WindowManager.shared.mainWindow {
+                for win in application.windows where win !== main {
+                    win.close()
+                }
+            }
             MediaCoordinator.shared.openLocalFile(url: url)
+            WindowManager.shared.mainWindow?.makeKeyAndOrderFront(nil)
         }
+        application.reply(toOpenOrPrint: .success)
     }
 
     public func application(_ sender: NSApplication, openFile filename: String) -> Bool {
         let url = URL(fileURLWithPath: filename)
         Task { @MainActor in
             MediaCoordinator.shared.openLocalFile(url: url)
+            WindowManager.shared.mainWindow?.makeKeyAndOrderFront(nil)
         }
         return true
+    }
+
+    public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if let window = WindowManager.shared.mainWindow {
+            window.makeKeyAndOrderFront(nil)
+            return false
+        }
+        return true
+    }
+
+    public func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
+        false
+    }
+
+    public func application(_ app: NSApplication, shouldSaveApplicationState coder: NSCoder) -> Bool {
+        false
+    }
+
+    public func application(_ app: NSApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool {
+        false
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

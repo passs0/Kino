@@ -100,7 +100,6 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
     public override func layout() {
         super.layout()
         playerLayer.frame = bounds
-        repositionTrafficLights()
     }
 
     public override func viewDidMoveToWindow() {
@@ -111,8 +110,7 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
         win.hasShadow = true
         win.isMovableByWindowBackground = false
         win.titlebarAppearsTransparent = true
-        win.titleVisibility = .hidden
-        repositionTrafficLights()
+        win.titleVisibility = .visible
         PlayerController.shared.activePlayerNSView = self
     }
 
@@ -201,10 +199,7 @@ public final class SereinPlayerNSView: NSView, AVPictureInPictureControllerDeleg
         pipSubtitleHostingView = nil
     }
 
-    public func repositionTrafficLights() {
-        guard let win = window else { return }
-        TrafficLightManager.shared.repositionTrafficLights(for: win)
-    }
+    public func repositionTrafficLights() {}
 
     // MARK: - Drag and Drop
 

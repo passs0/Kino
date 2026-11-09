@@ -14,13 +14,46 @@ public struct MainWindowView: View {
     public init() {}
 
     public var body: some View {
+        mainContent
+            .frame(minWidth: 440, minHeight: 320)
+            .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
+            .sheet(isPresented: $showURLSheet) {
+                URLInputSheet(coordinator: coordinator)
+            }
+            .sheet(isPresented: $showPrerequisitesSheet) {
+                PrerequisiteInstallSheet()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openURLSheetNotification)) { _ in
+                showURLSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
+                showPrerequisitesSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
+                handleCloseMedia()
+            }
+            .onChange(of: coordinator.currentSource) { _, newSource in
+                handleSourceChange(newSource)
+            }
+            .onChange(of: coordinator.activePlayableURL) { _, newURL in
+                handlePlayableURLChange(newURL)
+            }
+            .onChange(of: coordinator.probeResult) { _, newProbe in
+                handleProbeChange(newProbe)
+            }
+            .onChange(of: coordinator.extractedOnlineInfo?.duration) { _, newDuration in
+                if let d = newDuration, d > 0 {
+                    playerController.setKnownDuration(d)
+                }
+            }
+    }
+
+    private var mainContent: some View {
         ZStack(alignment: .center) {
-            // Solid native macOS window background for idle, cinematic black for loading & playback
             (coordinator.state == .idle ? Color(NSColor.windowBackgroundColor) : Color.black)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.25), value: coordinator.state == .idle)
 
-            // Centered player canvas / welcome screen
             VideoPlayerView(
                 coordinator: coordinator,
                 playerController: playerController,
@@ -30,76 +63,76 @@ public struct MainWindowView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .ignoresSafeArea()
 
-            // Centered Floating Media Statistics HUD (Cmd + I / Options Menu)
             if coordinator.isInspectorPresented {
-                ZStack(alignment: .center) {
-                    // Subtle dimmed backdrop scrim to guarantee legibility and quick dismissal
-                    Color.black.opacity(0.50)
-                        .ignoresSafeArea()
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                                coordinator.isInspectorPresented = false
-                            }
-                        }
+                inspectorOverlay
+            }
+        }
+    }
 
-                    MediaInspectorView(coordinator: coordinator) {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                            coordinator.isInspectorPresented = false
-                        }
+    private var inspectorOverlay: some View {
+        ZStack(alignment: .center) {
+            Color.black.opacity(0.50)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        coordinator.isInspectorPresented = false
                     }
-                    .padding(24)
                 }
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                .zIndex(200)
-            }
-        }
-        .frame(
-            minWidth: 380,
-            minHeight: 400
-        )
-        .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
-        .sheet(isPresented: $showURLSheet) {
-            URLInputSheet(coordinator: coordinator)
-        }
-        .sheet(isPresented: $showPrerequisitesSheet) {
-            PrerequisiteInstallSheet()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openURLSheetNotification)) { _ in
-            showURLSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
-            showPrerequisitesSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
-            if coordinator.state != .idle {
-                playerController.saveCurrentPosition()
-                playerController.pause()
-                coordinator.stop()
-                playerController.reset()
-            }
-        }
-        .onChange(of: coordinator.activePlayableURL) { _, newURL in
-            if let url = newURL {
-                if !playerController.isSeeking {
-                    let expDuration = coordinator.knownDuration
-                    let initTime = coordinator.pendingInitialTime
-                    coordinator.pendingInitialTime = nil
-                    playerController.load(url: url, expectedDuration: expDuration, initialTime: initTime)
+
+            MediaInspectorView(coordinator: coordinator) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                    coordinator.isInspectorPresented = false
                 }
+            }
+            .padding(24)
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .zIndex(200)
+    }
+
+    private func handleCloseMedia() {
+        if coordinator.state != .idle {
+            playerController.saveCurrentPosition()
+            playerController.pause()
+            coordinator.stop()
+            playerController.reset()
+            windowManager.transitionToWelcome()
+        }
+    }
+
+    private func handleSourceChange(_ source: MediaSource?) {
+        if let s = source {
+            if case .local(let url) = s {
+                windowManager.setMediaDocument(url: url, title: s.displayName)
             } else {
-                playerController.reset()
+                windowManager.setMediaDocument(url: nil, title: s.displayName)
             }
+        } else {
+            windowManager.setMediaDocument(url: nil, title: "Serein")
         }
-        .onChange(of: coordinator.probeResult) { _, newProbe in
-            if let d = newProbe?.duration, d > 0 {
-                playerController.setKnownDuration(d)
+    }
+
+    private func handlePlayableURLChange(_ newURL: URL?) {
+        if let url = newURL {
+            if !playerController.isSeeking {
+                let expDuration = coordinator.knownDuration
+                let initTime = coordinator.pendingInitialTime
+                coordinator.pendingInitialTime = nil
+                playerController.load(url: url, expectedDuration: expDuration, initialTime: initTime)
             }
+        } else {
+            playerController.reset()
         }
-        .onChange(of: coordinator.extractedOnlineInfo?.duration) { _, newDuration in
-            if let d = newDuration, d > 0 {
-                playerController.setKnownDuration(d)
-            }
+    }
+
+    private func handleProbeChange(_ probe: MediaProbeResult?) {
+        if let d = probe?.duration, d > 0 {
+            playerController.setKnownDuration(d)
+        }
+        if let video = probe?.primaryVideo, let w = video.width, let h = video.height, w > 0, h > 0 {
+            let size = CGSize(width: w, height: h)
+            windowManager.transitionToMedia(isAudio: false, videoSize: size)
         }
     }
 
@@ -144,8 +177,7 @@ private struct WindowGlassAccessor: NSViewRepresentable {
     var isIdle: Bool
 
     func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        return view
+        NSView()
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
@@ -156,12 +188,9 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.backgroundColor = isIdle ? .windowBackgroundColor : .black
             window.hasShadow = true
             window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
+            window.titleVisibility = isIdle ? .hidden : .visible
             window.styleMask.insert([.fullSizeContentView])
             window.isMovableByWindowBackground = true
-
-            // Position traffic lights cleanly with generous breathing room
-            TrafficLightManager.shared.repositionTrafficLights(for: window)
         }
     }
 }

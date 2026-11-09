@@ -36,6 +36,7 @@ public struct NativeSlider: NSViewRepresentable {
         )
         slider.isContinuous = true
         slider.focusRingType = .none
+        slider.controlSize = .small
         slider.onEditingChanged = onEditingChanged
         if #available(macOS 14.0, *) {
             slider.trackFillColor = trackFillColor

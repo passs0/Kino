@@ -10,10 +10,6 @@ public struct SereinApp: App {
     public var body: some Scene {
         WindowGroup {
             MainWindowView()
-                .frame(
-                    minWidth: 380,
-                    minHeight: 400
-                )
                 .onOpenURL { url in
                     Task { @MainActor in
                         handleIncomingURL(url)
@@ -21,6 +17,7 @@ public struct SereinApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 580, height: 380)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("Media Engines & Codecs...") {
@@ -34,22 +31,81 @@ public struct SereinApp: App {
             }
 
             CommandGroup(replacing: .newItem) {
-                Button("Open Media File...") {
+                Button("Open Media File…") {
                     openFileDialog()
                 }
                 .keyboardShortcut("o", modifiers: .command)
 
-                Button("Open Online URL...") {
+                Button("Open Online URL…") {
                     NotificationCenter.default.post(name: .openURLSheetNotification, object: nil)
                 }
                 .keyboardShortcut("u", modifiers: .command)
 
+                Menu("Open Recent") {
+                    let recents = NSDocumentController.shared.recentDocumentURLs
+                    if recents.isEmpty {
+                        Text("No Recent Documents")
+                    } else {
+                        ForEach(recents.prefix(10), id: \.self) { url in
+                            Button(url.lastPathComponent) {
+                                Task { @MainActor in
+                                    MediaCoordinator.shared.openLocalFile(url: url)
+                                }
+                            }
+                        }
+                        Divider()
+                        Button("Clear Menu") {
+                            NSDocumentController.shared.clearRecentDocuments(nil)
+                        }
+                    }
+                }
+
                 Divider()
 
-                Button("Close Video") {
+                Button("Close") {
                     NotificationCenter.default.post(name: .closeMediaNotification, object: nil)
                 }
                 .keyboardShortcut("w", modifiers: .command)
+            }
+
+            CommandMenu("View") {
+                Button("Actual Size") {
+                    WindowManager.shared.zoomToActualSize()
+                }
+                .keyboardShortcut("1", modifiers: .command)
+
+                Button("Double Size") {
+                    WindowManager.shared.zoomToDoubleSize()
+                }
+                .keyboardShortcut("2", modifiers: .command)
+
+                Button("Fit to Screen") {
+                    WindowManager.shared.zoomToFitScreen()
+                }
+                .keyboardShortcut("3", modifiers: .command)
+
+                Divider()
+
+                Button("Enter Full Screen") {
+                    NSApp.keyWindow?.toggleFullScreen(nil)
+                }
+                .keyboardShortcut("f", modifiers: [.control, .command])
+
+                Divider()
+
+                Button(windowManager.isPinnedAlwaysOnTop ? "Unpin from Always on Top" : "Keep Window Always on Top") {
+                    WindowManager.shared.togglePinAlwaysOnTop()
+                }
+                .keyboardShortcut("p", modifiers: [.command, .option])
+
+                Divider()
+
+                Button("Movie Inspector") {
+                    withAnimation {
+                        MediaCoordinator.shared.isInspectorPresented.toggle()
+                    }
+                }
+                .keyboardShortcut("i", modifiers: .command)
             }
 
             CommandMenu("Playback") {
@@ -58,13 +114,23 @@ public struct SereinApp: App {
                 }
                 .keyboardShortcut(.space, modifiers: [])
 
-                Button("Seek Forward 10s") {
-                    PlayerController.shared.seekRelative(seconds: 10)
+                Button("Step Forward 5s") {
+                    PlayerController.shared.seekRelative(seconds: 5)
+                }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+
+                Button("Step Backward 5s") {
+                    PlayerController.shared.seekRelative(seconds: -5)
+                }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+
+                Button("Jump Forward 30s") {
+                    PlayerController.shared.seekRelative(seconds: 30)
                 }
                 .keyboardShortcut(.rightArrow, modifiers: .command)
 
-                Button("Seek Backward 10s") {
-                    PlayerController.shared.seekRelative(seconds: -10)
+                Button("Jump Backward 30s") {
+                    PlayerController.shared.seekRelative(seconds: -30)
                 }
                 .keyboardShortcut(.leftArrow, modifiers: .command)
 
@@ -73,7 +139,7 @@ public struct SereinApp: App {
                 Button(PlayerController.shared.isMuted ? "Unmute" : "Mute") {
                     PlayerController.shared.toggleMute()
                 }
-                .keyboardShortcut("m", modifiers: .command)
+                .keyboardShortcut("m", modifiers: [])
 
                 Divider()
 
@@ -90,23 +156,13 @@ public struct SereinApp: App {
                     Button("Toggle Subtitle Placement") {
                         SubtitleManager.shared.togglePlacement()
                     }
+                    .keyboardShortcut("z", modifiers: [])
                 }
-            }
 
-            CommandGroup(after: .toolbar) {
-                Button("Toggle Media Inspector") {
-                    withAnimation {
-                        MediaCoordinator.shared.isInspectorPresented.toggle()
-                    }
+                Button("Toggle Aspect Ratio (Fit / Fill)") {
+                    PlayerController.shared.toggleLetterbox()
                 }
-                .keyboardShortcut("i", modifiers: .command)
-
-                Divider()
-
-                Button(windowManager.isPinnedAlwaysOnTop ? "Unpin from Always on Top" : "Keep Window Always on Top") {
-                    WindowManager.shared.togglePinAlwaysOnTop()
-                }
-                .keyboardShortcut("p", modifiers: [.command, .option])
+                .keyboardShortcut("c", modifiers: [])
             }
         }
     }

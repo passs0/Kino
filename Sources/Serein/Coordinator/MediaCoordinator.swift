@@ -131,6 +131,7 @@ public final class MediaCoordinator: ObservableObject {
     }
 
     public func openLocalFile(url: URL) {
+        NSDocumentController.shared.noteNewRecentDocumentURL(url)
         openSource(.local(url))
     }
 

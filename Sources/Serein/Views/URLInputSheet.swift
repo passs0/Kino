@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// Minimalist modal sheet for opening online media URLs.
+/// Clean, Apple-styled modal sheet for opening online media URLs.
 public struct URLInputSheet: View {
     @ObservedObject var coordinator: MediaCoordinator
     @Environment(\.dismiss) private var dismiss
@@ -9,51 +9,70 @@ public struct URLInputSheet: View {
     @State private var inputURLString = ""
 
     public var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
             // Header
-            HStack {
-                Label("Open Online URL", systemImage: "globe")
-                    .font(.system(size: 15, weight: .bold))
+            HStack(spacing: 12) {
+                Image(systemName: "globe")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundColor(Color.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Open Online URL")
+                        .font(.headline)
+                    Text("Enter a video link, streaming URL, or HLS stream (.m3u8):")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
                 Spacer()
+            }
+
+            // Input field
+            HStack(spacing: 8) {
+                TextField("https://...", text: $inputURLString)
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.large)
+                    .onSubmit {
+                        submitURL()
+                    }
+
+                if let clipboard = NSPasteboard.general.string(forType: .string),
+                   (clipboard.hasPrefix("http://") || clipboard.hasPrefix("https://") || clipboard.hasPrefix("rtmp://")),
+                   inputURLString.isEmpty {
+                    Button("Paste") {
+                        inputURLString = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                    .controlSize(.large)
+                }
+            }
+
+            // Action Buttons
+            HStack {
+                Spacer()
+
                 Button("Cancel") {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
-            }
+                .controlSize(.regular)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Enter a direct media link, HLS playlist (.m3u8), or online video page URL:")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 8) {
-                    TextField("https://...", text: $inputURLString)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit {
-                            submitURL()
-                        }
-
-                    Button("Paste") {
-                        if let clipboard = NSPasteboard.general.string(forType: .string) {
-                            inputURLString = clipboard.trimmingCharacters(in: .whitespacesAndNewlines)
-                        }
-                    }
-                }
-            }
-
-            HStack {
-                Spacer()
-
-                Button("Open Stream") {
+                Button("Open") {
                     submitURL()
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
                 .disabled(inputURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(20)
-        .frame(width: 460)
+        .padding(24)
+        .frame(width: 480)
+        .onAppear {
+            if let clipboard = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               (clipboard.hasPrefix("http://") || clipboard.hasPrefix("https://")) {
+                inputURLString = clipboard
+            }
+        }
     }
 
     private func submitURL() {

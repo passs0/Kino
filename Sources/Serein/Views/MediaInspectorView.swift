@@ -95,14 +95,14 @@ public struct MediaInspectorView: View {
         .frame(minWidth: 320, maxWidth: 440)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(nsColor: .init(white: 0.11, alpha: 0.95)))
+                .fill(.ultraThinMaterial)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: Color.black.opacity(0.65), radius: 30, x: 0, y: 12)
+        .shadow(color: Color.black.opacity(0.50), radius: 24, x: 0, y: 10)
         .environment(\.colorScheme, .dark)
     }
 

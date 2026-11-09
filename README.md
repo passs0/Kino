@@ -82,12 +82,12 @@ Serein treats subtitles as a first-class citizen using Apple's official `MediaAc
 - **Smart ASS/SSA Sanitization:** Automatically strips cluttered custom font/color overrides from anime and community subtitles while preserving semantic screen positioning (top, bottom, and center placement).
 - **Embedded Subtitle Extraction:** Automatically extracts container-embedded tracks (`mov_text`, `srt`, `ass`, `webvtt`) on-the-fly.
 
-### 5. Apple AppKit Controls & QuickTime Optical Liquid Glass Thumb
-- **AppKit Native Controls:** Replaced custom slider widgets with Apple's first-party `NSSlider` AppKit controls for system-level precision and responsiveness.
-- **QuickTime Optical Liquid Glass Thumb:** Features true optical glass translucency, submerged core progress bar, and dynamic specular flare on scrubber drag and hover.
-- **Centered Floating Modal HUD (`⌘I`):** A centered floating diagnostic block presenting live playback strategy, active upscaling pipeline, audio codec channels, and stream probe metadata. Hugs content snugly and scrolls smoothly with high-contrast dark frosted glass (`black.opacity(0.95)`) and a 50% backdrop dimming scrim. Dismiss with `Esc` or a click outside.
-- **Media Statistics Menu Action:** Inspect real-time audio/video codecs, container bitrate, and hardware rendering stats with a single click in the Options menu.
-- **Generous Traffic Light Breathing Room:** Swizzled window layout keeps macOS window controls comfortably placed at `18pt` left and `16pt` top margin across playback and resizing.
+### 5. Apple Built-in App Aesthetics & QuickTime Floating HUD Bar
+- **Unified QuickTime Floating HUD Bar:** Replaced scattered corner capsules with Apple's iconic single floating HUD capsule (`.ultraThinMaterial`) at the bottom of the video, leaving the entire video canvas 100% clean and unobstructed.
+- **Window Aspect Ratio Locking (`window.contentAspectRatio`):** Automatically computes and animates the window to the video's natural resolution upon loading, with hardware-enforced aspect ratio locking during manual window edge dragging.
+- **Titlebar Document Proxy Icon & Synchronized Auto-Fade:** Integrated macOS document proxy icon (`window.representedURL`) in the titlebar. When mouse is inactive for 2.5s, the titlebar, traffic lights, and floating HUD bar smoothly fade out in unison for a borderless cinema canvas.
+- **Apple First-Party Controls & Recent Items:** Uses Apple's `.borderedProminent` and `.bordered` controls, `NSDocumentController` Open Recent integration, AppKit `NSSlider`, and transient center play/pause feedback.
+- **Centered Floating Modal Inspector (`⌘I`):** A centered floating diagnostic block presenting live playback strategy, active upscaling pipeline, audio codec channels, and stream probe metadata. Dismiss with `Esc` or a click outside.
 
 ### 6. macOS Control Center & Now Playing Integration
 - **System-Wide Media Hub:** Seamlessly integrates with Apple's `MediaPlayer` framework (`MPNowPlayingInfoCenter` and `MPRemoteCommandCenter`).
