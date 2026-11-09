@@ -334,6 +334,26 @@ public final class PlayerController: ObservableObject {
         NowPlayingManager.shared.clear()
     }
 
+    /// Synchronously tears down playback, saves resume position, mutes audio, and dismantles AVPlayer on quit.
+    public func shutdownOnQuit() {
+        saveCurrentPosition()
+        cleanupItemObservers()
+        seekTimeoutTask?.cancel()
+        streamSeekTask?.cancel()
+        isSeeking = false
+        if let pip = activePlayerNSView?.pipController, pip.isPictureInPictureActive {
+            pip.stopPictureInPicture()
+        }
+        player.volume = 0
+        player.isMuted = true
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        isPlaying = false
+        NowPlayingManager.shared.clear()
+        SubtitleManager.shared.reset()
+        PlayerTimeState.shared.reset()
+    }
+
     /// Smoothly fades out audio to zero before pausing and tearing down the player item to prevent CoreAudio clicks/pops on quit.
     public func shutdownAudioCleanly() async {
         if let src = MediaCoordinator.shared.currentSource {

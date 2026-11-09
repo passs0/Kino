@@ -110,6 +110,8 @@ public struct MainWindowView: View {
             coordinator.stop()
             playerController.reset()
             windowManager.transitionToWelcome()
+        } else {
+            WindowManager.shared.mainWindow?.close()
         }
     }
 

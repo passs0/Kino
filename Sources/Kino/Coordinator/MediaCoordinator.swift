@@ -889,9 +889,6 @@ public final class MediaCoordinator: ObservableObject {
         SubtitleManager.shared.reset()
         AudioManager.shared.reset()
         NowPlayingManager.shared.clear()
-        Task { @MainActor in
-            WindowManager.shared.transitionToMedia(isAudio: false)
-        }
         state = .idle
         log("Playback stopped and pipelines dismantled.", level: .info)
     }

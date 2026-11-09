@@ -7,6 +7,8 @@ public final class LocalStreamingServer: @unchecked Sendable {
     private var baseDirectory: URL?
     private let queue = DispatchQueue(label: "kino.local.http.server", qos: .userInitiated)
     private var activePort: UInt16 = 0
+    private var activeConnections: [NWConnection] = []
+    private let connectionsLock = NSLock()
 
     public init() {}
 
@@ -63,9 +65,29 @@ public final class LocalStreamingServer: @unchecked Sendable {
         listener = nil
         activePort = 0
         baseDirectory = nil
+        connectionsLock.lock()
+        let conns = activeConnections
+        activeConnections.removeAll()
+        connectionsLock.unlock()
+        for conn in conns {
+            conn.cancel()
+        }
     }
 
     private func handleConnection(_ connection: NWConnection) {
+        connectionsLock.lock()
+        activeConnections.append(connection)
+        connectionsLock.unlock()
+
+        connection.stateUpdateHandler = { [weak self, weak connection] state in
+            if state == .cancelled {
+                if let c = connection {
+                    self?.connectionsLock.lock()
+                    self?.activeConnections.removeAll(where: { $0 === c })
+                    self?.connectionsLock.unlock()
+                }
+            }
+        }
         connection.start(queue: queue)
         receiveRequest(connection)
     }

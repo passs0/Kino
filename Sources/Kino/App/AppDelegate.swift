@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+@MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: Any?
 
@@ -195,18 +196,17 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        Task { @MainActor in
-            await PlayerController.shared.shutdownAudioCleanly()
-            MediaCoordinator.shared.stop()
-            sender.reply(toApplicationShouldTerminate: true)
-        }
-        return .terminateLater
+        performShutdown()
+        return .terminateNow
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
-        PlayerController.shared.player.volume = 0
-        PlayerController.shared.player.isMuted = true
-        PlayerController.shared.player.pause()
+        performShutdown()
+    }
+
+    private func performShutdown() {
+        PlayerController.shared.shutdownOnQuit()
+        SleepPreventionManager.shared.setSleepDisabled(false)
         MediaCoordinator.shared.stop()
     }
 }

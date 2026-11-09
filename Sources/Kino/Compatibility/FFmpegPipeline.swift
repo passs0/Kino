@@ -350,11 +350,19 @@ public final class FFmpegPipeline: @unchecked Sendable {
         syncQueue.sync {
             if let proc = activeProcess, proc.isRunning {
                 proc.terminate()
+                let pid = proc.processIdentifier
+                if pid > 0 {
+                    kill(pid, SIGKILL)
+                }
             }
             activeProcess = nil
 
             if let yt = activeYtDlpProcess, yt.isRunning {
                 yt.terminate()
+                let pid = yt.processIdentifier
+                if pid > 0 {
+                    kill(pid, SIGKILL)
+                }
             }
             activeYtDlpProcess = nil
         }
