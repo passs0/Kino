@@ -210,6 +210,8 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.contentView?.layer?.cornerRadius = isFS ? 0 : 26
             window.contentView?.layer?.cornerCurve = .continuous
             window.contentView?.layer?.masksToBounds = !isFS
+
+            TrafficLightManager.shared.repositionTrafficLights(for: window)
         }
     }
 }

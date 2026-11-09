@@ -25,6 +25,7 @@ public final class WindowManager: ObservableObject {
     /// Registers the main application window.
     public func register(window: NSWindow) {
         self.mainWindow = window
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenPrimary]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
         window.title = "Serein"
@@ -105,9 +106,8 @@ public final class WindowManager: ObservableObject {
         let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let targetW = Self.welcomeDefaultSize.width
         let targetH = Self.welcomeDefaultSize.height
-        let current = window.frame
-        let newX = max(screen.minX + 20, current.origin.x + (current.width - targetW) / 2)
-        let newY = max(screen.minY + 20, current.origin.y + (current.height - targetH) / 2)
+        let newX = screen.minX + (screen.width - targetW) / 2
+        let newY = screen.minY + (screen.height - targetH) / 2
 
         let targetRect = NSRect(x: newX, y: newY, width: targetW, height: targetH)
         window.setFrame(targetRect, display: true, animate: animated)
