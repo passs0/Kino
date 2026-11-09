@@ -349,9 +349,10 @@ public struct VideoPlayerView: View {
             // 2. Timeline Scrubber
             HStack(spacing: 8) {
                 Text(formatTime(currentTimeValue))
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(.system(size: 11.5, weight: .medium))
+                    .monospacedDigit()
                     .foregroundColor(.white.opacity(0.85))
-                    .frame(minWidth: 38, alignment: .leading)
+                    .frame(minWidth: 36, alignment: .leading)
 
                 NativeSlider(
                     value: Binding(
@@ -384,9 +385,10 @@ public struct VideoPlayerView: View {
                 .frame(height: 16)
 
                 Text(formatRemainingTime())
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(.system(size: 11.5, weight: .medium))
+                    .monospacedDigit()
                     .foregroundColor(.white.opacity(0.85))
-                    .frame(minWidth: 44, alignment: .trailing)
+                    .frame(minWidth: 42, alignment: .trailing)
             }
 
             hudDivider
@@ -674,9 +676,10 @@ public struct VideoPlayerView: View {
                 // Scrubber
                 HStack(spacing: 8) {
                     Text(formatTime(currentTimeValue))
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .monospacedDigit()
                         .foregroundColor(.white.opacity(0.80))
-                        .frame(minWidth: 38, alignment: .leading)
+                        .frame(minWidth: 36, alignment: .leading)
 
                     NativeSlider(
                         value: Binding(
@@ -708,9 +711,10 @@ public struct VideoPlayerView: View {
                     .frame(height: 16)
 
                     Text(formatRemainingTime())
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .monospacedDigit()
                         .foregroundColor(.white.opacity(0.80))
-                        .frame(minWidth: 44, alignment: .trailing)
+                        .frame(minWidth: 42, alignment: .trailing)
                 }
                 .padding(.horizontal, 24)
 
