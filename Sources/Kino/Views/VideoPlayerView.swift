@@ -317,19 +317,19 @@ public struct VideoPlayerView: View {
             Button(action: action) {
                 Image(systemName: iconName)
                     .font(.system(size: size, weight: weight))
-                    .foregroundColor(isSelected ? .cyan : .white)
+                    .foregroundColor(isSelected ? .cyan : (isHovered ? .white : .white.opacity(0.82)))
                     .offset(x: xOffset)
                     .frame(width: frameSize, height: frameSize)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(isHovered ? 0.16 : 0.0))
-                    )
-                    .contentShape(Circle())
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .contentShape(Circle())
+            .contentShape(Rectangle())
             .help(helpText)
-            .onHover { isHovered = $0 }
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.12)) {
+                    isHovered = hovering
+                }
+            }
         }
     }
 
