@@ -43,12 +43,16 @@ extension NSWindow {
            safeFrame.size.width.isNaN || safeFrame.size.width.isInfinite ||
            safeFrame.size.height.isNaN || safeFrame.size.height.isInfinite ||
            safeFrame.size.width < 10 || safeFrame.size.height < 10 {
-            let screen = self.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-            let defaultW: CGFloat = 900
-            let defaultH: CGFloat = 506
-            let x = screen.minX + max(0, (screen.width - defaultW) / 2)
-            let y = screen.minY + max(0, (screen.height - defaultH) / 2)
-            safeFrame = NSRect(x: x, y: y, width: defaultW, height: defaultH)
+            if let pre = WindowManager.shared.preFullScreenFrame, pre.width >= 100, pre.height >= 100 {
+                safeFrame = pre
+            } else {
+                let screen = self.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+                let defaultW: CGFloat = 900
+                let defaultH: CGFloat = 506
+                let x = screen.minX + max(0, (screen.width - defaultW) / 2)
+                let y = screen.minY + max(0, (screen.height - defaultH) / 2)
+                safeFrame = NSRect(x: x, y: y, width: defaultW, height: defaultH)
+            }
             NSLog("🛡️ [Kino] Intercepted malformed window frame in _reallySetFrame: sanitized to %@", NSStringFromRect(safeFrame))
         }
         self.kino_safeReallySetFrame(safeFrame)

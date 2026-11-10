@@ -65,7 +65,17 @@ private struct PiPSubtitleOverlayView: View {
 
 /// Custom AppKit view combining AVPlayerLayer with macOS drag-and-drop support and native PiP.
 public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegate {
-    public let playerLayer = AVPlayerLayer()
+    public var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+
+    public override func makeBackingLayer() -> CALayer {
+        let pl = AVPlayerLayer()
+        pl.backgroundColor = NSColor.black.cgColor
+        pl.videoGravity = PlayerController.shared.isLetterboxed ? .resizeAspect : .resizeAspectFill
+        return pl
+    }
+
     public var pipController: AVPictureInPictureController?
     public var onFileDropped: ((URL) -> Void)?
     private var pipSubtitleHostingView: NSView?
@@ -82,16 +92,7 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
 
     private func setup() {
         wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-        layer?.cornerRadius = 26
-        layer?.cornerCurve = .continuous
-        layer?.masksToBounds = true
-
-        playerLayer.cornerRadius = 26
-        playerLayer.cornerCurve = .continuous
-        playerLayer.masksToBounds = true
-        playerLayer.videoGravity = PlayerController.shared.isLetterboxed ? .resizeAspect : .resizeAspectFill
-        layer?.addSublayer(playerLayer)
+        autoresizingMask = [.width, .height]
 
         if AVPictureInPictureController.isPictureInPictureSupported() {
             pipController = AVPictureInPictureController(playerLayer: playerLayer)
@@ -105,16 +106,10 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
 
     public override func layout() {
         super.layout()
-        playerLayer.frame = bounds
-        updateCornerRadius()
     }
 
     public func updateCornerRadius() {
-        guard !WindowManager.shared.isTransitioningFullScreen else { return }
-        let isFS = window?.styleMask.contains(.fullScreen) ?? false
-        let radius: CGFloat = isFS ? 0 : 26
-        playerLayer.cornerRadius = radius
-        layer?.cornerRadius = radius
+        // Corner radius is managed natively by macOS NSWindow boundaries.
     }
 
     public override func viewDidMoveToWindow() {
@@ -133,16 +128,14 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .visible
         PlayerController.shared.activePlayerNSView = self
-        updateCornerRadius()
 
-        NotificationCenter.default.removeObserver(self, name: NSWindow.didEnterFullScreenNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: NSWindow.didExitFullScreenNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleFullScreenChange), name: NSWindow.didEnterFullScreenNotification, object: win)
         NotificationCenter.default.addObserver(self, selector: #selector(handleFullScreenChange), name: NSWindow.didExitFullScreenNotification, object: win)
     }
 
     @objc private func handleFullScreenChange() {
-        updateCornerRadius()
+        needsLayout = true
+        layer?.setNeedsLayout()
     }
 
     @discardableResult

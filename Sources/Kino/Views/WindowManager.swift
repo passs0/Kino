@@ -15,6 +15,7 @@ public final class WindowManager: NSObject, ObservableObject {
     @Published public private(set) var isTransitioningFullScreen: Bool = false
 
     public weak var mainWindow: NSWindow?
+    public private(set) var preFullScreenFrame: NSRect?
     private var preMediaFrame: NSRect?
     private var currentNaturalSize: CGSize?
     private var fullScreenExitObserver: NSObjectProtocol?
@@ -63,6 +64,9 @@ public final class WindowManager: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = true
+                if let win = self.mainWindow, !win.styleMask.contains(.fullScreen), win.frame.width >= 100 {
+                    self.preFullScreenFrame = win.frame
+                }
                 self.mainWindow?.contentAspectRatio = .zero
             }
         }
@@ -101,8 +105,13 @@ public final class WindowManager: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = false
+                
+                // Immediately trigger clean layout recalculation
+                self.mainWindow?.contentView?.needsLayout = true
+                self.mainWindow?.contentView?.layoutSubtreeIfNeeded()
+
                 // Restore aspect ratio with safety delay after AppKit transition finishes completely
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                     MainActor.assumeIsolated {
                         guard let win = self.mainWindow, !win.styleMask.contains(.fullScreen), !self.isTransitioningFullScreen else { return }
                         if let natSize = self.currentNaturalSize, natSize.width > 0, natSize.height > 0 {
