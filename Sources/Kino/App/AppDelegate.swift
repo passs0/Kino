@@ -6,6 +6,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: Any?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        NSSetUncaughtExceptionHandler { exception in
+            NSLog("🔥 UNCAUGHT EXCEPTION: %@ - %@", exception.name.rawValue, exception.reason ?? "no reason")
+            NSLog("🔥 CALL STACK: %@", exception.callStackSymbols.joined(separator: "\n"))
+        }
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
         TrafficLightManager.shared.install()
@@ -46,8 +50,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                         }
                     }
                     return nil
-                } else if let win = NSApp.keyWindow, win.styleMask.contains(.fullScreen) {
-                    win.toggleFullScreen(nil)
+                } else if let win = WindowManager.shared.mainWindow, win.styleMask.contains(.fullScreen) {
+                    WindowManager.shared.toggleFullScreen()
                     return nil
                 }
             }
@@ -119,7 +123,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             // F / f (keyCode 3 or char "f"): Toggle Full Screen
             if keyCode == 3 || chars == "f" {
                 Task { @MainActor in
-                    NSApp.keyWindow?.toggleFullScreen(nil)
+                    WindowManager.shared.toggleFullScreen()
                 }
                 return nil
             }
@@ -156,11 +160,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let first = filenames.first else { return }
         let url = URL(fileURLWithPath: first)
         Task { @MainActor in
-            if application.windows.count > 1, let main = WindowManager.shared.mainWindow {
-                for win in application.windows where win !== main {
-                    win.close()
-                }
-            }
             MediaCoordinator.shared.openLocalFile(url: url)
             WindowManager.shared.mainWindow?.makeKeyAndOrderFront(nil)
         }
@@ -170,11 +169,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func application(_ sender: NSApplication, openFile filename: String) -> Bool {
         let url = URL(fileURLWithPath: filename)
         Task { @MainActor in
-            if sender.windows.count > 1, let main = WindowManager.shared.mainWindow {
-                for win in sender.windows where win !== main {
-                    win.close()
-                }
-            }
             MediaCoordinator.shared.openLocalFile(url: url)
             WindowManager.shared.mainWindow?.makeKeyAndOrderFront(nil)
         }
@@ -202,7 +196,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
     }
 
     public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

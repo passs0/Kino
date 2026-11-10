@@ -233,8 +233,6 @@ private struct WindowGlassAccessor: NSViewRepresentable {
                     }
                 }
             }
-
-            TrafficLightManager.shared.repositionTrafficLights(for: window)
         }
     }
 }

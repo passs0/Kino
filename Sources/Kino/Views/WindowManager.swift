@@ -27,9 +27,10 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
 
     /// Registers the main application window.
     public func register(window: NSWindow) {
+        if self.mainWindow === window { return }
         self.mainWindow = window
         window.delegate = self
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenPrimary]
+        window.collectionBehavior = [.fullScreenPrimary, .managed]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
         window.title = "Kino"
@@ -63,7 +64,7 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
             // Lock content aspect ratio to prevent letterbox bars when dragging window edges!
             window.contentAspectRatio = natSize
             window.minSize = Self.videoMinSize
-            window.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+            window.maxSize = CGSize(width: 10000, height: 10000)
 
             let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
             let maxW = screen.width * 0.82
@@ -126,7 +127,7 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
         currentNaturalSize = nil
         window.contentAspectRatio = .zero
         window.minSize = CGSize(width: 440, height: 320)
-        window.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        window.maxSize = CGSize(width: 10000, height: 10000)
         window.representedURL = nil
         window.title = "Kino"
         updateTitlebarVisibility(visible: true, animated: animated)
@@ -215,6 +216,17 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
         isPinnedAlwaysOnTop.toggle()
         guard let window = mainWindow else { return }
         window.level = isPinnedAlwaysOnTop ? .floating : .normal
+        if isPinnedAlwaysOnTop {
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        } else {
+            window.collectionBehavior = [.fullScreenPrimary, .managed]
+        }
+    }
+
+    /// Safely toggles Full Screen on the primary player window without risking targeting auxiliary toolbars.
+    public func toggleFullScreen() {
+        guard let window = mainWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.className != "NSTitlebarToolbarWindow" && $0.canBecomeMain }) else { return }
+        window.toggleFullScreen(nil)
     }
 }
 
@@ -225,6 +237,7 @@ extension WindowManager {
             NotificationCenter.default.post(name: .closeMediaNotification, object: nil)
             return false
         }
+        NSApp.terminate(nil)
         return true
     }
 
@@ -233,5 +246,31 @@ extension WindowManager {
         SleepPreventionManager.shared.setSleepDisabled(false)
         SubtitleManager.shared.reset()
         MediaCoordinator.shared.stop()
+    }
+
+    public func windowWillEnterFullScreen(_ notification: Notification) {
+        NSLog("🎬 WindowManager: windowWillEnterFullScreen")
+        // Clear contentAspectRatio so AppKit doesn't enforce rigid aspect ratios during full screen
+        mainWindow?.contentAspectRatio = .zero
+    }
+
+    public func windowDidEnterFullScreen(_ notification: Notification) {
+        NSLog("🎬 WindowManager: windowDidEnterFullScreen")
+        mainWindow?.contentAspectRatio = .zero
+    }
+
+    public func windowWillExitFullScreen(_ notification: Notification) {
+        NSLog("🎬 WindowManager: windowWillExitFullScreen")
+        // Keep contentAspectRatio at zero during the exit animation to prevent AppKit window server deadlocks/freezes!
+        mainWindow?.contentAspectRatio = .zero
+    }
+
+    public func windowDidExitFullScreen(_ notification: Notification) {
+        NSLog("🎬 WindowManager: windowDidExitFullScreen")
+        guard let window = mainWindow else { return }
+        // Restore aspect ratio after the transition animation finishes
+        if let natSize = currentNaturalSize, natSize.width > 0, natSize.height > 0 {
+            window.contentAspectRatio = natSize
+        }
     }
 }

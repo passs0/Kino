@@ -633,14 +633,14 @@ public struct VideoPlayerView: View {
     }
 
     private func toggleFullscreen() {
-        NSApp.keyWindow?.toggleFullScreen(nil)
+        WindowManager.shared.toggleFullScreen()
         registerUserActivity()
     }
 
     private func quitVideoAndReturnToWelcome() {
         playerController.saveCurrentPosition()
         playerController.pause()
-        if isFullScreen, let win = NSApp.keyWindow ?? NSApp.windows.first {
+        if isFullScreen, let win = WindowManager.shared.mainWindow {
             win.toggleFullScreen(nil)
         }
         coordinator.stop()

@@ -50,9 +50,11 @@ public final class TrafficLightManager: @unchecked Sendable {
             object: nil,
             queue: .main
         ) { notif in
-            MainActor.assumeIsolated {
-                if let window = notif.object as? NSWindow {
-                    TrafficLightManager.shared.repositionTrafficLights(for: window)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    if let window = notif.object as? NSWindow {
+                        TrafficLightManager.shared.repositionTrafficLights(for: window)
+                    }
                 }
             }
         }

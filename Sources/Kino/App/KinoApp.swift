@@ -88,7 +88,7 @@ public struct KinoApp: App {
                 Divider()
 
                 Button("Enter Full Screen") {
-                    NSApp.keyWindow?.toggleFullScreen(nil)
+                    WindowManager.shared.toggleFullScreen()
                 }
                 .keyboardShortcut("f", modifiers: [.control, .command])
 
