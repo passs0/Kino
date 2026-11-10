@@ -597,16 +597,22 @@ public final class MediaCoordinator: ObservableObject {
                 self.state = .ready(strategy)
                 log("✨ Live online remux stream connected to AVPlayer.", level: .success)
             } catch {
-                log("⚠️ Remux pipeline note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
-                do {
-                    state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
-                    let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
-                    self.activePlayableURL = streamURL
-                    self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
-                    log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
-                } catch {
-                    log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
-                    state = .error("Stream pipeline failed: \(error.localizedDescription)")
+                let isNativeVideo = probe?.primaryVideo?.videoCodec?.isNativelyDecodable ?? true
+                if isNativeVideo {
+                    log("❌ Remux stream failed: \(error.localizedDescription)", level: .error)
+                    state = .error("Stream remux failed: \(error.localizedDescription)")
+                } else {
+                    log("⚠️ Remux pipeline note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
+                    do {
+                        state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
+                        let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                        self.activePlayableURL = streamURL
+                        self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
+                        log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
+                    } catch {
+                        log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
+                        state = .error("Stream pipeline failed: \(error.localizedDescription)")
+                    }
                 }
             }
 
@@ -619,16 +625,22 @@ public final class MediaCoordinator: ObservableObject {
                 self.state = .ready(strategy)
                 log("✨ Online audio transcode stream connected to AVPlayer.", level: .success)
             } catch {
-                log("⚠️ Audio transcode note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
-                do {
-                    state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
-                    let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
-                    self.activePlayableURL = streamURL
-                    self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
-                    log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
-                } catch {
-                    log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
-                    state = .error("Stream pipeline failed: \(error.localizedDescription)")
+                let isNativeVideo = probe?.primaryVideo?.videoCodec?.isNativelyDecodable ?? true
+                if isNativeVideo {
+                    log("❌ Audio transcode stream failed: \(error.localizedDescription)", level: .error)
+                    state = .error("Stream preparation failed: \(error.localizedDescription)")
+                } else {
+                    log("⚠️ Audio transcode note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
+                    do {
+                        state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
+                        let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                        self.activePlayableURL = streamURL
+                        self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
+                        log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
+                    } catch {
+                        log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
+                        state = .error("Stream pipeline failed: \(error.localizedDescription)")
+                    }
                 }
             }
 

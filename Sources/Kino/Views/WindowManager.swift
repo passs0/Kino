@@ -5,16 +5,20 @@ import Combine
 /// Manages window presentation styles, smooth sizing to video natural resolution,
 /// aspect-ratio preservation, titlebar proxy icons, and Desktop Always-On-Top floating behavior.
 @MainActor
-public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
+public final class WindowManager: NSObject, ObservableObject {
     public static let shared = WindowManager()
 
     /// Indicates whether the window is pinned always on top of other desktop windows.
     @Published public private(set) var isPinnedAlwaysOnTop: Bool = false
 
+    /// Tracks active Full Screen transitions to prevent AppKit animation deadlocks.
+    @Published public private(set) var isTransitioningFullScreen: Bool = false
+
     public weak var mainWindow: NSWindow?
     private var preMediaFrame: NSRect?
     private var currentNaturalSize: CGSize?
     private var fullScreenExitObserver: NSObjectProtocol?
+    private var windowNotificationObservers: [NSObjectProtocol] = []
 
     public static let welcomeDefaultSize = CGSize(width: 580, height: 380)
     public static let audioDefaultSize = CGSize(width: 440, height: 500)
@@ -25,11 +29,15 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
         super.init()
     }
 
-    /// Registers the main application window.
+    /// Registers the main application window without hijacking SwiftUI's internal delegate.
     public func register(window: NSWindow) {
         if self.mainWindow === window { return }
         self.mainWindow = window
-        window.delegate = self
+
+        // DO NOT override window.delegate! SwiftUI.AppKitWindow relies on its internal WindowDelegate
+        // for full screen enter/exit frame restoration and scene management.
+        setupWindowNotifications(for: window)
+
         window.collectionBehavior = [.fullScreenPrimary, .managed]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
@@ -37,6 +45,88 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
         if MediaCoordinator.shared.state == .idle {
             transitionToWelcome(animated: false)
         }
+    }
+
+    private func setupWindowNotifications(for window: NSWindow) {
+        for obs in windowNotificationObservers {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        windowNotificationObservers.removeAll()
+
+        let center = NotificationCenter.default
+
+        let willEnter = center.addObserver(
+            forName: NSWindow.willEnterFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.isTransitioningFullScreen = true
+                self.mainWindow?.contentAspectRatio = .zero
+            }
+        }
+
+        let didEnter = center.addObserver(
+            forName: NSWindow.didEnterFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.isTransitioningFullScreen = false
+                self.mainWindow?.contentAspectRatio = .zero
+            }
+        }
+
+        let willExit = center.addObserver(
+            forName: NSWindow.willExitFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.isTransitioningFullScreen = true
+                // Keep contentAspectRatio at zero throughout transition so AppKit's
+                // _NSExitFullScreenTransitionController can restore preFullScreenFrame without constraint conflicts!
+                self.mainWindow?.contentAspectRatio = .zero
+            }
+        }
+
+        let didExit = center.addObserver(
+            forName: NSWindow.didExitFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.isTransitioningFullScreen = false
+                // Restore aspect ratio with safety delay after AppKit transition finishes completely
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    MainActor.assumeIsolated {
+                        guard let win = self.mainWindow, !win.styleMask.contains(.fullScreen), !self.isTransitioningFullScreen else { return }
+                        if let natSize = self.currentNaturalSize, natSize.width > 0, natSize.height > 0 {
+                            win.contentAspectRatio = natSize
+                        }
+                    }
+                }
+            }
+        }
+
+        let willClose = center.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                PlayerController.shared.shutdownOnQuit()
+                SleepPreventionManager.shared.setSleepDisabled(false)
+                SubtitleManager.shared.reset()
+                MediaCoordinator.shared.stop()
+            }
+        }
+
+        windowNotificationObservers = [willEnter, didEnter, willExit, didExit, willClose]
     }
 
     /// Adapts window size smoothly based on whether media is pure audio, video, or idle.
@@ -225,52 +315,8 @@ public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
 
     /// Safely toggles Full Screen on the primary player window without risking targeting auxiliary toolbars.
     public func toggleFullScreen() {
+        guard !isTransitioningFullScreen else { return }
         guard let window = mainWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.className != "NSTitlebarToolbarWindow" && $0.canBecomeMain }) else { return }
         window.toggleFullScreen(nil)
-    }
-}
-
-// MARK: - NSWindowDelegate
-extension WindowManager {
-    public func windowShouldClose(_ sender: NSWindow) -> Bool {
-        if MediaCoordinator.shared.state != .idle {
-            NotificationCenter.default.post(name: .closeMediaNotification, object: nil)
-            return false
-        }
-        NSApp.terminate(nil)
-        return true
-    }
-
-    public func windowWillClose(_ notification: Notification) {
-        PlayerController.shared.shutdownOnQuit()
-        SleepPreventionManager.shared.setSleepDisabled(false)
-        SubtitleManager.shared.reset()
-        MediaCoordinator.shared.stop()
-    }
-
-    public func windowWillEnterFullScreen(_ notification: Notification) {
-        NSLog("🎬 WindowManager: windowWillEnterFullScreen")
-        // Clear contentAspectRatio so AppKit doesn't enforce rigid aspect ratios during full screen
-        mainWindow?.contentAspectRatio = .zero
-    }
-
-    public func windowDidEnterFullScreen(_ notification: Notification) {
-        NSLog("🎬 WindowManager: windowDidEnterFullScreen")
-        mainWindow?.contentAspectRatio = .zero
-    }
-
-    public func windowWillExitFullScreen(_ notification: Notification) {
-        NSLog("🎬 WindowManager: windowWillExitFullScreen")
-        // Keep contentAspectRatio at zero during the exit animation to prevent AppKit window server deadlocks/freezes!
-        mainWindow?.contentAspectRatio = .zero
-    }
-
-    public func windowDidExitFullScreen(_ notification: Notification) {
-        NSLog("🎬 WindowManager: windowDidExitFullScreen")
-        guard let window = mainWindow else { return }
-        // Restore aspect ratio after the transition animation finishes
-        if let natSize = currentNaturalSize, natSize.width > 0, natSize.height > 0 {
-            window.contentAspectRatio = natSize
-        }
     }
 }

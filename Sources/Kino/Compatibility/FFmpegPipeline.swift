@@ -29,7 +29,7 @@ public enum FFmpegPipelineError: LocalizedError, Sendable {
         case .pipelineLaunchFailed(let msg):
             return "Failed to launch FFmpeg pipeline: \(msg)"
         case .timedOutWaitingForPlaylist:
-            return "Timed out waiting for initial HLS stream segments to be produced."
+            return "Stream preparation timed out while waiting for initial media segments."
         }
     }
 }
@@ -104,8 +104,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-rw_timeout", "15000000",
                 "-recv_buffer_size", "16777216",
                 "-tcp_nodelay", "1",
-                "-analyzeduration", "10000000",
-                "-probesize", "10000000"
+                "-analyzeduration", "2000000",
+                "-probesize", "2000000"
             ])
         }
 
@@ -122,9 +122,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "copy",
+                "-tag:v", "hvc1",
                 "-c:a", "aac",
                 "-b:a", "384k",
-                "-ar", "48000"
+                "-ar", "48000",
+                "-max_muxing_queue_size", "4096",
+                "-avoid_negative_ts", "make_zero"
             ])
         case .audioTranscodeOnly:
             // Copy native video stream, transcode audio to studio-grade high-fidelity AAC preserving multichannel audio
@@ -132,9 +135,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-map", "0:v:0?",
                 "-map", audioMap,
                 "-c:v", "copy",
+                "-tag:v", "hvc1",
                 "-c:a", "aac",
                 "-b:a", "384k",
-                "-ar", "48000"
+                "-ar", "48000",
+                "-max_muxing_queue_size", "4096",
+                "-avoid_negative_ts", "make_zero"
             ])
         case .fullHardwareTranscode:
             // Hardware accelerated Apple Silicon VideoToolbox encoding.
@@ -147,7 +153,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-b:v", "6000k",
                 "-c:a", "aac",
                 "-b:a", "640k",
-                "-ar", "48000"
+                "-ar", "48000",
+                "-max_muxing_queue_size", "4096"
             ])
         }
 
@@ -423,6 +430,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
                    (content.contains(".m4s") || content.contains(".ts")) {
                     return true
                 }
+            }
+            if !isRunning {
+                // Pipeline exited prematurely; do not hang the full timeout
+                return false
             }
             try? await Task.sleep(nanoseconds: 80_000_000) // 80ms check
         }

@@ -110,12 +110,11 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
     }
 
     public func updateCornerRadius() {
+        guard !WindowManager.shared.isTransitioningFullScreen else { return }
         let isFS = window?.styleMask.contains(.fullScreen) ?? false
         let radius: CGFloat = isFS ? 0 : 26
         playerLayer.cornerRadius = radius
         layer?.cornerRadius = radius
-        playerLayer.masksToBounds = !isFS
-        layer?.masksToBounds = !isFS
     }
 
     public override func viewDidMoveToWindow() {

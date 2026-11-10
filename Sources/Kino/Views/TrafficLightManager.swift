@@ -32,25 +32,13 @@ public final class TrafficLightManager: @unchecked Sendable {
             swizzleLayout(on: titlebarClass)
         }
 
-        // Listen for window resize and fullscreen transitions to ensure immediate alignment
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didResizeNotification,
-            object: nil,
-            queue: .main
-        ) { notif in
-            MainActor.assumeIsolated {
-                if let window = notif.object as? NSWindow {
-                    TrafficLightManager.shared.repositionTrafficLights(for: window)
-                }
-            }
-        }
-
+        // Align buttons only after window has fully finished returning to windowed mode
         NotificationCenter.default.addObserver(
             forName: NSWindow.didExitFullScreenNotification,
             object: nil,
             queue: .main
         ) { notif in
-            DispatchQueue.main.async {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 MainActor.assumeIsolated {
                     if let window = notif.object as? NSWindow {
                         TrafficLightManager.shared.repositionTrafficLights(for: window)
@@ -62,10 +50,9 @@ public final class TrafficLightManager: @unchecked Sendable {
 
     @MainActor
     public func repositionTrafficLights(for window: NSWindow) {
-        guard !window.styleMask.contains(.fullScreen) else { return }
+        guard !window.styleMask.contains(.fullScreen), !WindowManager.shared.isTransitioningFullScreen else { return }
         guard let titlebar = window.standardWindowButton(.closeButton)?.superview else { return }
         titlebar.needsLayout = true
-        titlebar.layoutSubtreeIfNeeded()
     }
 
     private func swizzleLayout(on titlebarClass: AnyClass) {
@@ -85,7 +72,9 @@ extension NSView {
     @objc func kino_titlebarLayout() {
         self.kino_titlebarLayout()
 
-        guard let win = self.window, !win.styleMask.contains(.fullScreen) else { return }
+        guard let win = self.window,
+              !win.styleMask.contains(.fullScreen),
+              !WindowManager.shared.isTransitioningFullScreen else { return }
 
         // Clear any default background or visual effect views so the titlebar blends 100% seamlessly
         self.wantsLayer = true

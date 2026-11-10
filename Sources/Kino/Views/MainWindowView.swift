@@ -211,15 +211,16 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.styleMask.insert([.fullSizeContentView])
             window.isMovableByWindowBackground = true
 
-            // macOS 26 corner radius physics
+            // Do not alter layers or titlebars during Full Screen transitions
+            guard !WindowManager.shared.isTransitioningFullScreen else { return }
+
             let isFS = window.styleMask.contains(.fullScreen)
             window.contentView?.wantsLayer = true
             window.contentView?.layer?.cornerRadius = isFS ? 0 : 26
             window.contentView?.layer?.cornerCurve = .continuous
-            window.contentView?.layer?.masksToBounds = !isFS
 
             // Clear any AppKit titlebar materials or visual effect backdrops so the window is 100% unified
-            if let titlebar = window.standardWindowButton(.closeButton)?.superview {
+            if !isFS, let titlebar = window.standardWindowButton(.closeButton)?.superview {
                 titlebar.wantsLayer = true
                 titlebar.layer?.backgroundColor = NSColor.clear.cgColor
                 if let container = titlebar.superview {
