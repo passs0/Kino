@@ -56,7 +56,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
     }
 
     /// Prepares and starts the FFmpeg streaming session, returning the local playback URL.
-    public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil) async throws -> URL {
+    public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil, isHEVC: Bool = false) async throws -> URL {
         stop()
 
         guard let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else {
@@ -121,8 +121,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
-                "-c:v", "copy",
-                "-tag:v", "hvc1",
+                "-c:v", "copy"
+            ])
+            if isHEVC {
+                args.append(contentsOf: ["-tag:v", "hvc1"])
+            }
+            args.append(contentsOf: [
                 "-c:a", "aac",
                 "-b:a", "384k",
                 "-ar", "48000",
@@ -134,8 +138,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             args.append(contentsOf: [
                 "-map", "0:v:0?",
                 "-map", audioMap,
-                "-c:v", "copy",
-                "-tag:v", "hvc1",
+                "-c:v", "copy"
+            ])
+            if isHEVC {
+                args.append(contentsOf: ["-tag:v", "hvc1"])
+            }
+            args.append(contentsOf: [
                 "-c:a", "aac",
                 "-b:a", "384k",
                 "-ar", "48000",
@@ -423,9 +431,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
     private func waitForFirstSegment(playlistURL: URL, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         let fm = FileManager.default
+        let initURL = playlistURL.deletingLastPathComponent().appendingPathComponent("init.mp4")
 
         while Date() < deadline {
-            if fm.fileExists(atPath: playlistURL.path) {
+            if fm.fileExists(atPath: playlistURL.path) && fm.fileExists(atPath: initURL.path) {
                 if let content = try? String(contentsOf: playlistURL, encoding: .utf8),
                    (content.contains(".m4s") || content.contains(".ts")) {
                     return true

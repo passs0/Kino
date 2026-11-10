@@ -322,7 +322,8 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Fast Remuxing into local stream...")
             log("⚙️ Starting zero-reencode HLS remux pipeline...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex)
+                let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Live remux stream connected to AVPlayer.", level: .success)
@@ -338,7 +339,8 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Transcoding audio track to AAC...")
             log("⚙️ Starting video-copy + AAC audio transcode pipeline...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex)
+                let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Audio transcode stream connected to AVPlayer.", level: .success)
@@ -592,7 +594,8 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Remuxing online container into local stream...")
             log("⚙️ Starting zero-reencode HLS remux pipeline for online stream...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex)
+                let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Live online remux stream connected to AVPlayer.", level: .success)
@@ -620,7 +623,8 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Transcoding online audio track to AAC...")
             log("⚙️ Starting online video-copy + AAC transcode pipeline...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex)
+                let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
+                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
                 self.activePlayableURL = streamURL
                 self.state = .ready(strategy)
                 log("✨ Online audio transcode stream connected to AVPlayer.", level: .success)
@@ -677,11 +681,13 @@ public final class MediaCoordinator: ObservableObject {
                 default:
                     mode = .remuxCopy
                 }
+                let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
                 let streamURL = try await ffmpegPipeline.startSession(
                     inputURL: fileURL,
                     mode: mode,
                     audioStreamIndex: track.streamIndex,
-                    seekTime: currentSec
+                    seekTime: currentSec,
+                    isHEVC: isHEVC
                 )
                 self.activePlayableURL = streamURL
                 log("✨ Audio track switched successfully.", level: .success)
@@ -690,11 +696,13 @@ public final class MediaCoordinator: ObservableObject {
             }
         case .online(let webURL, _):
             do {
+                let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
                 let streamURL = try await ffmpegPipeline.startSession(
                     inputURL: webURL,
                     mode: .remuxCopy,
                     audioStreamIndex: track.streamIndex,
-                    seekTime: currentSec
+                    seekTime: currentSec,
+                    isHEVC: isHEVC
                 )
                 self.activePlayableURL = streamURL
                 log("✨ Online audio track switched successfully.", level: .success)
@@ -728,11 +736,13 @@ public final class MediaCoordinator: ObservableObject {
                 default:
                     mode = .remuxCopy
                 }
+                let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
                 let streamURL = try await ffmpegPipeline.startSession(
                     inputURL: fileURL,
                     mode: mode,
                     audioStreamIndex: selectedAudioIndex,
-                    seekTime: targetSeconds
+                    seekTime: targetSeconds,
+                    isHEVC: isHEVC
                 )
                 self.activePlayableURL = streamURL
                 PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
@@ -759,11 +769,13 @@ public final class MediaCoordinator: ObservableObject {
                     default:
                         mode = .remuxCopy
                     }
+                    let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
                     let streamURL = try await ffmpegPipeline.startSession(
                         inputURL: webURL,
                         mode: mode,
                         audioStreamIndex: selectedAudioIndex,
-                        seekTime: targetSeconds
+                        seekTime: targetSeconds,
+                        isHEVC: isHEVC
                     )
                     self.activePlayableURL = streamURL
                     PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)

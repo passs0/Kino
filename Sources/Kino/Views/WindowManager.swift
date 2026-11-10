@@ -102,7 +102,7 @@ public final class WindowManager: NSObject, ObservableObject {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = false
                 // Restore aspect ratio with safety delay after AppKit transition finishes completely
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) {
                     MainActor.assumeIsolated {
                         guard let win = self.mainWindow, !win.styleMask.contains(.fullScreen), !self.isTransitioningFullScreen else { return }
                         if let natSize = self.currentNaturalSize, natSize.width > 0, natSize.height > 0 {

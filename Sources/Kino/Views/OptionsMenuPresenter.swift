@@ -315,9 +315,10 @@ public final class OptionsMenuPresenter: NSObject {
             NSMenu.popUpContextMenu(menu, with: ev, for: targetView)
         } else if let win = NSApp.keyWindow ?? NSApp.windows.first, let cv = view ?? win.contentView {
             let mousePt = cv.convert(win.mouseLocationOutsideOfEventStream, from: nil)
-            // Position comfortably above HUD pill so bottom shadow doesn't overlap the ellipsis button
-            let pt = NSPoint(x: mousePt.x, y: max(mousePt.y + 36, 96))
-            menu.popUp(positioning: nil, at: pt, in: cv)
+            // Anchor menu using its last item so it expands cleanly upward into the media canvas,
+            // maintaining a generous 26pt clearance above the HUD bar to ensure drop shadows never overlap the ellipsis button
+            let pt = NSPoint(x: mousePt.x, y: mousePt.y + 26)
+            menu.popUp(positioning: menu.items.last, at: pt, in: cv)
         }
     }
 

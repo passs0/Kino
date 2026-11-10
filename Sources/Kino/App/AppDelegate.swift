@@ -12,6 +12,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        NSWindow.installFrameSafetySwizzle()
         TrafficLightManager.shared.install()
         NowPlayingManager.shared.install()
         setupKeyboardShortcuts()

@@ -4,8 +4,8 @@ import UniformTypeIdentifiers
 
 /// Minimalist Liquid Glass Main Window (macOS 26+)
 public struct MainWindowView: View {
-    public static let idleBackgroundColor = Color(red: 0.118, green: 0.118, blue: 0.118)
-    public static let idleNSBackgroundColor = NSColor(calibratedRed: 0.118, green: 0.118, blue: 0.118, alpha: 1.0)
+    public static let idleNSBackgroundColor = NSColor(srgbRed: 0.118, green: 0.118, blue: 0.118, alpha: 1.0)
+    public static let idleBackgroundColor = Color(nsColor: idleNSBackgroundColor)
 
     @StateObject private var coordinator = MediaCoordinator.shared
     @StateObject private var playerController = PlayerController.shared
@@ -21,7 +21,6 @@ public struct MainWindowView: View {
         mainContent
             .ignoresSafeArea()
             .frame(minWidth: 440, minHeight: 320)
-            .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? 0 : 26, style: .continuous))
             .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
             .sheet(isPresented: $showURLSheet) {
                 URLInputSheet(coordinator: coordinator)
@@ -216,8 +215,8 @@ private struct WindowGlassAccessor: NSViewRepresentable {
 
             let isFS = window.styleMask.contains(.fullScreen)
             window.contentView?.wantsLayer = true
-            window.contentView?.layer?.cornerRadius = isFS ? 0 : 26
-            window.contentView?.layer?.cornerCurve = .continuous
+            // Allow macOS to render native window corners without inner border clipping
+            window.contentView?.layer?.masksToBounds = false
 
             // Clear any AppKit titlebar materials or visual effect backdrops so the window is 100% unified
             if !isFS, let titlebar = window.standardWindowButton(.closeButton)?.superview {
