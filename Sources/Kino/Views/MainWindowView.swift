@@ -4,8 +4,12 @@ import UniformTypeIdentifiers
 
 /// Minimalist Liquid Glass Main Window (macOS 26+)
 public struct MainWindowView: View {
-    public static let idleNSBackgroundColor = NSColor(srgbRed: 0.118, green: 0.118, blue: 0.118, alpha: 1.0)
-    public static let idleBackgroundColor = Color(nsColor: idleNSBackgroundColor)
+    public static var idleNSBackgroundColor: NSColor {
+        .windowBackgroundColor
+    }
+    public static var idleBackgroundColor: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
 
     @StateObject private var coordinator = MediaCoordinator.shared
     @StateObject private var playerController = PlayerController.shared
@@ -199,6 +203,7 @@ public struct MainWindowView: View {
 /// Helper that configures the parent NSWindow for native window background and insets traffic lights.
 private struct WindowGlassAccessor: NSViewRepresentable {
     var isIdle: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeNSView(context: Context) -> NSView {
         NSView()

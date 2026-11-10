@@ -157,6 +157,7 @@ public final class WindowManager: NSObject, ObservableObject {
             window.contentAspectRatio = .zero
             window.minSize = Self.videoMinSize
             window.maxSize = CGSize(width: 10000, height: 10000)
+            window.backgroundColor = .black
 
             let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
             let maxW = screen.width * 0.82
@@ -225,6 +226,7 @@ public final class WindowManager: NSObject, ObservableObject {
         window.contentAspectRatio = .zero
         window.minSize = CGSize(width: 320, height: 180)
         window.maxSize = CGSize(width: 10000, height: 10000)
+        window.backgroundColor = .windowBackgroundColor
         window.representedURL = nil
         window.title = "Kino"
         updateTitlebarVisibility(visible: true, animated: animated)
