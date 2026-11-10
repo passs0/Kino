@@ -92,9 +92,12 @@ public final class PlayerController: ObservableObject {
         }
     }
 
+    @Published public private(set) var naturalVideoSize: CGSize?
+
     private var timeObserverToken: Any?
     private var itemStatusObserver: NSKeyValueObservation?
     private var itemDurationObserver: NSKeyValueObservation?
+    private var itemPresentationSizeObserver: NSKeyValueObservation?
     private var itemLoadedRangesObserver: NSKeyValueObservation?
     private var itemBufferObserver: NSKeyValueObservation?
     private var itemKeepUpObserver: NSKeyValueObservation?
@@ -527,6 +530,19 @@ public final class PlayerController: ObservableObject {
             }
         }
 
+        itemPresentationSizeObserver = item.observe(\.presentationSize, options: [.initial, .new]) { [weak self] observedItem, _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                let size = observedItem.presentationSize
+                if size.width > 0 && size.height > 0 {
+                    self.naturalVideoSize = size
+                    if !MediaCoordinator.shared.isAudioMode {
+                        WindowManager.shared.transitionToMedia(isAudio: false, videoSize: size)
+                    }
+                }
+            }
+        }
+
         itemLoadedRangesObserver = item.observe(\.loadedTimeRanges, options: [.new]) { [weak self] observedItem, _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
@@ -584,6 +600,8 @@ public final class PlayerController: ObservableObject {
         itemStatusObserver = nil
         itemDurationObserver?.invalidate()
         itemDurationObserver = nil
+        itemPresentationSizeObserver?.invalidate()
+        itemPresentationSizeObserver = nil
         itemLoadedRangesObserver?.invalidate()
         itemLoadedRangesObserver = nil
         itemBufferObserver?.invalidate()

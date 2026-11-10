@@ -105,20 +105,11 @@ public final class WindowManager: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = false
+                self.mainWindow?.contentAspectRatio = .zero
                 
                 // Immediately trigger clean layout recalculation
                 self.mainWindow?.contentView?.needsLayout = true
                 self.mainWindow?.contentView?.layoutSubtreeIfNeeded()
-
-                // Restore aspect ratio with safety delay after AppKit transition finishes completely
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    MainActor.assumeIsolated {
-                        guard let win = self.mainWindow, !win.styleMask.contains(.fullScreen), !self.isTransitioningFullScreen else { return }
-                        if let natSize = self.currentNaturalSize, natSize.width > 0, natSize.height > 0 {
-                            win.contentAspectRatio = natSize
-                        }
-                    }
-                }
             }
         }
 
@@ -160,8 +151,9 @@ public final class WindowManager: NSObject, ObservableObject {
             let natSize = videoSize ?? currentNaturalSize ?? CGSize(width: 900, height: 506)
             currentNaturalSize = natSize
 
-            // Lock content aspect ratio to prevent letterbox bars when dragging window edges!
-            window.contentAspectRatio = natSize
+            // Keep contentAspectRatio at .zero permanently (aligning with Apple QuickTime Player & Safari)
+            // This enables free window resizing and eliminates AppKit fullscreen transition constraint conflicts.
+            window.contentAspectRatio = .zero
             window.minSize = Self.videoMinSize
             window.maxSize = CGSize(width: 10000, height: 10000)
 
@@ -192,7 +184,12 @@ public final class WindowManager: NSObject, ObservableObject {
             let newY = max(screen.minY + 20, current.origin.y - (targetH - current.height) / 2)
 
             let targetRect = NSRect(x: newX, y: newY, width: targetW, height: targetH)
-            window.setFrame(targetRect, display: true, animate: animated)
+            self.preFullScreenFrame = targetRect
+
+            // Never mutate window frame while macOS is in Full Screen
+            if !window.styleMask.contains(.fullScreen) {
+                window.setFrame(targetRect, display: true, animate: animated)
+            }
         }
     }
 
@@ -327,5 +324,13 @@ public final class WindowManager: NSObject, ObservableObject {
         guard !isTransitioningFullScreen else { return }
         guard let window = mainWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.className != "NSTitlebarToolbarWindow" && $0.canBecomeMain }) else { return }
         window.toggleFullScreen(nil)
+
+        // Safety watchdog: reset transition flag if AppKit drops notification under extreme load
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if self?.isTransitioningFullScreen == true {
+                self?.isTransitioningFullScreen = false
+            }
+        }
     }
 }

@@ -73,6 +73,8 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
         let pl = AVPlayerLayer()
         pl.backgroundColor = NSColor.black.cgColor
         pl.videoGravity = PlayerController.shared.isLetterboxed ? .resizeAspect : .resizeAspectFill
+        pl.masksToBounds = true
+        pl.needsDisplayOnBoundsChange = true
         return pl
     }
 
@@ -92,6 +94,7 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
 
     private func setup() {
         wantsLayer = true
+        layerContentsRedrawPolicy = .duringViewResize
         autoresizingMask = [.width, .height]
 
         if AVPictureInPictureController.isPictureInPictureSupported() {
@@ -106,6 +109,26 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
 
     public override func layout() {
         super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.frame = bounds
+        CATransaction.commit()
+    }
+
+    public override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.frame = bounds
+        CATransaction.commit()
+    }
+
+    public override func setFrameOrigin(_ newOrigin: NSPoint) {
+        super.setFrameOrigin(newOrigin)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.frame = bounds
+        CATransaction.commit()
     }
 
     public func updateCornerRadius() {
@@ -131,11 +154,27 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
 
         NotificationCenter.default.removeObserver(self, name: NSWindow.didExitFullScreenNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleFullScreenChange), name: NSWindow.didExitFullScreenNotification, object: win)
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didEnterFullScreenNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleFullScreenChange), name: NSWindow.didEnterFullScreenNotification, object: win)
     }
 
     @objc private func handleFullScreenChange() {
         needsLayout = true
         layer?.setNeedsLayout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.frame = bounds
+        CATransaction.commit()
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.needsLayout = true
+            self.layer?.setNeedsLayout()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.playerLayer.frame = self.bounds
+            CATransaction.commit()
+        }
     }
 
     @discardableResult
@@ -273,6 +312,15 @@ public struct NativePlayerView: NSViewRepresentable {
         }
         nsView.onFileDropped = onFileDropped
         PlayerController.shared.activePlayerNSView = nsView
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        nsView.playerLayer.frame = nsView.bounds
+        CATransaction.commit()
+    }
+
+    public func sizeThatFits(_ proposal: ProposedViewSize, nsView: KinoPlayerNSView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions()
     }
 
     public static func dismantleNSView(_ nsView: KinoPlayerNSView, coordinator: ()) {

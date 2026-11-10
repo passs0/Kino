@@ -215,8 +215,7 @@ private struct WindowGlassAccessor: NSViewRepresentable {
 
             let isFS = window.styleMask.contains(.fullScreen)
             window.contentView?.wantsLayer = true
-            // Allow macOS to render native window corners without inner border clipping
-            window.contentView?.layer?.masksToBounds = false
+            window.contentView?.layer?.masksToBounds = true
 
             // Clear any AppKit titlebar materials or visual effect backdrops so the window is 100% unified
             if !isFS, let titlebar = window.standardWindowButton(.closeButton)?.superview {

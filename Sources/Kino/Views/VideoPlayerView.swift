@@ -123,6 +123,8 @@ public struct VideoPlayerView: View {
                             coordinator.openLocalFile(url: droppedURL)
                         }
                     }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
                     .ignoresSafeArea()
                 }
 
@@ -337,10 +339,10 @@ public struct VideoPlayerView: View {
 
     private func quickTimeFloatingHUD(availableWidth: CGFloat) -> some View {
         let isUltraCompact = availableWidth < 470
-        let isCompact = availableWidth < 580
-        let itemSpacing: CGFloat = isUltraCompact ? 4 : (isCompact ? 6 : 10)
+        let isCompact = availableWidth < 600
+        let itemSpacing: CGFloat = isUltraCompact ? 4 : (isCompact ? 6 : 8)
         let groupSpacing: CGFloat = isUltraCompact ? 2 : 4
-        let horizontalPadding: CGFloat = isCompact ? 10 : 14
+        let horizontalPadding: CGFloat = isUltraCompact ? 16 : (isCompact ? 20 : 24)
 
         return HStack(spacing: itemSpacing) {
             // 1. Transport Controls: [Rewind 10] [Play / Pause] [Forward 10]
@@ -652,9 +654,6 @@ public struct VideoPlayerView: View {
     private func quitVideoAndReturnToWelcome() {
         playerController.saveCurrentPosition()
         playerController.pause()
-        if isFullScreen, let win = WindowManager.shared.mainWindow {
-            win.toggleFullScreen(nil)
-        }
         coordinator.stop()
         playerController.reset()
         WindowManager.shared.transitionToWelcome()

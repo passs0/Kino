@@ -67,6 +67,10 @@ public final class MediaCoordinator: ObservableObject {
         return nil
     }
 
+    public var isAudioMode: Bool {
+        probeResult?.isAudioOnly == true || currentSource?.isAudioTrack == true
+    }
+
     private let ffmpegPipeline = FFmpegPipeline()
     private var loadTask: Task<Void, Never>?
 
