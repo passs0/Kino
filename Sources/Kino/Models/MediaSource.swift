@@ -18,9 +18,14 @@ public enum MediaSource: Identifiable, Hashable, Sendable {
         switch self {
         case .local(let url):
             return url.lastPathComponent
-        case .online(_, let originalInput):
+        case .online(let url, let originalInput):
             if let host = URL(string: originalInput)?.host {
-                return "\(host) Stream"
+                let cleanHost = host.replacingOccurrences(of: "www.", with: "")
+                let path = url.lastPathComponent
+                if !path.isEmpty && path != "/" && !path.contains("watch") && !path.contains("video") {
+                    return "\(path) (\(cleanHost))"
+                }
+                return "\(cleanHost) Video"
             }
             return originalInput
         }

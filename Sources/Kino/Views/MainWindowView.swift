@@ -20,7 +20,8 @@ public struct MainWindowView: View {
     public var body: some View {
         mainContent
             .ignoresSafeArea()
-            .frame(minWidth: 440, minHeight: 320)
+            .frame(minWidth: 320, minHeight: 180)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
             .sheet(isPresented: $showURLSheet) {
                 URLInputSheet(coordinator: coordinator)
@@ -59,6 +60,11 @@ public struct MainWindowView: View {
             .onChange(of: coordinator.extractedOnlineInfo?.duration) { _, newDuration in
                 if let d = newDuration, d > 0 {
                     playerController.setKnownDuration(d)
+                }
+            }
+            .onChange(of: coordinator.extractedOnlineInfo?.title) { _, newTitle in
+                if let t = newTitle, !t.isEmpty {
+                    windowManager.setMediaDocument(url: nil, title: t)
                 }
             }
     }
@@ -123,7 +129,8 @@ public struct MainWindowView: View {
             if case .local(let url) = s {
                 windowManager.setMediaDocument(url: url, title: s.displayName)
             } else {
-                windowManager.setMediaDocument(url: nil, title: s.displayName)
+                let streamTitle = coordinator.extractedOnlineInfo?.title ?? s.displayName
+                windowManager.setMediaDocument(url: nil, title: streamTitle)
             }
         } else {
             windowManager.setMediaDocument(url: nil, title: "Kino")
@@ -207,8 +214,8 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.titlebarAppearsTransparent = true
             window.titlebarSeparatorStyle = .none
             window.titleVisibility = isIdle ? .hidden : .visible
-            window.styleMask.insert([.fullSizeContentView])
-            window.isMovableByWindowBackground = true
+            window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+            window.isMovableByWindowBackground = isIdle
 
             // Do not alter layers or titlebars during Full Screen transitions
             guard !WindowManager.shared.isTransitioningFullScreen else { return }

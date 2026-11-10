@@ -23,8 +23,8 @@ public final class WindowManager: NSObject, ObservableObject {
 
     public static let welcomeDefaultSize = CGSize(width: 580, height: 380)
     public static let audioDefaultSize = CGSize(width: 440, height: 500)
-    public static let audioMinSize = CGSize(width: 380, height: 440)
-    public static let videoMinSize = CGSize(width: 480, height: 270)
+    public static let audioMinSize = CGSize(width: 320, height: 360)
+    public static let videoMinSize = CGSize(width: 320, height: 180)
 
     private override init() {
         super.init()
@@ -39,6 +39,7 @@ public final class WindowManager: NSObject, ObservableObject {
         // for full screen enter/exit frame restoration and scene management.
         setupWindowNotifications(for: window)
 
+        window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
         window.collectionBehavior = [.fullScreenPrimary, .managed]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
@@ -137,7 +138,7 @@ public final class WindowManager: NSObject, ObservableObject {
             currentNaturalSize = nil
             window.contentAspectRatio = .zero
             window.minSize = Self.audioMinSize
-            window.maxSize = CGSize(width: 720, height: 800)
+            window.maxSize = CGSize(width: 10000, height: 10000)
 
             let current = window.frame
             let newWidth = Self.audioDefaultSize.width
@@ -222,7 +223,7 @@ public final class WindowManager: NSObject, ObservableObject {
 
         currentNaturalSize = nil
         window.contentAspectRatio = .zero
-        window.minSize = CGSize(width: 440, height: 320)
+        window.minSize = CGSize(width: 320, height: 180)
         window.maxSize = CGSize(width: 10000, height: 10000)
         window.representedURL = nil
         window.title = "Kino"

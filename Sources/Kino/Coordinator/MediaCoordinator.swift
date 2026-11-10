@@ -423,6 +423,10 @@ public final class MediaCoordinator: ObservableObject {
                 self.extractedOnlineInfo = extracted
                 NowPlayingManager.shared.mediaItemDidChange()
 
+                Task { @MainActor in
+                    WindowManager.shared.setMediaDocument(url: nil, title: extracted.title)
+                }
+
                 if let thumb = extracted.thumbnailURL {
                     Task.detached(priority: .utility) { [weak self] in
                         if let (data, _) = try? await URLSession.shared.data(from: thumb),

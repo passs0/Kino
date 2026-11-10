@@ -18,6 +18,7 @@ public struct KinoApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
         .defaultSize(width: 580, height: 380)
         .commands {
             CommandGroup(after: .appInfo) {
