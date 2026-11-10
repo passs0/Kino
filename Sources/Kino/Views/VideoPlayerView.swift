@@ -339,20 +339,18 @@ public struct VideoPlayerView: View {
     // MARK: - Apple QuickTime Player Unified Floating HUD Bar
 
     private func quickTimeFloatingHUD(availableWidth: CGFloat) -> some View {
-        let isUltraCompact = availableWidth < 470
-        let isCompact = availableWidth < 600
-        let itemSpacing: CGFloat = isUltraCompact ? 4 : (isCompact ? 6 : 8)
-        let groupSpacing: CGFloat = isUltraCompact ? 2 : 4
-        let horizontalPadding: CGFloat = isUltraCompact ? 16 : (isCompact ? 20 : 24)
+        let itemSpacing: CGFloat = 8
+        let groupSpacing: CGFloat = 4
+        let horizontalPadding: CGFloat = 18
 
         return HStack(spacing: itemSpacing) {
             // 1. Transport Controls: [Rewind 10] [Play / Pause] [Forward 10]
             HStack(spacing: groupSpacing) {
                 HUDIconButton(
                     iconName: "gobackward.10",
-                    size: isCompact ? 13 : 14,
+                    size: 13.5,
                     weight: .semibold,
-                    frameSize: isCompact ? 26 : 30,
+                    frameSize: 28,
                     helpText: "Rewind 10 seconds (⌘←)"
                 ) {
                     playerController.seekRelative(seconds: -10)
@@ -361,9 +359,9 @@ public struct VideoPlayerView: View {
 
                 HUDIconButton(
                     iconName: playerController.isPlaying ? "pause.fill" : "play.fill",
-                    size: isCompact ? 15 : 17,
+                    size: 16.5,
                     weight: .bold,
-                    frameSize: isCompact ? 30 : 34,
+                    frameSize: 32,
                     helpText: playerController.isPlaying ? "Pause (Space)" : "Play (Space)",
                     xOffset: playerController.isPlaying ? 0 : 1
                 ) {
@@ -374,9 +372,9 @@ public struct VideoPlayerView: View {
 
                 HUDIconButton(
                     iconName: "goforward.10",
-                    size: isCompact ? 13 : 14,
+                    size: 13.5,
                     weight: .semibold,
-                    frameSize: isCompact ? 26 : 30,
+                    frameSize: 28,
                     helpText: "Forward 10 seconds (⌘→)"
                 ) {
                     playerController.seekRelative(seconds: 10)
@@ -387,12 +385,12 @@ public struct VideoPlayerView: View {
             hudDivider
 
             // 2. Timeline Scrubber
-            HStack(spacing: isCompact ? 6 : 8) {
+            HStack(spacing: 8) {
                 Text(formatTime(currentTimeValue))
-                    .font(.system(size: isCompact ? 10.5 : 11.5, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .monospacedDigit()
                     .foregroundColor(.white.opacity(0.85))
-                    .frame(minWidth: isCompact ? 30 : 36, alignment: .leading)
+                    .frame(minWidth: 36, alignment: .leading)
 
                 NativeSlider(
                     value: Binding(
@@ -421,47 +419,45 @@ public struct VideoPlayerView: View {
                         registerUserActivity()
                     }
                 )
-                .frame(minWidth: isCompact ? 40 : 80, maxWidth: .infinity)
+                .frame(minWidth: 40, maxWidth: .infinity)
                 .frame(height: 22)
 
                 Text(formatRemainingTime())
-                    .font(.system(size: isCompact ? 10.5 : 11.5, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .monospacedDigit()
                     .foregroundColor(.white.opacity(0.85))
-                    .frame(minWidth: isCompact ? 36 : 42, alignment: .trailing)
+                    .frame(minWidth: 42, alignment: .trailing)
             }
 
             hudDivider
 
-            // 3. Volume Control
+            // 3. Volume Control (Always visible in both windowed and full screen modes)
             HStack(spacing: groupSpacing) {
                 HUDIconButton(
                     iconName: volumeIconName,
                     size: 13,
                     weight: .semibold,
-                    frameSize: isCompact ? 26 : 28,
+                    frameSize: 28,
                     helpText: playerController.isMuted ? "Unmute (M)" : "Mute (M)"
                 ) {
                     playerController.toggleMute()
                     registerUserActivity()
                 }
 
-                if !isCompact {
-                    NativeSlider(
-                        value: Binding(
-                            get: { Double(playerController.isMuted ? 0 : playerController.volume) },
-                            set: { newVal in
-                                playerController.isMuted = false
-                                playerController.volume = Float(newVal)
-                                registerUserActivity()
-                            }
-                        ),
-                        in: 0.0...1.0,
-                        trackFillColor: .white,
-                        onEditingChanged: { _ in registerUserActivity() }
-                    )
-                    .frame(width: 54, height: 22)
-                }
+                NativeSlider(
+                    value: Binding(
+                        get: { Double(playerController.isMuted ? 0 : playerController.volume) },
+                        set: { newVal in
+                            playerController.isMuted = false
+                            playerController.volume = Float(newVal)
+                            registerUserActivity()
+                        }
+                    ),
+                    in: 0.0...1.0,
+                    trackFillColor: .white,
+                    onEditingChanged: { _ in registerUserActivity() }
+                )
+                .frame(width: 50, height: 22)
             }
 
             hudDivider
@@ -472,38 +468,34 @@ public struct VideoPlayerView: View {
                     iconName: "ellipsis",
                     size: 13,
                     weight: .semibold,
-                    frameSize: isCompact ? 26 : 28,
+                    frameSize: 28,
                     helpText: "Playback Options (Subtitles, Speed, Audio Tracks, Statistics)"
                 ) {
                     OptionsMenuPresenter.shared.show()
                     registerUserActivity()
                 }
 
-                if !isUltraCompact {
-                    HUDIconButton(
-                        iconName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter",
-                        size: 12.5,
-                        weight: .semibold,
-                        frameSize: isCompact ? 26 : 28,
-                        helpText: "Picture in Picture",
-                        isSelected: playerController.isPictureInPictureActive
-                    ) {
-                        playerController.togglePictureInPicture()
-                        registerUserActivity()
-                    }
+                HUDIconButton(
+                    iconName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter",
+                    size: 12.5,
+                    weight: .semibold,
+                    frameSize: 28,
+                    helpText: "Picture in Picture",
+                    isSelected: playerController.isPictureInPictureActive
+                ) {
+                    playerController.togglePictureInPicture()
+                    registerUserActivity()
                 }
 
-                if !isCompact {
-                    AirPlayRoutePicker(player: playerController.player, mode: .video)
-                        .frame(width: 22, height: 22)
-                        .help("AirPlay Video (Apple TV / External Display)")
-                }
+                AirPlayRoutePicker(player: playerController.player, mode: .video)
+                    .frame(width: 22, height: 22)
+                    .help("AirPlay Video (Apple TV / External Display)")
 
                 HUDIconButton(
                     iconName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
                     size: 12,
                     weight: .semibold,
-                    frameSize: isCompact ? 26 : 28,
+                    frameSize: 28,
                     helpText: isFullScreen ? "Exit Full Screen (^⌘F)" : "Enter Full Screen (^⌘F)"
                 ) {
                     toggleFullscreen()
@@ -513,7 +505,7 @@ public struct VideoPlayerView: View {
         }
         .padding(.horizontal, horizontalPadding)
         .frame(height: 48)
-        .frame(maxWidth: 680)
+        .frame(maxWidth: 620)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)

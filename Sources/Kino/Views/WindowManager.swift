@@ -16,6 +16,7 @@ public final class WindowManager: NSObject, ObservableObject {
 
     public weak var mainWindow: NSWindow?
     public private(set) var preFullScreenFrame: NSRect?
+    public private(set) var hasAppliedInitialMediaSize: Bool = false
     private var preMediaFrame: NSRect?
     private var currentNaturalSize: CGSize?
     private var fullScreenExitObserver: NSObjectProtocol?
@@ -192,15 +193,20 @@ public final class WindowManager: NSObject, ObservableObject {
             let targetRect = NSRect(x: newX, y: newY, width: targetW, height: targetH)
             self.preFullScreenFrame = targetRect
 
-            // Never mutate window frame while macOS is in Full Screen
-            if !window.styleMask.contains(.fullScreen) {
-                window.setFrame(targetRect, display: true, animate: animated)
+            // Set initial window frame to match media size only once per media load.
+            // Do not override user dragging/resizing if initial media size has already been set!
+            if !hasAppliedInitialMediaSize {
+                hasAppliedInitialMediaSize = true
+                if !window.styleMask.contains(.fullScreen) {
+                    window.setFrame(targetRect, display: true, animate: animated)
+                }
             }
         }
     }
 
     /// Returns the window to the clean, compact Welcome screen presentation.
     public func transitionToWelcome(animated: Bool = true) {
+        hasAppliedInitialMediaSize = false
         guard let window = mainWindow else { return }
 
         // If currently in macOS native Full Screen, exit full screen first to prevent AppKit animation freezes

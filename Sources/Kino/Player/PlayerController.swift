@@ -338,6 +338,7 @@ public final class PlayerController: ObservableObject {
         SubtitleManager.shared.reset()
         PlayerTimeState.shared.reset()
         isPlaying = false
+        naturalVideoSize = nil
         NowPlayingManager.shared.clear()
     }
 
@@ -357,6 +358,7 @@ public final class PlayerController: ObservableObject {
         activePlayerNSView?.playerLayer.player = nil
         player.replaceCurrentItem(with: nil)
         isPlaying = false
+        naturalVideoSize = nil
         NowPlayingManager.shared.clear()
         SubtitleManager.shared.reset()
         PlayerTimeState.shared.reset()
@@ -387,6 +389,7 @@ public final class PlayerController: ObservableObject {
         cleanupItemObservers()
         player.replaceCurrentItem(with: nil)
         isPlaying = false
+        naturalVideoSize = nil
         NowPlayingManager.shared.clear()
     }
 
@@ -535,8 +538,9 @@ public final class PlayerController: ObservableObject {
                 guard let self = self else { return }
                 let size = observedItem.presentationSize
                 if size.width > 0 && size.height > 0 {
+                    let isFirst = (self.naturalVideoSize == nil)
                     self.naturalVideoSize = size
-                    if !MediaCoordinator.shared.isAudioMode {
+                    if !MediaCoordinator.shared.isAudioMode && isFirst {
                         WindowManager.shared.transitionToMedia(isAudio: false, videoSize: size)
                     }
                 }
