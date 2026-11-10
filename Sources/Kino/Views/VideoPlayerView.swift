@@ -132,6 +132,7 @@ public struct VideoPlayerView: View {
                 if !isAudioMode {
                     Color.clear
                         .contentShape(Rectangle())
+                        .padding(6)
                         .onTapGesture(count: 2) {
                             toggleFullscreen()
                         }

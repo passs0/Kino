@@ -92,6 +92,7 @@ public struct MainWindowView: View {
                 inspectorOverlay
             }
         }
+        .preferredColorScheme(coordinator.state == .idle ? nil : .dark)
     }
 
     private var inspectorOverlay: some View {
@@ -215,6 +216,7 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             WindowManager.shared.register(window: window)
             window.isOpaque = true
             window.backgroundColor = isIdle ? MainWindowView.idleNSBackgroundColor : .black
+            window.appearance = isIdle ? nil : NSAppearance(named: .darkAqua)
             window.hasShadow = true
             window.titlebarAppearsTransparent = true
             window.titlebarSeparatorStyle = .none

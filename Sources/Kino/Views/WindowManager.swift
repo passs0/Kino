@@ -156,8 +156,12 @@ public final class WindowManager: NSObject, ObservableObject {
             // This enables free window resizing and eliminates AppKit fullscreen transition constraint conflicts.
             window.contentAspectRatio = .zero
             window.minSize = Self.videoMinSize
+            window.contentMinSize = Self.videoMinSize
             window.maxSize = CGSize(width: 10000, height: 10000)
+            window.contentMaxSize = CGSize(width: 10000, height: 10000)
+            window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
             window.backgroundColor = .black
+            window.appearance = NSAppearance(named: .darkAqua)
 
             let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
             let maxW = screen.width * 0.82
@@ -225,8 +229,12 @@ public final class WindowManager: NSObject, ObservableObject {
         currentNaturalSize = nil
         window.contentAspectRatio = .zero
         window.minSize = CGSize(width: 320, height: 180)
+        window.contentMinSize = CGSize(width: 320, height: 180)
         window.maxSize = CGSize(width: 10000, height: 10000)
+        window.contentMaxSize = CGSize(width: 10000, height: 10000)
+        window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
         window.backgroundColor = .windowBackgroundColor
+        window.appearance = nil
         window.representedURL = nil
         window.title = "Kino"
         updateTitlebarVisibility(visible: true, animated: animated)

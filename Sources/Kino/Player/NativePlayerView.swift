@@ -146,10 +146,12 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
         }
         win.isOpaque = true
         win.backgroundColor = .black
+        win.appearance = NSAppearance(named: .darkAqua)
         win.hasShadow = true
         win.isMovableByWindowBackground = false
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .visible
+        win.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
         PlayerController.shared.activePlayerNSView = self
 
         NotificationCenter.default.removeObserver(self, name: NSWindow.didExitFullScreenNotification, object: nil)
