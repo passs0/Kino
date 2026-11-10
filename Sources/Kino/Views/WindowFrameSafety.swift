@@ -39,20 +39,25 @@ extension NSWindow {
     @objc func kino_safeReallySetFrame(_ frame: CGRect) {
         var safeFrame = frame
         if self === WindowManager.shared.mainWindow {
-            let current = self.frame
             let screen = self.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            let isFS = self.styleMask.contains(.fullScreen)
+            let fallback = (isFS ? WindowManager.shared.preFullScreenFrame : nil)
+                ?? WindowManager.shared.preFullScreenFrame
+                ?? NSRect(x: screen.minX + 40, y: screen.minY + 40, width: 580, height: 380)
+
+            let refFrame = isFS ? fallback : self.frame
 
             if safeFrame.origin.x.isNaN || safeFrame.origin.x.isInfinite {
-                safeFrame.origin.x = (current.origin.x.isNaN || current.origin.x.isInfinite) ? (screen.minX + 40) : current.origin.x
+                safeFrame.origin.x = (refFrame.origin.x.isNaN || refFrame.origin.x.isInfinite) ? fallback.origin.x : refFrame.origin.x
             }
             if safeFrame.origin.y.isNaN || safeFrame.origin.y.isInfinite {
-                safeFrame.origin.y = (current.origin.y.isNaN || current.origin.y.isInfinite) ? (screen.minY + 40) : current.origin.y
+                safeFrame.origin.y = (refFrame.origin.y.isNaN || refFrame.origin.y.isInfinite) ? fallback.origin.y : refFrame.origin.y
             }
             if safeFrame.size.width.isNaN || safeFrame.size.width.isInfinite || safeFrame.size.width < 100 {
-                safeFrame.size.width = (current.size.width.isNaN || current.size.width.isInfinite || current.size.width < 100) ? 580 : current.size.width
+                safeFrame.size.width = (refFrame.size.width.isNaN || refFrame.size.width.isInfinite || refFrame.size.width < 100) ? fallback.size.width : refFrame.size.width
             }
             if safeFrame.size.height.isNaN || safeFrame.size.height.isInfinite || safeFrame.size.height < 100 {
-                safeFrame.size.height = (current.size.height.isNaN || current.size.height.isInfinite || current.size.height < 100) ? 380 : current.size.height
+                safeFrame.size.height = (refFrame.size.height.isNaN || refFrame.size.height.isInfinite || refFrame.size.height < 100) ? fallback.size.height : refFrame.size.height
             }
         }
         self.kino_safeReallySetFrame(safeFrame)

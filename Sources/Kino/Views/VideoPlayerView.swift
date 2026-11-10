@@ -45,17 +45,22 @@ public struct VideoPlayerView: View {
             switch coordinator.state {
             case .idle:
                 idleStateView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
             case .probing(let msg), .extractingOnline(let msg), .preparingStream(let msg):
                 loadingView(message: msg)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
             case .ready:
                 playerCanvas
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
             case .error(let errMsg):
                 errorView(message: errMsg)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onDrop(of: [.fileURL, .url], isTargeted: $isDropTargeted) { providers in
             guard let provider = providers.first else { return false }
             let typeId = provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)

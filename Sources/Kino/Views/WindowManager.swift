@@ -69,7 +69,6 @@ public final class WindowManager: NSObject, ObservableObject {
                 if let win = self.mainWindow, !win.styleMask.contains(.fullScreen), win.frame.width >= 100 {
                     self.preFullScreenFrame = win.frame
                 }
-                self.mainWindow?.contentAspectRatio = .zero
             }
         }
 
@@ -81,7 +80,6 @@ public final class WindowManager: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = false
-                self.mainWindow?.contentAspectRatio = .zero
             }
         }
 
@@ -93,9 +91,6 @@ public final class WindowManager: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = true
-                // Keep contentAspectRatio at zero throughout transition so AppKit's
-                // _NSExitFullScreenTransitionController can restore preFullScreenFrame without constraint conflicts!
-                self.mainWindow?.contentAspectRatio = .zero
             }
         }
 
@@ -107,11 +102,23 @@ public final class WindowManager: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.isTransitioningFullScreen = false
-                self.mainWindow?.contentAspectRatio = .zero
                 
                 // Immediately trigger clean layout recalculation
                 self.mainWindow?.contentView?.needsLayout = true
                 self.mainWindow?.contentView?.layoutSubtreeIfNeeded()
+            }
+        }
+
+        let didResize = center.addObserver(
+            forName: NSWindow.didResizeNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self, let win = self.mainWindow else { return }
+                if !win.styleMask.contains(.fullScreen) && !self.isTransitioningFullScreen && win.frame.width >= 100 {
+                    self.preFullScreenFrame = win.frame
+                }
             }
         }
 
@@ -128,7 +135,7 @@ public final class WindowManager: NSObject, ObservableObject {
             }
         }
 
-        windowNotificationObservers = [willEnter, didEnter, willExit, didExit, willClose]
+        windowNotificationObservers = [willEnter, didEnter, willExit, didExit, didResize, willClose]
     }
 
     /// Adapts window size smoothly based on whether media is pure audio, video, or idle.
@@ -137,7 +144,6 @@ public final class WindowManager: NSObject, ObservableObject {
 
         if isAudio {
             currentNaturalSize = nil
-            window.contentAspectRatio = .zero
             window.minSize = Self.audioMinSize
             window.maxSize = CGSize(width: 10000, height: 10000)
 
@@ -153,9 +159,6 @@ public final class WindowManager: NSObject, ObservableObject {
             let natSize = videoSize ?? currentNaturalSize ?? CGSize(width: 900, height: 506)
             currentNaturalSize = natSize
 
-            // Keep contentAspectRatio at .zero permanently (aligning with Apple QuickTime Player & Safari)
-            // This enables free window resizing and eliminates AppKit fullscreen transition constraint conflicts.
-            window.contentAspectRatio = .zero
             window.minSize = Self.videoMinSize
             window.contentMinSize = Self.videoMinSize
             window.maxSize = CGSize(width: 10000, height: 10000)
@@ -233,7 +236,6 @@ public final class WindowManager: NSObject, ObservableObject {
         }
 
         currentNaturalSize = nil
-        window.contentAspectRatio = .zero
         window.minSize = CGSize(width: 320, height: 180)
         window.contentMinSize = CGSize(width: 320, height: 180)
         window.maxSize = CGSize(width: 10000, height: 10000)
@@ -340,6 +342,11 @@ public final class WindowManager: NSObject, ObservableObject {
     public func toggleFullScreen() {
         guard !isTransitioningFullScreen else { return }
         guard let window = mainWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.className != "NSTitlebarToolbarWindow" && $0.canBecomeMain }) else { return }
+
+        // Ensure application and window are active and key so macOS automatically switches Space to the video
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+
         window.toggleFullScreen(nil)
 
         // Safety watchdog: reset transition flag if AppKit drops notification under extreme load
