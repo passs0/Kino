@@ -111,8 +111,8 @@ public struct MainWindowView: View {
         if coordinator.state != .idle {
             playerController.saveCurrentPosition()
             playerController.pause()
-            coordinator.stop()
             playerController.reset()
+            coordinator.stop()
             windowManager.transitionToWelcome()
         } else {
             WindowManager.shared.mainWindow?.close()

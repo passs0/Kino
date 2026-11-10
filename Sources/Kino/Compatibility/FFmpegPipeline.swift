@@ -356,6 +356,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
     public func stop() {
         syncQueue.sync {
             if let proc = activeProcess, proc.isRunning {
+                proc.terminationHandler = nil
                 proc.terminate()
                 let pid = proc.processIdentifier
                 if pid > 0 {
@@ -365,6 +366,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
             activeProcess = nil
 
             if let yt = activeYtDlpProcess, yt.isRunning {
+                yt.terminationHandler = nil
                 yt.terminate()
                 let pid = yt.processIdentifier
                 if pid > 0 {
@@ -376,8 +378,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
         streamingServer.stop()
 
         if let dir = sessionDir {
-            try? FileManager.default.removeItem(at: dir)
             sessionDir = nil
+            DispatchQueue.global(qos: .utility).async {
+                try? FileManager.default.removeItem(at: dir)
+            }
         }
     }
 

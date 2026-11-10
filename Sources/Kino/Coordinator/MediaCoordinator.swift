@@ -885,6 +885,10 @@ public final class MediaCoordinator: ObservableObject {
         activePlayableURL = nil
         activeStrategy = nil
         currentArtwork = nil
+        currentSource = nil
+        probeResult = nil
+        extractedOnlineInfo = nil
+        isInspectorPresented = false
         SubtitleManager.shared.reset()
         AudioManager.shared.reset()
         NowPlayingManager.shared.clear()

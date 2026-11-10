@@ -5,7 +5,7 @@ import Combine
 /// Manages window presentation styles, smooth sizing to video natural resolution,
 /// aspect-ratio preservation, titlebar proxy icons, and Desktop Always-On-Top floating behavior.
 @MainActor
-public final class WindowManager: ObservableObject {
+public final class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
     public static let shared = WindowManager()
 
     /// Indicates whether the window is pinned always on top of other desktop windows.
@@ -14,17 +14,21 @@ public final class WindowManager: ObservableObject {
     public weak var mainWindow: NSWindow?
     private var preMediaFrame: NSRect?
     private var currentNaturalSize: CGSize?
+    private var fullScreenExitObserver: NSObjectProtocol?
 
     public static let welcomeDefaultSize = CGSize(width: 580, height: 380)
     public static let audioDefaultSize = CGSize(width: 440, height: 500)
     public static let audioMinSize = CGSize(width: 380, height: 440)
     public static let videoMinSize = CGSize(width: 480, height: 270)
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     /// Registers the main application window.
     public func register(window: NSWindow) {
         self.mainWindow = window
+        window.delegate = self
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenPrimary]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
@@ -95,6 +99,30 @@ public final class WindowManager: ObservableObject {
     /// Returns the window to the clean, compact Welcome screen presentation.
     public func transitionToWelcome(animated: Bool = true) {
         guard let window = mainWindow else { return }
+
+        // If currently in macOS native Full Screen, exit full screen first to prevent AppKit animation freezes
+        if window.styleMask.contains(.fullScreen) {
+            if let existing = fullScreenExitObserver {
+                NotificationCenter.default.removeObserver(existing)
+            }
+            fullScreenExitObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didExitFullScreenNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self = self else { return }
+                    if let obs = self.fullScreenExitObserver {
+                        NotificationCenter.default.removeObserver(obs)
+                        self.fullScreenExitObserver = nil
+                    }
+                    self.transitionToWelcome(animated: animated)
+                }
+            }
+            window.toggleFullScreen(nil)
+            return
+        }
+
         currentNaturalSize = nil
         window.contentAspectRatio = .zero
         window.minSize = CGSize(width: 440, height: 320)
@@ -187,5 +215,23 @@ public final class WindowManager: ObservableObject {
         isPinnedAlwaysOnTop.toggle()
         guard let window = mainWindow else { return }
         window.level = isPinnedAlwaysOnTop ? .floating : .normal
+    }
+}
+
+// MARK: - NSWindowDelegate
+extension WindowManager {
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if MediaCoordinator.shared.state != .idle {
+            NotificationCenter.default.post(name: .closeMediaNotification, object: nil)
+            return false
+        }
+        return true
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        PlayerController.shared.shutdownOnQuit()
+        SleepPreventionManager.shared.setSleepDisabled(false)
+        SubtitleManager.shared.reset()
+        MediaCoordinator.shared.stop()
     }
 }

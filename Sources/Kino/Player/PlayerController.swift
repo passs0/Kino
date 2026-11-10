@@ -325,8 +325,12 @@ public final class PlayerController: ObservableObject {
         isSeeking = false
         seekTargetTime = nil
         streamTimeOffset = 0
+        if let pip = activePlayerNSView?.pipController, pip.isPictureInPictureActive {
+            pip.stopPictureInPicture()
+        }
         player.volume = 0
         player.pause()
+        activePlayerNSView?.playerLayer.player = nil
         player.replaceCurrentItem(with: nil)
         SubtitleManager.shared.reset()
         PlayerTimeState.shared.reset()
@@ -347,6 +351,7 @@ public final class PlayerController: ObservableObject {
         player.volume = 0
         player.isMuted = true
         player.pause()
+        activePlayerNSView?.playerLayer.player = nil
         player.replaceCurrentItem(with: nil)
         isPlaying = false
         NowPlayingManager.shared.clear()

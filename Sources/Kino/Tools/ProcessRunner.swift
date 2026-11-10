@@ -143,7 +143,11 @@ public final class ProcessRunner: @unchecked Sendable {
         var outBuffer = ""
         outPipe.fileHandleForReading.readabilityHandler = { handle in
             let chunk = handle.availableData
-            guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
+            guard !chunk.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+            guard let text = String(data: chunk, encoding: .utf8) else { return }
             outQueue.async {
                 outBuffer.append(text)
                 while let nl = outBuffer.firstIndex(of: "\n") {
@@ -157,7 +161,11 @@ public final class ProcessRunner: @unchecked Sendable {
         var errBuffer = ""
         errPipe.fileHandleForReading.readabilityHandler = { handle in
             let chunk = handle.availableData
-            guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
+            guard !chunk.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+            guard let text = String(data: chunk, encoding: .utf8) else { return }
             errQueue.async {
                 errBuffer.append(text)
                 while let nl = errBuffer.firstIndex(where: { $0 == "\n" || $0 == "\r" }) {
@@ -169,6 +177,11 @@ public final class ProcessRunner: @unchecked Sendable {
                     }
                 }
             }
+        }
+
+        process.terminationHandler = { [weak outPipe, weak errPipe] _ in
+            outPipe?.fileHandleForReading.readabilityHandler = nil
+            errPipe?.fileHandleForReading.readabilityHandler = nil
         }
 
         try process.run()

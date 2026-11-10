@@ -120,7 +120,13 @@ public final class KinoPlayerNSView: NSView, AVPictureInPictureControllerDelegat
 
     public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        guard let win = window else { return }
+        guard let win = window else {
+            NotificationCenter.default.removeObserver(self)
+            if PlayerController.shared.activePlayerNSView === self {
+                PlayerController.shared.activePlayerNSView = nil
+            }
+            return
+        }
         win.isOpaque = true
         win.backgroundColor = .black
         win.hasShadow = true
@@ -275,6 +281,16 @@ public struct NativePlayerView: NSViewRepresentable {
         }
         nsView.onFileDropped = onFileDropped
         PlayerController.shared.activePlayerNSView = nsView
+    }
+
+    public static func dismantleNSView(_ nsView: KinoPlayerNSView, coordinator: ()) {
+        if let pip = nsView.pipController, pip.isPictureInPictureActive {
+            pip.stopPictureInPicture()
+        }
+        nsView.playerLayer.player = nil
+        if PlayerController.shared.activePlayerNSView === nsView {
+            PlayerController.shared.activePlayerNSView = nil
+        }
     }
 }
 

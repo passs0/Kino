@@ -31,6 +31,7 @@ public final class SubtitleManager: ObservableObject {
     private var nativeLegiblePosition: SubtitlePosition = .bottom
     private var downloadTask: Task<Void, Never>?
     private var activeFFmpegProcess: Process?
+    private var activeOutPipe: Pipe?
 
     private init() {}
 
@@ -242,10 +243,13 @@ public final class SubtitleManager: ObservableObject {
         downloadTask?.cancel()
         downloadTask = nil
         if let proc = activeFFmpegProcess, proc.isRunning {
+            proc.terminationHandler = nil
             proc.terminate()
             kill(proc.processIdentifier, SIGKILL)
         }
         activeFFmpegProcess = nil
+        try? activeOutPipe?.fileHandleForReading.close()
+        activeOutPipe = nil
     }
 
     private func startEmbeddedExtraction(for track: SubtitleTrack, seekOffset: Double) {
@@ -336,6 +340,7 @@ public final class SubtitleManager: ObservableObject {
 
                 await MainActor.run {
                     self.activeFFmpegProcess = process
+                    self.activeOutPipe = outPipe
                 }
 
                 do {
