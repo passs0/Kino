@@ -5,7 +5,7 @@
   },
   "layers" : [
     {
-      "filename" : "4.2 _ layer.iconstacklayer"
+      "filename" : "4.3 _ layer.iconstacklayer"
     }
   ],
   "properties" : {
@@ -143,9 +143,9 @@
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0.3576953125,
+          "depth" : 0.2959765625,
           "enabled" : true,
-          "strength" : 0.0140234375
+          "strength" : 0.025625
         }
       },
       {
@@ -153,9 +153,9 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0.3576953125,
+          "depth" : 0.2959765625,
           "enabled" : true,
-          "strength" : 0.0140234375
+          "strength" : 0.025625
         }
       },
       {
@@ -163,9 +163,9 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0.3576953125,
+          "depth" : 0.2959765625,
           "enabled" : true,
-          "strength" : 0.0140234375
+          "strength" : 0.025625
         }
       },
       {
@@ -173,9 +173,9 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0.3576953125,
+          "depth" : 0.2959765625,
           "enabled" : true,
-          "strength" : 0.0140234375
+          "strength" : 0.025625
         }
       }
     ],
@@ -248,25 +248,25 @@
         "icon-studio-appearance" : "unspecified",
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0.3
       },
       {
         "icon-studio-appearance" : "light",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0.3
       },
       {
         "icon-studio-appearance" : "dark",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0.3
       },
       {
         "icon-studio-appearance" : "tinted",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0.3
       }
     ]
   }

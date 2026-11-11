@@ -36,12 +36,7 @@
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "gradient" : {
-            "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/system-light",
-            "type" : "icon-stack-gradient"
-          },
-          "type" : "gradient"
+          "type" : "automatic"
         }
       },
       {
@@ -49,12 +44,7 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "gradient" : {
-            "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/system-light",
-            "type" : "icon-stack-gradient"
-          },
-          "type" : "gradient"
+          "type" : "automatic"
         }
       },
       {
@@ -62,12 +52,7 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "gradient" : {
-            "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/system-light",
-            "type" : "icon-stack-gradient"
-          },
-          "type" : "gradient"
+          "type" : "none"
         }
       },
       {
@@ -75,12 +60,7 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "gradient" : {
-            "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/system-light",
-            "type" : "icon-stack-gradient"
-          },
-          "type" : "gradient"
+          "type" : "automatic"
         }
       }
     ],
@@ -269,7 +249,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/4.2 _ layer",
+          "name" : "Kino_Assets\/4.3 _ layer",
           "type" : "image-set"
         }
       },
@@ -279,7 +259,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/4.2 _ layer",
+          "name" : "Kino_Assets\/4.3 _ layer",
           "type" : "image-set"
         }
       },
@@ -289,7 +269,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/4.2 _ layer",
+          "name" : "Kino_Assets\/4.3 _ layer",
           "type" : "image-set"
         }
       },
@@ -299,7 +279,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/4.2 _ layer",
+          "name" : "Kino_Assets\/4.3 _ layer",
           "type" : "image-set"
         }
       }
@@ -335,49 +315,49 @@
         "icon-studio-appearance" : "unspecified",
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "light",
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "dark",
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "tinted",
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "unspecified",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "light",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "dark",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       },
       {
         "icon-studio-appearance" : "tinted",
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
-        "value" : 1
+        "value" : 0
       }
     ]
   }

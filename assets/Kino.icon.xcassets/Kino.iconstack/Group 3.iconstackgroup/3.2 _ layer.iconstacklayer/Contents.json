@@ -36,12 +36,12 @@
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "color" : {
+          "gradient" : {
             "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/Color-6",
-            "type" : "color-set"
+            "name" : "Kino_Assets\/system-dark",
+            "type" : "icon-stack-gradient"
           },
-          "type" : "solid"
+          "type" : "gradient"
         }
       },
       {
@@ -49,12 +49,12 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "color" : {
+          "gradient" : {
             "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/Color-6",
-            "type" : "color-set"
+            "name" : "Kino_Assets\/system-dark",
+            "type" : "icon-stack-gradient"
           },
-          "type" : "solid"
+          "type" : "gradient"
         }
       },
       {
@@ -62,12 +62,12 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "color" : {
+          "gradient" : {
             "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/Color-6",
-            "type" : "color-set"
+            "name" : "Kino_Assets\/system-light",
+            "type" : "icon-stack-gradient"
           },
-          "type" : "solid"
+          "type" : "gradient"
         }
       },
       {
@@ -75,12 +75,12 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "color" : {
+          "gradient" : {
             "matching-style" : "fully-qualified-name",
-            "name" : "Kino_Assets\/Color-6",
-            "type" : "color-set"
+            "name" : "Kino_Assets\/system-light",
+            "type" : "icon-stack-gradient"
           },
-          "type" : "solid"
+          "type" : "gradient"
         }
       }
     ],
@@ -269,7 +269,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/2.1 _ layer",
+          "name" : "Kino_Assets\/3.2 _ layer",
           "type" : "image-set"
         }
       },
@@ -279,7 +279,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/2.1 _ layer",
+          "name" : "Kino_Assets\/3.2 _ layer",
           "type" : "image-set"
         }
       },
@@ -289,7 +289,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/2.1 _ layer",
+          "name" : "Kino_Assets\/3.2 _ layer",
           "type" : "image-set"
         }
       },
@@ -299,7 +299,7 @@
         "icon-studio-localization" : "unspecified",
         "value" : {
           "matching-style" : "fully-qualified-name",
-          "name" : "Kino_Assets\/2.1 _ layer",
+          "name" : "Kino_Assets\/3.2 _ layer",
           "type" : "image-set"
         }
       }

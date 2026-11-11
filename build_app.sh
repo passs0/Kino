@@ -48,6 +48,17 @@ if [ -f "Resources/AppIcon.png" ]; then
     cp "Resources/AppIcon.png" "$RESOURCES_DIR/AppIcon.png"
 fi
 
+if [ -d "assets/Kino.icon.xcassets" ] && xcrun actool --version >/dev/null 2>&1; then
+    echo "🎨 Compiling dynamic multi-appearance iconstack into Assets.car..."
+    xcrun actool "assets/Kino.icon.xcassets" \
+        --compile "$RESOURCES_DIR" \
+        --platform macosx \
+        --minimum-deployment-target 14.0 \
+        --app-icon Kino \
+        --output-partial-info-plist /tmp/kino_partial.plist \
+        --output-format human-readable-text || true
+fi
+
 # Clear quarantine and extended attributes
 xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
@@ -57,9 +68,11 @@ codesign --force --deep --sign - "$APP_BUNDLE"
 echo "✅ Successfully built $APP_BUNDLE"
 ls -ld "$APP_BUNDLE"
 
-echo "🚀 Installing cleanly to /Applications/$APP_NAME.app..."
-rm -rf "/Applications/$APP_NAME.app"
-cp -R "$APP_BUNDLE" "/Applications/$APP_NAME.app"
+if [ -z "${CI:-}" ]; then
+    echo "🚀 Installing cleanly to /Applications/$APP_NAME.app..."
+    rm -rf "/Applications/$APP_NAME.app"
+    cp -R "$APP_BUNDLE" "/Applications/$APP_NAME.app"
 
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/$APP_NAME.app" 2>/dev/null || true
-echo "✨ Installed to /Applications/$APP_NAME.app"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/$APP_NAME.app" 2>/dev/null || true
+    echo "✨ Installed to /Applications/$APP_NAME.app"
+fi

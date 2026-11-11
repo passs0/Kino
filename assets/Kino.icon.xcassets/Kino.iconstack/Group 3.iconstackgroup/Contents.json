@@ -5,10 +5,10 @@
   },
   "layers" : [
     {
-      "filename" : "3.layer 11.iconstacklayer"
+      "filename" : "3.2 _ layer.iconstacklayer"
     },
     {
-      "filename" : "2.1 _ layer.iconstacklayer"
+      "filename" : "2.1 _ layer 2.iconstacklayer"
     }
   ],
   "properties" : {
@@ -146,9 +146,9 @@
         "icon-studio-idiom" : "unspecified",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0,
-          "enabled" : true,
-          "strength" : 0.5
+          "depth" : 0.3576953125,
+          "enabled" : false,
+          "strength" : 0.0140234375
         }
       },
       {
@@ -156,9 +156,9 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0,
-          "enabled" : true,
-          "strength" : 0.5
+          "depth" : 0.3576953125,
+          "enabled" : false,
+          "strength" : 0.0140234375
         }
       },
       {
@@ -166,9 +166,9 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0,
-          "enabled" : true,
-          "strength" : 0.5
+          "depth" : 0.3576953125,
+          "enabled" : false,
+          "strength" : 0.0140234375
         }
       },
       {
@@ -176,9 +176,9 @@
         "icon-studio-idiom" : "macOS",
         "icon-studio-localization" : "unspecified",
         "value" : {
-          "depth" : 0,
-          "enabled" : true,
-          "strength" : 0.5
+          "depth" : 0.3576953125,
+          "enabled" : false,
+          "strength" : 0.0140234375
         }
       }
     ],
