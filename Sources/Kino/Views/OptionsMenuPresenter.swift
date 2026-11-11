@@ -68,6 +68,13 @@ public final class OptionsMenuPresenter: NSObject {
             }
 
             subsMenu.addItem(NSMenuItem.separator())
+            let searchAudioSubsItem = createMenuItem(
+                title: "Search Subtitles/Lyrics Online…",
+                systemImage: "magnifyingglass",
+                action: #selector(handleSearchSubtitlesOnline)
+            )
+            subsMenu.addItem(searchAudioSubsItem)
+
             let loadAudioSubsItem = createMenuItem(title: "Load External Lyrics/Subtitles…", systemImage: "folder", action: #selector(handleLoadExternalSubtitles))
             subsMenu.addItem(loadAudioSubsItem)
 
@@ -165,6 +172,15 @@ public final class OptionsMenuPresenter: NSObject {
             }
 
             subsMenu.addItem(NSMenuItem.separator())
+            let searchOnlineItem = createMenuItem(
+                title: "Search Subtitles Online…",
+                systemImage: "magnifyingglass",
+                action: #selector(handleSearchSubtitlesOnline),
+                keyEquivalent: "s",
+                modifierMask: [.option, .command]
+            )
+            subsMenu.addItem(searchOnlineItem)
+
             let loadExternalItem = createMenuItem(title: "Load External Subtitles…", systemImage: "folder", action: #selector(handleLoadExternalSubtitles))
             subsMenu.addItem(loadExternalItem)
 
@@ -376,6 +392,10 @@ public final class OptionsMenuPresenter: NSObject {
         if panel.runModal() == .OK, let url = panel.url {
             SubtitleManager.shared.loadExternalSubtitle(from: url)
         }
+    }
+
+    @objc private func handleSearchSubtitlesOnline() {
+        NotificationCenter.default.post(name: .openSubtitleSearchSheetNotification, object: nil)
     }
 
     @objc private func handleSelectAudioTrack(_ sender: NSMenuItem) {

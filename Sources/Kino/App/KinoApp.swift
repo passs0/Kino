@@ -144,20 +144,29 @@ public struct KinoApp: App {
 
                 Divider()
 
-                Menu("Subtitle Placement") {
-                    Button("In Letterbox Bar (Display Height)") {
-                        SubtitleManager.shared.setPlacement(.letterbox)
+                Menu("Subtitles") {
+                    Button("Search Subtitles Online…") {
+                        NotificationCenter.default.post(name: .openSubtitleSearchSheetNotification, object: nil)
                     }
-                    Button("Inside Video (Media Height)") {
-                        SubtitleManager.shared.setPlacement(.mediaFrame)
-                    }
+                    .keyboardShortcut("s", modifiers: [.command, .option])
 
                     Divider()
 
-                    Button("Toggle Subtitle Placement") {
-                        SubtitleManager.shared.togglePlacement()
+                    Menu("Placement") {
+                        Button("In Letterbox Bar (Display Height)") {
+                            SubtitleManager.shared.setPlacement(.letterbox)
+                        }
+                        Button("Inside Video (Media Height)") {
+                            SubtitleManager.shared.setPlacement(.mediaFrame)
+                        }
+
+                        Divider()
+
+                        Button("Toggle Placement") {
+                            SubtitleManager.shared.togglePlacement()
+                        }
+                        .keyboardShortcut("z", modifiers: [])
                     }
-                    .keyboardShortcut("z", modifiers: [])
                 }
 
                 Button("Toggle Aspect Ratio (Fit / Fill)") {
@@ -225,5 +234,6 @@ public struct KinoApp: App {
 public extension Notification.Name {
     static let openURLSheetNotification = Notification.Name("KinoOpenURLSheetNotification")
     static let openPrerequisitesSheetNotification = Notification.Name("KinoOpenPrerequisitesSheetNotification")
+    static let openSubtitleSearchSheetNotification = Notification.Name("KinoOpenSubtitleSearchSheetNotification")
     static let closeMediaNotification = Notification.Name("KinoCloseMediaNotification")
 }

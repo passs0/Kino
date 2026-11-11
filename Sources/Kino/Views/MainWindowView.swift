@@ -17,6 +17,7 @@ public struct MainWindowView: View {
 
     @State private var showURLSheet = false
     @State private var showPrerequisitesSheet = false
+    @State private var showSubtitleSearchSheet = false
     @State private var isFullScreen = false
 
     public init() {}
@@ -33,6 +34,9 @@ public struct MainWindowView: View {
             .sheet(isPresented: $showPrerequisitesSheet) {
                 PrerequisiteInstallSheet()
             }
+            .sheet(isPresented: $showSubtitleSearchSheet) {
+                SubtitleSearchSheet()
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
                 withAnimation(.easeInOut(duration: 0.25)) {
                     isFullScreen = true
@@ -48,6 +52,9 @@ public struct MainWindowView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
                 showPrerequisitesSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openSubtitleSearchSheetNotification)) { _ in
+                showSubtitleSearchSheet = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
                 handleCloseMedia()
