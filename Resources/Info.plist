@@ -28,6 +28,8 @@
     <string>26.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Kino uses on-device speech recognition to generate live subtitles and translations for playing videos.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSAppTransportSecurity</key>

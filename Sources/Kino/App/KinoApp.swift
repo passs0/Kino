@@ -160,6 +160,18 @@ public struct KinoApp: App {
 
                     Divider()
 
+                    Button(LiveCaptionManager.shared.isEnabled ? "Turn Off Live Captions" : "Turn On Live Captions") {
+                        LiveCaptionManager.shared.toggleLiveCaptions()
+                    }
+                    .keyboardShortcut("l", modifiers: [.command, .option])
+
+                    Button("Live Captions & Translation Settings…") {
+                        NotificationCenter.default.post(name: .openLiveCaptionSheetNotification, object: nil)
+                    }
+                    .keyboardShortcut("c", modifiers: [.command, .option])
+
+                    Divider()
+
                     Menu("Placement") {
                         Button("In Letterbox Bar (Display Height)") {
                             SubtitleManager.shared.setPlacement(.letterbox)

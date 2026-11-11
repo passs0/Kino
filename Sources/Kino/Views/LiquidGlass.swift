@@ -178,3 +178,18 @@ public struct LiquidCapsuleButtonStyle: ButtonStyle {
             .onHover { h in isHovering = h }
     }
 }
+
+/// Helper that provides standard macOS AppKit visual effect backdrop for sheets and modal dialogs.
+public struct VisualEffectBackdrop: NSViewRepresentable {
+    public init() {}
+
+    public func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .sheet
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    public func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}

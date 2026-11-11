@@ -599,16 +599,3 @@ public struct SubtitleSearchSheet: View {
         return "\(count)"
     }
 }
-
-/// Helper that provides standard macOS AppKit visual effect backdrop for sheets.
-private struct VisualEffectBackdrop: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .sheet
-        view.blendingMode = .behindWindow
-        view.state = .active
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
-}

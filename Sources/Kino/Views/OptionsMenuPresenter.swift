@@ -156,6 +156,19 @@ public final class OptionsMenuPresenter: NSObject {
             subsMenu.addItem(loadExternalItem)
 
             subsMenu.addItem(NSMenuItem.separator())
+            let isLiveOn = LiveCaptionManager.shared.isEnabled
+            let liveTitle = isLiveOn ? "Live Captions & Translation (Active)" : "Live Captions & Translation…"
+            let liveItem = createMenuItem(
+                title: liveTitle,
+                systemImage: "waveform.badge.mic",
+                action: #selector(handleOpenLiveCaptions),
+                keyEquivalent: "c",
+                modifierMask: [.option, .command]
+            )
+            liveItem.state = isLiveOn ? .on : .off
+            subsMenu.addItem(liveItem)
+
+            subsMenu.addItem(NSMenuItem.separator())
 
             // Subtitle Placement Submenu (Display Height vs Media Height)
             let placementItem = createMenuItem(title: "Placement", systemImage: "arrow.up.and.down.text.horizontal")
@@ -300,6 +313,10 @@ public final class OptionsMenuPresenter: NSObject {
 
     @objc private func handleSearchSubtitlesOnline() {
         NotificationCenter.default.post(name: .openSubtitleSearchSheetNotification, object: nil)
+    }
+
+    @objc private func handleOpenLiveCaptions() {
+        NotificationCenter.default.post(name: .openLiveCaptionSheetNotification, object: nil)
     }
 
     @objc private func handleSelectAudioTrack(_ sender: NSMenuItem) {
