@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" width="160" height="160" alt="Kino Icon" />
+  <img src="assets/icon_mac.png" width="160" height="160" alt="Kino Icon" />
 </p>
 
 <h1 align="center">Kino</h1>
