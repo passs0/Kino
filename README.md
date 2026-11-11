@@ -73,9 +73,14 @@ Kino includes a zero-bloat GPU video enhancement suite integrated directly via h
 - **Dolby TrueHD & MLP Lossless Decoding:** Dynamic container demuxing and high-bandwidth pipeline preserving high-resolution multi-channel audio tracks.
 - **Multi-Track Audio Switching:** Effortlessly switch between original audio tracks, commentary, and localized dubs from the Options menu (`...`).
 
-### 4. macOS System Settings Accessibility Captions & Subtitle Engine
-Kino treats subtitles as a first-class citizen using Apple's official `MediaAccessibility` framework (`MACaptionAppearance`):
-- **System-Wide Consistency:** Subtitles dynamically adapt to your preferences in **System Settings ➔ Accessibility ➔ Captions** (e.g. *Transparent Background*, *Classic*, *Outline Text*, or *Large Text*).
+### 4. Native OpenSubtitles.com Integration & Subtitle Engine
+Kino treats subtitles as a first-class citizen with both local media intelligence and global online database integration:
+- **Native OpenSubtitles.com Integration (`⌥⌘S`):** Search, browse, and download subtitles across 100+ languages directly inside Kino with a single click. No browser trips or manual `.srt` file juggling required.
+- **64-bit Checksum Exact Frame Sync (`MovieHash`):** Computes the official 64-bit OpenSubtitles checksum on local media files upon launch. Subtitles matching the exact file release and framerate are prominently badged (`⭐️ Exact Match`), guaranteeing 100% synchronized timing with zero audio/caption drift.
+- **Dual Subtitle Placement Modes (`Z`):** Toggle between **In Letterbox Bar (Display Height)**—positioning captions cleanly inside the black cinema bars below the picture—and **Inside Video (Media Height)**.
+- **Smart Title Query Cleaner:** Intelligently cleans scene tags (e.g. `The.Matrix.1999.2160p.UHD.BluRay.x265-TERMINAL` $\rightarrow$ `The Matrix 1999`) to retrieve the highest-rated community releases.
+- **Account & VIP Quota Management:** Built-in account login for registered OpenSubtitles users (granting 20 free downloads/24h) and custom API key support, with automatic browser fallback links.
+- **System-Wide Accessibility Consistency:** Subtitles dynamically adapt to your preferences in **System Settings ➔ Accessibility ➔ Captions** (e.g. *Transparent Background*, *Classic*, *Outline Text*, or *Large Text*).
 - **Responsive Subtitle Scaling:** Caption font size, padding, and line height dynamically scale with viewport height (`18 pt` to `48 pt`) when entering full screen.
 - **Automatic Sidecar Subtitle & Lyric Discovery:** Automatically detects `.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, and `.lrc` files located alongside media or in `Subs/` and `Subtitles/` subdirectories.
 - **Drag-and-Drop Subtitle Attachment:** Drop any external subtitle or lyric file directly onto the player window to immediately switch to that track without stopping the video.
@@ -84,10 +89,13 @@ Kino treats subtitles as a first-class citizen using Apple's official `MediaAcce
 - **Smart ASS/SSA Sanitization:** Automatically strips cluttered custom font/color overrides from anime and community subtitles while preserving semantic screen positioning (top, bottom, and center placement).
 - **Embedded Subtitle Extraction:** Automatically extracts container-embedded tracks (`mov_text`, `srt`, `ass`, `webvtt`) on-the-fly.
 
-### 5. Apple Built-in App Aesthetics & QuickTime Floating HUD Bar
-- **Unified QuickTime Floating HUD Bar:** Replaced scattered corner capsules with Apple's iconic single floating HUD capsule (`.ultraThinMaterial`) at the bottom of the video, leaving the entire video canvas 100% clean and unobstructed.
+### 5. Modern QuickTime Design & Window Mechanics
+- **Unified QuickTime Floating HUD Bar:** Apple's iconic single floating HUD capsule (`.ultraThinMaterial`) anchored at the bottom of the video, leaving the entire video canvas 100% clean and unobstructed across both windowed and full-screen modes.
+- **Zero-Lag Full Screen Space Switching:** Orders the key window front and activates the application before animating into full screen, ensuring macOS immediately switches desktop Spaces to the video rather than stranding the user on the previous desktop.
+- **Unconstrained 2D Resizing with Fluid Letterboxing:** Smooth, free-form 2D window resizing in all directions without aspect ratio lockups or `NaN` coordinate errors, automatically framing the media with clean cinema letterboxing bars.
+- **Online Stream Title Extraction:** YouTube, Bilibili, and web stream titles are automatically parsed and displayed in the native titlebar instead of generic host URLs.
+- **Adaptive QuickTime Light & Dark Appearance:** Keeps the video canvas focused in cinema dark during active playback while seamlessly adapting window chrome and menus to the system appearance during idle state.
 - **San Francisco Tabular Digits (`tnum`):** QuickTime-native SF Pro medium typography with tabular digits prevents horizontal glyph wobble while scrubbing or playing.
-- **Window Aspect Ratio Locking (`window.contentAspectRatio`):** Automatically computes and animates the window to the video's natural resolution upon loading, with hardware-enforced aspect ratio locking during manual window edge dragging.
 - **Titlebar Document Proxy Icon & Single-Axis Alignment:** Integrated macOS document proxy icon (`window.representedURL`) in the titlebar, aligned to the exact horizontal center axis of the 26pt inset traffic lights. When mouse is inactive for 2.5s, the titlebar, traffic lights, and floating HUD bar smoothly fade out in unison for a borderless cinema canvas.
 - **Apple First-Party Controls & Recent Items:** Uses Apple's `.borderedProminent` and `.bordered` controls, `NSDocumentController` Open Recent integration, AppKit `NSSlider`, and transient center play/pause feedback.
 - **Centered Floating Modal Inspector (`⌘I`):** A centered floating diagnostic block presenting live playback strategy, active upscaling pipeline, audio codec channels, and stream probe metadata. Dismiss with `Esc` or a click outside.
@@ -127,7 +135,9 @@ Unlike traditional players that demand manual command-line installations, Kino k
 | **`-`** | Volume Down (`-10%`) |
 | **`M`** | Mute / Unmute |
 | **`C`** | Toggle Video Aspect Ratio: **Fit to Screen (Letterbox)** vs. **Fill Screen** |
-| **`Z`** | Toggle Subtitle Placement: **Video Frame Bounds** vs. **Display Frame Bounds** |
+| **`Z`** | Toggle Subtitle Placement: **In Letterbox Bar** vs. **Inside Video** |
+| **`⌥⌘S`** | **Search Subtitles Online…** (OpenSubtitles.com REST API v1) |
+| **`⌃⌘F`** | Toggle Full Screen (Instant Space Switch) |
 | **`⌘I`** | Toggle Centered Media Statistics & Technical Inspector HUD |
 | **`⌥⌘M`** | Toggle Compact Liquid Glass MiniPlayer (Music Mode) |
 | **`⌥⌘P`** | Toggle Always-on-Top Floating Window |
@@ -185,8 +195,14 @@ cd kino
 - [x] Minimalist Welcome Screen with floating squircle app icon & direct open actions
 - [x] Centered Media Statistics Technical Inspector (`⌘I`) with dark glass scrim
 - [x] macOS Control Center & Now Playing widget integration (`MPNowPlayingInfoCenter` & `MPRemoteCommandCenter`)
+- [x] Unconstrained 2D window resizing with cinema letterbox framing & aspect ratio protection
+- [x] Instant full-screen desktop Space switching without focus strand (`⌃⌘F`)
+- [x] Automatic online stream video title parsing (YouTube, Bilibili, etc.)
 
 ### Audio & Subtitles (v1.0.0 Complete)
+- [x] Native OpenSubtitles.com online subtitle search, multi-language filter & 1-click download (`⌥⌘S`)
+- [x] 64-bit `MovieHash` checksum calculation for exact frame-level timing synchronization
+- [x] Dual subtitle placement: In Letterbox Bar (Display Height) vs Inside Video (Media Height) (`Z`)
 - [x] Apple MetalFX Spatial Super-Resolution & CoreImage GPU video enhancement suite
 - [x] Multi-channel surround sound preservation (discrete 5.1 & 7.1 tracks & Dolby Atmos)
 - [x] Dolby TrueHD & MLP lossless multi-channel container demuxing & high-bitrate streaming pipeline
