@@ -10,7 +10,6 @@ public final class SubtitleManager: ObservableObject {
     @Published public private(set) var selectedTrack: SubtitleTrack? = nil
     @Published public private(set) var currentCueText: String? = nil
     @Published public private(set) var currentCuePosition: SubtitlePosition = .bottom
-    @Published public private(set) var liveCaptionText: String? = nil
 
     private static let placementDefaultsKey = "KinoSubtitlePlacement"
     private static let legacyPlacementDefaultsKey = "SereinSubtitlePlacement"
@@ -426,22 +425,7 @@ public final class SubtitleManager: ObservableObject {
         refreshDisplayedCue(for: currentTime)
     }
 
-    /// Sets real-time speech recognized or translated caption text from LiveCaptionManager.
-    public func setLiveCaptionText(_ text: String?) {
-        guard liveCaptionText != text else { return }
-        self.liveCaptionText = text
-        refreshDisplayedCue(for: PlayerController.shared.currentTime)
-    }
-
     private func refreshDisplayedCue(for currentTime: Double) {
-        if let live = liveCaptionText, !live.isEmpty {
-            if currentCueText != live || currentCuePosition != .bottom {
-                currentCueText = live
-                currentCuePosition = .bottom
-            }
-            return
-        }
-
         guard selectedTrack != nil else {
             if currentCueText != nil {
                 currentCueText = nil

@@ -200,7 +200,6 @@ cd kino
 - [x] Automatic online stream video title parsing (YouTube, Bilibili, etc.)
 
 ### Audio & Subtitles (v1.0.0 Complete)
-- [x] **Live On-Device Captions & Real-Time Neural Translation (`⌥⌘C`, `⌥⌘L`)**: 100% on-device speech-to-text & neural translation powered by Apple Silicon Neural Engine (`Speech` & `Translation` frameworks). Real-time translation between Japanese, English, Korean, Traditional Chinese, Simplified Chinese, French, German, and Spanish with zero cloud latency and no external dependencies.
 - [x] Native OpenSubtitles.com online subtitle search, multi-language filter & 1-click download (`⌥⌘S`)
 - [x] 64-bit `MovieHash` checksum calculation for exact frame-level timing synchronization
 - [x] Dual subtitle placement: In Letterbox Bar (Display Height) vs Inside Video (Media Height) (`Z`)

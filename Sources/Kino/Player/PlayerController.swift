@@ -178,14 +178,12 @@ public final class PlayerController: ObservableObject {
     public func play() {
         player.rate = playbackRate
         isPlaying = true
-        LiveCaptionManager.shared.handlePlay()
         NowPlayingManager.shared.updatePlaybackState(isPlaying: true, rate: playbackRate)
     }
 
     public func pause() {
         player.pause()
         isPlaying = false
-        LiveCaptionManager.shared.handlePause()
         saveCurrentPosition()
         NowPlayingManager.shared.updatePlaybackState(isPlaying: false, rate: 0.0)
     }
@@ -241,7 +239,6 @@ public final class PlayerController: ObservableObject {
         let relativeSec = max(0, targetSec - streamTimeOffset)
         let cmTime = CMTime(seconds: relativeSec, preferredTimescale: 600)
         SubtitleManager.shared.handleUserSeek(to: targetSec)
-        LiveCaptionManager.shared.handleUserSeek(to: targetSec)
 
         // Prevent periodic time observer snapback during user seeking
         isSeeking = true

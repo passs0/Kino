@@ -1,7 +1,6 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import Translation
 
 /// Minimalist Liquid Glass Main Window (macOS 26+)
 public struct MainWindowView: View {
@@ -15,12 +14,10 @@ public struct MainWindowView: View {
     @StateObject private var coordinator = MediaCoordinator.shared
     @StateObject private var playerController = PlayerController.shared
     @StateObject private var windowManager = WindowManager.shared
-    @StateObject private var liveCaption = LiveCaptionManager.shared
 
     @State private var showURLSheet = false
     @State private var showPrerequisitesSheet = false
     @State private var showSubtitleSearchSheet = false
-    @State private var showLiveCaptionSheet = false
     @State private var isFullScreen = false
 
     public init() {}
@@ -40,12 +37,6 @@ public struct MainWindowView: View {
             .sheet(isPresented: $showSubtitleSearchSheet) {
                 SubtitleSearchSheet()
             }
-            .sheet(isPresented: $showLiveCaptionSheet) {
-                LiveCaptionSheet()
-            }
-            .translationTask(liveCaption.translationConfig) { session in
-                liveCaption.registerTranslationSession(session)
-            }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
                 withAnimation(.easeInOut(duration: 0.25)) {
                     isFullScreen = true
@@ -64,9 +55,6 @@ public struct MainWindowView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .openSubtitleSearchSheetNotification)) { _ in
                 showSubtitleSearchSheet = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .openLiveCaptionSheetNotification)) { _ in
-                showLiveCaptionSheet = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
                 handleCloseMedia()
