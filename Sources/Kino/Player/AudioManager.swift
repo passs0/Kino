@@ -6,11 +6,32 @@ import Combine
 @MainActor
 public final class AudioManager: ObservableObject {
     public static let shared = AudioManager()
+    private static let enhanceDialogueDefaultsKey = "KinoEnhanceDialogue"
 
     @Published public private(set) var availableTracks: [AudioTrack] = []
     @Published public private(set) var selectedTrack: AudioTrack? = nil
+    @Published public private(set) var isEnhanceDialogueEnabled: Bool = {
+        UserDefaults.standard.bool(forKey: "KinoEnhanceDialogue")
+    }()
 
     private init() {}
+
+    /// Toggles the Apple-style Enhance Dialogue speech clarity filter.
+    public func toggleEnhanceDialogue() {
+        setEnhanceDialogue(!isEnhanceDialogueEnabled)
+    }
+
+    /// Sets Enhance Dialogue state and updates user preferences.
+    public func setEnhanceDialogue(_ enabled: Bool) {
+        guard isEnhanceDialogueEnabled != enabled else { return }
+        isEnhanceDialogueEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.enhanceDialogueDefaultsKey)
+
+        PlayerController.shared.showHUD(
+            message: enabled ? "Enhance Dialogue: On" : "Enhance Dialogue: Off",
+            iconName: enabled ? "quote.bubble.fill" : "quote.bubble"
+        )
+    }
 
     /// Updates the available audio tracks from container inspection or stream metadata.
     public func setAvailableTracks(_ tracks: [AudioTrack], defaultIndex: Int? = nil) {

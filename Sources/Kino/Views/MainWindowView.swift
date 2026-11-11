@@ -103,24 +103,20 @@ public struct MainWindowView: View {
     }
 
     private var inspectorOverlay: some View {
-        ZStack(alignment: .center) {
-            Color.black.opacity(0.50)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+        VStack {
+            HStack {
+                Spacer()
+                MediaInspectorView(coordinator: coordinator) {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
                         coordinator.isInspectorPresented = false
                     }
                 }
-
-            MediaInspectorView(coordinator: coordinator) {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                    coordinator.isInspectorPresented = false
-                }
+                .padding(.top, 48)
+                .padding(.trailing, 20)
             }
-            .padding(24)
+            Spacer()
         }
-        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topTrailing)))
         .zIndex(200)
     }
 

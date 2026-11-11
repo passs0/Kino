@@ -19,18 +19,11 @@ public struct KinoApp: App {
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 580, height: 380)
+
+        Settings {
+            SettingsView()
+        }
         .commands {
-            CommandGroup(after: .appInfo) {
-                Button("Media Engines & Codecs...") {
-                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
-                }
-                .keyboardShortcut(",", modifiers: .command)
-
-                Button("Check for Engine Updates...") {
-                    NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
-                }
-            }
-
             CommandGroup(replacing: .newItem) {
                 Button("Open Media File…") {
                     openFileDialog()
@@ -141,6 +134,21 @@ public struct KinoApp: App {
                     PlayerController.shared.toggleMute()
                 }
                 .keyboardShortcut("m", modifiers: [])
+
+                Button(AudioManager.shared.isEnhanceDialogueEnabled ? "Disable Enhance Dialogue" : "Enhance Dialogue") {
+                    AudioManager.shared.toggleEnhanceDialogue()
+                }
+
+                Divider()
+
+                Menu("Playback Speed") {
+                    let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+                    ForEach(rates, id: \.self) { r in
+                        Button(r == 1.0 ? "Normal (1x)" : "\(r)x") {
+                            PlayerController.shared.playbackRate = r
+                        }
+                    }
+                }
 
                 Divider()
 

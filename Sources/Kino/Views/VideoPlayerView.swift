@@ -467,14 +467,14 @@ public struct VideoPlayerView: View {
 
             hudDivider
 
-            // 4. Auxiliary & Route Actions: [Options] [PiP] [AirPlay] [Fullscreen]
+            // 4. Auxiliary & Route Actions: [Subtitles & Audio] [PiP] [AirPlay] [Fullscreen]
             HStack(spacing: groupSpacing) {
                 HUDIconButton(
-                    iconName: "ellipsis",
+                    iconName: "quote.bubble",
                     size: 13,
                     weight: .semibold,
                     frameSize: 28,
-                    helpText: "Playback Options (Subtitles, Speed, Audio Tracks, Statistics)"
+                    helpText: "Subtitles and Audio"
                 ) {
                     OptionsMenuPresenter.shared.show()
                     registerUserActivity()
@@ -841,12 +841,13 @@ public struct VideoPlayerView: View {
                         .help("AirPlay Audio")
 
                     Button(action: { OptionsMenuPresenter.shared.show() }) {
-                        Image(systemName: "ellipsis")
+                        Image(systemName: "quote.bubble")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.white.opacity(0.85))
                             .frame(width: 24, height: 24)
                     }
                     .buttonStyle(.plain)
+                    .help("Subtitles and Audio")
                     .help("Audio Options & Media Statistics")
                 }
                 .padding(.horizontal, 24)

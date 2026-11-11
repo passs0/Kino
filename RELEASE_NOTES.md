@@ -3,7 +3,7 @@
 > **Version:** 1.0.0  
 > **Target Platform:** macOS 13.0+ (Apple Silicon)  
 > **Disk Image:** `Kino-v1.0.0.dmg` (2.0 MB)  
-> **SHA-256 Checksum:** `4c7e5b2172cb20175ec6634b353bc164ff3b99cf428be6aeaf114e13cef00230`
+> **SHA-256 Checksum:** `caa39459649a2c05984556ab876017dc30ca0816c983ae675ea97704fbf598cd`
 
 ---
 
@@ -108,7 +108,7 @@ Kino combines the clean elegance, battery efficiency, and fluid animations of Ap
 4. Verify checksum:
    ```zsh
    shasum -a 256 Kino-v1.0.0.dmg
-   # Expected: 4c7e5b2172cb20175ec6634b353bc164ff3b99cf428be6aeaf114e13cef00230
+   # Expected: caa39459649a2c05984556ab876017dc30ca0816c983ae675ea97704fbf598cd
    ```
 
 ---

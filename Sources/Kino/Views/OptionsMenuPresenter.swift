@@ -82,47 +82,18 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(subsItem)
 
             menu.addItem(NSMenuItem.separator())
-
-            // 3. Playback Speed Submenu
-            let speedItem = createMenuItem(title: "Playback Speed", systemImage: "gauge.with.needle")
-            let speedMenu = NSMenu(title: "Playback Speed")
-            speedMenu.autoenablesItems = false
-
-            let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-            let currentRate = PlayerController.shared.playbackRate
-            for r in rates {
-                let label = r == 1.0 ? "1x" : "\(formatRate(Double(r)))x"
-                let item = NSMenuItem(title: label, action: #selector(handleSelectSpeed(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = r
-                item.state = (abs(currentRate - r) < 0.01) ? .on : .off
-                speedMenu.addItem(item)
+            let enhanceDialogueItem = NSMenuItem(
+                title: "Enhance Dialogue",
+                action: #selector(handleToggleEnhanceDialogue),
+                keyEquivalent: ""
+            )
+            enhanceDialogueItem.target = self
+            enhanceDialogueItem.state = AudioManager.shared.isEnhanceDialogueEnabled ? .on : .off
+            if let img = NSImage(systemSymbolName: "quote.bubble.fill", accessibilityDescription: "Enhance Dialogue") {
+                img.isTemplate = true
+                enhanceDialogueItem.image = img
             }
-
-            speedItem.submenu = speedMenu
-            menu.addItem(speedItem)
-
-            menu.addItem(NSMenuItem.separator())
-
-            // 4. Media Statistics & Codec Inspector
-            let isInspectorOpen = MediaCoordinator.shared.isInspectorPresented
-            let statsItem = createMenuItem(
-                title: isInspectorOpen ? "Hide Media Statistics" : "Show Media Statistics",
-                systemImage: "chart.bar.xaxis",
-                action: #selector(handleToggleStats),
-                keyEquivalent: "i"
-            )
-            statsItem.state = isInspectorOpen ? .on : .off
-            menu.addItem(statsItem)
-
-            // 5. Media Engines & Codecs Setup
-            let enginesItem = createMenuItem(
-                title: "Media Engines & Codecs...",
-                systemImage: "gearshape",
-                action: #selector(handleOpenEngines),
-                keyEquivalent: ","
-            )
-            menu.addItem(enginesItem)
+            menu.addItem(enhanceDialogueItem)
 
         } else {
             // MARK: - Video Mode (Spacious & Clean Options Menu)
@@ -244,85 +215,18 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(audioItem)
 
             menu.addItem(NSMenuItem.separator())
-
-            // 3. Playback Speed Submenu
-            let speedItem = createMenuItem(title: "Playback Speed", systemImage: "gauge.with.needle")
-            let speedMenu = NSMenu(title: "Playback Speed")
-            speedMenu.autoenablesItems = false
-
-            let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-            let currentRate = PlayerController.shared.playbackRate
-            for r in rates {
-                let label = r == 1.0 ? "1x" : "\(formatRate(Double(r)))x"
-                let item = NSMenuItem(title: label, action: #selector(handleSelectSpeed(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = r
-                item.state = (abs(currentRate - r) < 0.01) ? .on : .off
-                speedMenu.addItem(item)
-            }
-
-            speedItem.submenu = speedMenu
-            menu.addItem(speedItem)
-
-            // 4. Aspect Ratio Submenu
-            let aspectItem = createMenuItem(title: "Aspect Ratio", systemImage: "aspectratio")
-            let aspectMenu = NSMenu(title: "Aspect Ratio")
-            aspectMenu.autoenablesItems = false
-
-            let isLetterboxed = PlayerController.shared.isLetterboxed
-
-            let fitItem = NSMenuItem(title: "Fit to Screen (Preserve Aspect)", action: #selector(handleSetLetterboxFit), keyEquivalent: "")
-            fitItem.target = self
-            fitItem.state = isLetterboxed ? .on : .off
-            aspectMenu.addItem(fitItem)
-
-            let fillItem = NSMenuItem(title: "Fill Screen (Crop)", action: #selector(handleSetLetterboxFill), keyEquivalent: "")
-            fillItem.target = self
-            fillItem.state = (!isLetterboxed) ? .on : .off
-            aspectMenu.addItem(fillItem)
-
-            aspectItem.submenu = aspectMenu
-            menu.addItem(aspectItem)
-
-            // 5. Video Upscaler & Enhancer Submenu (GPU-accelerated native upscaling)
-            let enhanceItem = createMenuItem(title: "Video Upscaler & Enhancer", systemImage: "sparkles")
-            let enhanceMenu = NSMenu(title: "Video Upscaler & Enhancer")
-            enhanceMenu.autoenablesItems = false
-
-            let currentMode = VideoEnhancer.shared.activeMode
-            for mode in VideoEnhancer.EnhancementMode.allCases {
-                let item = NSMenuItem(title: mode.rawValue, action: #selector(handleSelectEnhancementMode(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = mode
-                item.state = (currentMode == mode) ? .on : .off
-                item.toolTip = mode.shortDescription
-                enhanceMenu.addItem(item)
-            }
-
-            enhanceItem.submenu = enhanceMenu
-            menu.addItem(enhanceItem)
-
-            menu.addItem(NSMenuItem.separator())
-
-            // 6. Media Statistics (Canonical access point for media information & technical inspector)
-            let isInspectorOpen = MediaCoordinator.shared.isInspectorPresented
-            let statsItem = createMenuItem(
-                title: isInspectorOpen ? "Hide Media Statistics" : "Show Media Statistics",
-                systemImage: "chart.bar.xaxis",
-                action: #selector(handleToggleStats),
-                keyEquivalent: "i"
+            let enhanceDialogueItem = NSMenuItem(
+                title: "Enhance Dialogue",
+                action: #selector(handleToggleEnhanceDialogue),
+                keyEquivalent: ""
             )
-            statsItem.state = isInspectorOpen ? .on : .off
-            menu.addItem(statsItem)
-
-            // 7. Media Engines & Codecs Setup
-            let enginesItem = createMenuItem(
-                title: "Media Engines & Codecs...",
-                systemImage: "gearshape",
-                action: #selector(handleOpenEngines),
-                keyEquivalent: ","
-            )
-            menu.addItem(enginesItem)
+            enhanceDialogueItem.target = self
+            enhanceDialogueItem.state = AudioManager.shared.isEnhanceDialogueEnabled ? .on : .off
+            if let img = NSImage(systemSymbolName: "quote.bubble.fill", accessibilityDescription: "Enhance Dialogue") {
+                img.isTemplate = true
+                enhanceDialogueItem.image = img
+            }
+            menu.addItem(enhanceDialogueItem)
         }
 
         // Pop up the menu at the cursor event position or comfortably above the HUD pill
@@ -402,6 +306,10 @@ public final class OptionsMenuPresenter: NSObject {
         if let track = sender.representedObject as? AudioTrack {
             AudioManager.shared.selectTrack(track)
         }
+    }
+
+    @objc private func handleToggleEnhanceDialogue() {
+        AudioManager.shared.toggleEnhanceDialogue()
     }
 
     @objc private func handleSelectSpeed(_ sender: NSMenuItem) {

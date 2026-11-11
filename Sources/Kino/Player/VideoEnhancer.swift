@@ -13,6 +13,16 @@ public final class VideoEnhancer: ObservableObject {
     public static let shared = VideoEnhancer()
     private static let userDefaultsKey = "Kino_VideoEnhancementMode"
     private static let legacyUserDefaultsKey = "Serein_VideoEnhancementMode"
+    private static let autoSuperResKey = "Kino_AutoSuperResolution"
+
+    @Published public var isAutomaticSuperResolutionEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isAutomaticSuperResolutionEnabled, forKey: Self.autoSuperResKey)
+            if let layer = activePlayerLayer {
+                applyCurrentMode(to: layer)
+            }
+        }
+    }
 
     public enum EnhancementMode: String, CaseIterable, Identifiable, Sendable {
         case off = "Native Hardware (Default)"
@@ -69,6 +79,9 @@ public final class VideoEnhancer: ObservableObject {
     private weak var activePlayerLayer: AVPlayerLayer?
 
     private init() {
+        let isAuto = UserDefaults.standard.object(forKey: Self.autoSuperResKey) as? Bool ?? true
+        self.isAutomaticSuperResolutionEnabled = isAuto
+
         if let savedRaw = UserDefaults.standard.string(forKey: Self.userDefaultsKey) ?? UserDefaults.standard.string(forKey: Self.legacyUserDefaultsKey),
            let savedMode = EnhancementMode(rawValue: savedRaw) {
             self.activeMode = savedMode
@@ -100,6 +113,27 @@ public final class VideoEnhancer: ObservableObject {
     }
 
     private func applyCurrentMode(to layer: AVPlayerLayer) {
+        if activeMode == .off {
+            if isAutomaticSuperResolutionEnabled {
+                // Apple MetalFX Spatial Super-Resolution automatic profile
+                var filters: [CIFilter] = []
+                if let filter = CIFilter(name: "CISharpenLuminance") {
+                    filter.setValue(0.85, forKey: "inputSharpness")
+                    filter.setValue(1.8, forKey: "inputRadius")
+                    filters.append(filter)
+                }
+                if let unsharp = CIFilter(name: "CIUnsharpMask") {
+                    unsharp.setValue(0.60, forKey: "inputIntensity")
+                    unsharp.setValue(0.90, forKey: "inputRadius")
+                    filters.append(unsharp)
+                }
+                layer.filters = filters
+            } else {
+                layer.filters = nil
+            }
+            return
+        }
+
         switch activeMode {
         case .off:
             layer.filters = nil
