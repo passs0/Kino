@@ -327,8 +327,8 @@ public final class MediaCoordinator: ObservableObject {
             log("⚙️ Starting zero-reencode HLS remux pipeline...", level: .info)
             do {
                 let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
+                self.activePlayableURL = session.url
                 self.state = .ready(strategy)
                 log("✨ Live remux stream connected to AVPlayer.", level: .success)
             } catch {
@@ -344,8 +344,8 @@ public final class MediaCoordinator: ObservableObject {
             log("⚙️ Starting video-copy + AAC audio transcode pipeline...", level: .info)
             do {
                 let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
+                self.activePlayableURL = session.url
                 self.state = .ready(strategy)
                 log("✨ Audio transcode stream connected to AVPlayer.", level: .success)
             } catch {
@@ -360,8 +360,8 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Transcoding video via VideoToolbox HW encoder...")
             log("⚙️ Starting Apple Silicon VideoToolbox hardware transcode...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                self.activePlayableURL = session.url
                 self.state = .ready(strategy)
                 log("✨ Hardware transcode stream connected to AVPlayer.", level: .success)
             } catch {
@@ -481,11 +481,11 @@ public final class MediaCoordinator: ObservableObject {
                 state = .preparingStream("Connecting online stream via yt-dlp & FFmpeg bridge...")
                 log("⚙️ Routing stream through yt-dlp ➔ FFmpeg pipeline...", level: .info)
                 let initTime = self.pendingInitialTime ?? 0
-                let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: initTime > 0 ? initTime : nil)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: initTime > 0 ? initTime : nil)
+                self.activePlayableURL = session.url
                 if initTime > 0 {
                     self.pendingInitialTime = nil
-                    PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: extracted.duration, timeOffset: initTime)
+                    PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: extracted.duration, timeOffset: session.actualStartTime)
                 }
                 self.state = .ready(strategy)
                 log("✨ Online stream connected to AVPlayer via local bridge.", level: .success)
@@ -603,8 +603,8 @@ public final class MediaCoordinator: ObservableObject {
             log("⚙️ Starting zero-reencode HLS remux pipeline for online stream...", level: .info)
             do {
                 let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .remuxCopy, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
+                self.activePlayableURL = session.url
                 self.state = .ready(strategy)
                 log("✨ Live online remux stream connected to AVPlayer.", level: .success)
             } catch {
@@ -616,9 +616,9 @@ public final class MediaCoordinator: ObservableObject {
                     log("⚠️ Remux pipeline note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
                     do {
                         state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
-                        let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
-                        self.activePlayableURL = streamURL
-                        self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
+                        let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                        self.activePlayableURL = session.url
+                        self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: session.url, reason: "Hardware transcode fallback."))
                         log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
                     } catch {
                         log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
@@ -632,8 +632,8 @@ public final class MediaCoordinator: ObservableObject {
             log("⚙️ Starting online video-copy + AAC transcode pipeline...", level: .info)
             do {
                 let isHEVC = (probe?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .audioTranscodeOnly, audioStreamIndex: selectedAudioIndex, isHEVC: isHEVC)
+                self.activePlayableURL = session.url
                 self.state = .ready(strategy)
                 log("✨ Online audio transcode stream connected to AVPlayer.", level: .success)
             } catch {
@@ -645,9 +645,9 @@ public final class MediaCoordinator: ObservableObject {
                     log("⚠️ Audio transcode note: \(error.localizedDescription). Falling back to Apple Silicon hardware transcode...", level: .warning)
                     do {
                         state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
-                        let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
-                        self.activePlayableURL = streamURL
-                        self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: streamURL, reason: "Hardware transcode fallback."))
+                        let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                        self.activePlayableURL = session.url
+                        self.state = .ready(.fullTranscode(inputURL: inputURL, streamURL: session.url, reason: "Hardware transcode fallback."))
                         log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
                     } catch {
                         log("❌ Transcode failed: \(error.localizedDescription)", level: .error)
@@ -660,8 +660,8 @@ public final class MediaCoordinator: ObservableObject {
             state = .preparingStream("Transcoding online video via VideoToolbox HW encoder...")
             log("⚙️ Starting Apple Silicon VideoToolbox hardware transcode for online stream...", level: .info)
             do {
-                let streamURL = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
-                self.activePlayableURL = streamURL
+                let session = try await ffmpegPipeline.startSession(inputURL: inputURL, mode: .fullHardwareTranscode, audioStreamIndex: selectedAudioIndex)
+                self.activePlayableURL = session.url
                 self.state = .ready(strategy)
                 log("✨ Online hardware transcode stream connected to AVPlayer.", level: .success)
             } catch {
@@ -690,14 +690,15 @@ public final class MediaCoordinator: ObservableObject {
                     mode = .remuxCopy
                 }
                 let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(
+                let session = try await ffmpegPipeline.startSession(
                     inputURL: fileURL,
                     mode: mode,
                     audioStreamIndex: track.streamIndex,
                     seekTime: currentSec,
                     isHEVC: isHEVC
                 )
-                self.activePlayableURL = streamURL
+                self.activePlayableURL = session.url
+                PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: self.knownDuration, timeOffset: session.actualStartTime)
                 log("✨ Audio track switched successfully.", level: .success)
             } catch {
                 log("❌ Failed to switch audio track: \(error.localizedDescription)", level: .error)
@@ -705,14 +706,15 @@ public final class MediaCoordinator: ObservableObject {
         case .online(let webURL, _):
             do {
                 let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(
+                let session = try await ffmpegPipeline.startSession(
                     inputURL: webURL,
                     mode: .remuxCopy,
                     audioStreamIndex: track.streamIndex,
                     seekTime: currentSec,
                     isHEVC: isHEVC
                 )
-                self.activePlayableURL = streamURL
+                self.activePlayableURL = session.url
+                PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: self.knownDuration, timeOffset: session.actualStartTime)
                 log("✨ Online audio track switched successfully.", level: .success)
             } catch {
                 log("❌ Failed to switch online audio track: \(error.localizedDescription)", level: .error)
@@ -745,16 +747,16 @@ public final class MediaCoordinator: ObservableObject {
                     mode = .remuxCopy
                 }
                 let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
-                let streamURL = try await ffmpegPipeline.startSession(
+                let session = try await ffmpegPipeline.startSession(
                     inputURL: fileURL,
                     mode: mode,
                     audioStreamIndex: selectedAudioIndex,
                     seekTime: targetSeconds,
                     isHEVC: isHEVC
                 )
-                self.activePlayableURL = streamURL
-                PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
-                log("✨ Pipeline fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
+                self.activePlayableURL = session.url
+                PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: knownD, timeOffset: session.actualStartTime)
+                log("✨ Pipeline fast-forwarded to \(formatSeconds(session.actualStartTime)).", level: .success)
             } catch {
                 log("❌ Seek pipeline failed: \(error.localizedDescription)", level: .error)
             }
@@ -763,10 +765,10 @@ public final class MediaCoordinator: ObservableObject {
             do {
                 if let strategy = activeStrategy, case .onlineTranscode = strategy {
                     // Video platform stream (YouTube, Vimeo, etc.)
-                    let streamURL = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: targetSeconds)
-                    self.activePlayableURL = streamURL
-                    PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
-                    log("✨ Online stream fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
+                    let session = try await ffmpegPipeline.startOnlinePipedSession(webURL: webURL, seekTime: targetSeconds)
+                    self.activePlayableURL = session.url
+                    PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: knownD, timeOffset: session.actualStartTime)
+                    log("✨ Online stream fast-forwarded to \(formatSeconds(session.actualStartTime)).", level: .success)
                 } else {
                     let mode: PipelineMode
                     switch activeStrategy {
@@ -778,16 +780,16 @@ public final class MediaCoordinator: ObservableObject {
                         mode = .remuxCopy
                     }
                     let isHEVC = (probeResult?.primaryVideo?.videoCodec == .hevc)
-                    let streamURL = try await ffmpegPipeline.startSession(
+                    let session = try await ffmpegPipeline.startSession(
                         inputURL: webURL,
                         mode: mode,
                         audioStreamIndex: selectedAudioIndex,
                         seekTime: targetSeconds,
                         isHEVC: isHEVC
                     )
-                    self.activePlayableURL = streamURL
-                    PlayerController.shared.loadStreamFromSeek(url: streamURL, expectedDuration: knownD, timeOffset: targetSeconds)
-                    log("✨ Stream fast-forwarded to \(formatSeconds(targetSeconds)).", level: .success)
+                    self.activePlayableURL = session.url
+                    PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: knownD, timeOffset: session.actualStartTime)
+                    log("✨ Stream fast-forwarded to \(formatSeconds(session.actualStartTime)).", level: .success)
                 }
             } catch {
                 log("❌ Online seek failed: \(error.localizedDescription)", level: .error)
@@ -806,10 +808,10 @@ public final class MediaCoordinator: ObservableObject {
             self.state = .preparingStream("Switching to compatible piped stream...")
 
             do {
-                let streamURL = try await self.ffmpegPipeline.startOnlinePipedSession(webURL: webURL)
-                self.activePlayableURL = streamURL
+                let session = try await self.ffmpegPipeline.startOnlinePipedSession(webURL: webURL)
+                self.activePlayableURL = session.url
                 let fallbackStrategy: PlaybackStrategy = .onlineTranscode(
-                    streamURL: streamURL,
+                    streamURL: session.url,
                     originalURL: webURL,
                     title: self.extractedOnlineInfo?.title ?? "Online Stream",
                     reason: "Dynamic fallback compatibility bridge"

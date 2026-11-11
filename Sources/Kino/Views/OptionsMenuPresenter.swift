@@ -157,6 +157,36 @@ public final class OptionsMenuPresenter: NSObject {
 
             subsMenu.addItem(NSMenuItem.separator())
 
+            // Subtitle Delay Submenu
+            let delayVal = SubtitleManager.shared.subtitleDelay
+            let delayStr = delayVal == 0 ? "0.0s" : String(format: "%@%.1fs", delayVal > 0 ? "+" : "", delayVal)
+            let delayItem = createMenuItem(title: "Subtitle Delay (\(delayStr))", systemImage: "timer")
+            let delayMenu = NSMenu(title: "Subtitle Delay")
+            delayMenu.autoenablesItems = false
+
+            let delayEarlier05 = NSMenuItem(title: "Earlier by 0.5s (⇧G)", action: #selector(handleSubtitleDelayEarlierLarge), keyEquivalent: "")
+            delayEarlier05.target = self
+            delayMenu.addItem(delayEarlier05)
+
+            let delayEarlier01 = NSMenuItem(title: "Earlier by 0.1s (G)", action: #selector(handleSubtitleDelayEarlierSmall), keyEquivalent: "")
+            delayEarlier01.target = self
+            delayMenu.addItem(delayEarlier01)
+
+            let resetDelay = NSMenuItem(title: "Reset Delay to 0.0s (⌥G)", action: #selector(handleSubtitleDelayReset), keyEquivalent: "")
+            resetDelay.target = self
+            delayMenu.addItem(resetDelay)
+
+            let delayLater01 = NSMenuItem(title: "Later by 0.1s (H)", action: #selector(handleSubtitleDelayLaterSmall), keyEquivalent: "")
+            delayLater01.target = self
+            delayMenu.addItem(delayLater01)
+
+            let delayLater05 = NSMenuItem(title: "Later by 0.5s (⇧H)", action: #selector(handleSubtitleDelayLaterLarge), keyEquivalent: "")
+            delayLater05.target = self
+            delayMenu.addItem(delayLater05)
+
+            delayItem.submenu = delayMenu
+            subsMenu.addItem(delayItem)
+
             // Subtitle Placement Submenu (Display Height vs Media Height)
             let placementItem = createMenuItem(title: "Placement", systemImage: "arrow.up.and.down.text.horizontal")
             let placementMenu = NSMenu(title: "Placement")
@@ -296,6 +326,26 @@ public final class OptionsMenuPresenter: NSObject {
         if panel.runModal() == .OK, let url = panel.url {
             SubtitleManager.shared.loadExternalSubtitle(from: url)
         }
+    }
+
+    @objc private func handleSubtitleDelayEarlierSmall() {
+        SubtitleManager.shared.adjustSubtitleDelay(by: -0.1)
+    }
+
+    @objc private func handleSubtitleDelayEarlierLarge() {
+        SubtitleManager.shared.adjustSubtitleDelay(by: -0.5)
+    }
+
+    @objc private func handleSubtitleDelayLaterSmall() {
+        SubtitleManager.shared.adjustSubtitleDelay(by: 0.1)
+    }
+
+    @objc private func handleSubtitleDelayLaterLarge() {
+        SubtitleManager.shared.adjustSubtitleDelay(by: 0.5)
+    }
+
+    @objc private func handleSubtitleDelayReset() {
+        SubtitleManager.shared.resetSubtitleDelay()
     }
 
     @objc private func handleSearchSubtitlesOnline() {

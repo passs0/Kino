@@ -34,13 +34,31 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 return event
             }
 
-            let modifiers = event.modifierFlags.intersection([.command, .control, .option])
-            guard modifiers.isEmpty else {
-                return event // Do not intercept command/control shortcuts (like Cmd+W, Cmd+I)
+            let isCommand = event.modifierFlags.contains(.command)
+            let isControl = event.modifierFlags.contains(.control)
+            let isOption = event.modifierFlags.contains(.option)
+            let isShift = event.modifierFlags.contains(.shift)
+
+            // Do not intercept command/control shortcuts (like Cmd+W, Cmd+I, Cmd+Q)
+            guard !isCommand && !isControl else {
+                return event
             }
 
             let keyCode = event.keyCode
             let chars = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+            // Option + G (⌥G): Reset Subtitle Delay to 0.0s
+            if isOption && (keyCode == 5 || chars == "g") {
+                Task { @MainActor in
+                    SubtitleManager.shared.resetSubtitleDelay()
+                }
+                return nil
+            }
+
+            // If any other Option combination, pass through to system
+            guard !isOption else {
+                return event
+            }
 
             // Escape (keyCode 53): Dismiss Media Statistics HUD if presented, or exit Full Screen
             if keyCode == 53 {
@@ -149,6 +167,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             if keyCode == 8 || chars == "c" {
                 Task { @MainActor in
                     PlayerController.shared.toggleLetterbox()
+                }
+                return nil
+            }
+
+            // G / g (keyCode 5 or char "g"): Subtitle Delay Earlier (-0.1s, or -0.5s with Shift)
+            if keyCode == 5 || chars == "g" {
+                let delta = isShift ? -0.5 : -0.1
+                Task { @MainActor in
+                    SubtitleManager.shared.adjustSubtitleDelay(by: delta)
+                }
+                return nil
+            }
+
+            // H / h (keyCode 4 or char "h"): Subtitle Delay Later (+0.1s, or +0.5s with Shift)
+            if keyCode == 4 || chars == "h" {
+                let delta = isShift ? 0.5 : 0.1
+                Task { @MainActor in
+                    SubtitleManager.shared.adjustSubtitleDelay(by: delta)
                 }
                 return nil
             }

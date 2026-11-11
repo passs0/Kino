@@ -77,6 +77,10 @@ Kino includes a zero-bloat GPU video enhancement suite integrated directly via h
 Kino treats subtitles as a first-class citizen with both local media intelligence and global online database integration:
 - **Native OpenSubtitles.com Integration (`⌥⌘S`):** Search, browse, and download subtitles across 100+ languages directly inside Kino with a single click. No browser trips or manual `.srt` file juggling required.
 - **64-bit Checksum Exact Frame Sync (`MovieHash`):** Computes the official 64-bit OpenSubtitles checksum on local media files upon launch. Subtitles matching the exact file release and framerate are prominently badged (`⭐️ Exact Match`), guaranteeing 100% synchronized timing with zero audio/caption drift.
+- **Sample-Accurate A/V Clock Locking:** Continuous `aresample=async=1000:first_pts=0` audio clock resampling locks audio presentation timestamps directly to video PTS, eliminating initial audio delay, container clock drift, and seek offset gaps.
+- **Keyframe-Aligned Stream Seeking:** Fast demuxing automatically aligns stream seek offsets to exact video keyframe boundaries, ensuring video, audio, timeline scrubbers, and subtitles remain in 100% lockstep without any lead or lag.
+- **Native Subtitle Delay Controls (`G` / `H`):** Adjust subtitle timing in real time by $\pm 0.1$s (`G` / `H`), $\pm 0.5$s (`⇧G` / `⇧H`), or reset to 0.0s (`⌥G`), with native Apple HUD feedback and controls in Settings (`⌘,`) and the Subtitles menu.
+- **Simultaneous Multi-Cue Rendering:** Accurately renders multiple speakers and dialogue lines speaking simultaneously without dropping concurrent cues or duplicating lines.
 - **Dual Subtitle Placement Modes (`Z`):** Toggle between **In Letterbox Bar (Display Height)**—positioning captions cleanly inside the black cinema bars below the picture—and **Inside Video (Media Height)**.
 - **Smart Title Query Cleaner:** Intelligently cleans scene tags (e.g. `The.Matrix.1999.2160p.UHD.BluRay.x265-TERMINAL` $\rightarrow$ `The Matrix 1999`) to retrieve the highest-rated community releases.
 - **Account & VIP Quota Management:** Built-in account login for registered OpenSubtitles users (granting 20 free downloads/24h) and custom API key support, with automatic browser fallback links.
@@ -136,6 +140,11 @@ Unlike traditional players that demand manual command-line installations, Kino k
 | **`M`** | Mute / Unmute |
 | **`C`** | Toggle Video Aspect Ratio: **Fit to Screen (Letterbox)** vs. **Fill Screen** |
 | **`Z`** | Toggle Subtitle Placement: **In Letterbox Bar** vs. **Inside Video** |
+| **`G`** | Subtitle Delay **-0.1s** (Subtitles appear earlier) |
+| **`H`** | Subtitle Delay **+0.1s** (Subtitles appear later) |
+| **`⇧G`** | Subtitle Delay **-0.5s** |
+| **`⇧H`** | Subtitle Delay **+0.5s** |
+| **`⌥G`** | Reset Subtitle Delay to **0.0s** |
 | **`⌥⌘S`** | **Search Subtitles Online…** (OpenSubtitles.com REST API v1) |
 | **`⌃⌘F`** | Toggle Full Screen (Instant Space Switch) |
 | **`⌘I`** | Toggle Centered Media Statistics & Technical Inspector HUD |

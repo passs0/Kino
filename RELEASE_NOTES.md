@@ -2,8 +2,8 @@
 
 > **Version:** 1.0.0  
 > **Target Platform:** macOS 13.0+ (Apple Silicon)  
-> **Disk Image:** `Kino-v1.0.0.dmg` (2.0 MB)  
-> **SHA-256 Checksum:** `caa39459649a2c05984556ab876017dc30ca0816c983ae675ea97704fbf598cd`
+> **Disk Image:** `Kino-v1.0.0.dmg` (2.8 MB)  
+> **SHA-256 Checksum:** `d6515ad567f60179251720b6b94434935f14c286adb1996f6dcb4762a1a11c7f`
 
 ---
 
@@ -17,7 +17,20 @@ Kino combines the clean elegance, battery efficiency, and fluid animations of Ap
 
 ## 🌟 Key Highlights & Major Features
 
-### 1. Native OpenSubtitles.com Integration (`⌥⌘S`)
+### 1. Studio-Grade Audio/Video & Subtitle Clock Synchronization
+- **Sample-Accurate Audio Clock Locking**:
+  - Implements dynamic `aresample=async=1000:first_pts=0` audio clock resampling across all remux, transcode, and online piped streams.
+  - Aligns initial audio presentation timestamps (PTS) to the precise video start time, eliminating edit list delays, container offsets, and lip-sync drift over long playback sessions.
+- **Keyframe-Aligned Stream Seeking**:
+  - Fast seek demuxing automatically queries preceding keyframes with `ffprobe` and passes `-noaccurate_seek`, preventing audio discard gaps while aligning `streamTimeOffset` to the exact keyframe where the video starts.
+  - Subtitles, timeline scrubbers, and audio stay in 100% lockstep across scrubbing and seeks.
+- **Native Subtitle Timing Adjustment (`G` / `H`)**:
+  - Fine-tune subtitle timing on-the-fly: **`G`** advances subtitles by `0.1s` (earlier), **`H`** delays subtitles by `0.1s` (later), **`⇧G` / `⇧H`** adjusts by `0.5s`, and **`⌥G`** instantly resets delay to `0.0s`.
+  - Full feedback through native Apple HUD alerts, the Subtitles menu bar, the speech bubble popover, and macOS Settings (`⌘,`).
+- **Simultaneous Multi-Cue Rendering**:
+  - Replaces single-cue selection with multi-cue collection, accurately rendering simultaneous dialogues and overlapping sound cues without swallowed lines or duplicate text.
+
+### 2. Native OpenSubtitles.com Integration (`⌥⌘S`)
 - **64-bit Checksum Exact Frame Sync (`MovieHash`)**:
   - Implements the official OpenSubtitles 64-bit wrapping checksum algorithm.
   - Automatically identifies local media releases and highlights matching subtitles with a green **`⭐️ Exact Match`** badge, guaranteeing 100% synchronized timing with zero subtitle drift.

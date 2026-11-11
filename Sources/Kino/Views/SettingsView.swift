@@ -126,6 +126,37 @@ public struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
 
+            Section("Timing & Synchronization") {
+                HStack {
+                    Text("Subtitle Delay")
+                    Spacer()
+                    Text(subtitles.subtitleDelay == 0 ? "0.0s (In Sync)" : String(format: "%@%.1fs", subtitles.subtitleDelay > 0 ? "+" : "", subtitles.subtitleDelay))
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundColor(subtitles.subtitleDelay == 0 ? .secondary : .primary)
+
+                    Button("-0.1s") {
+                        subtitles.adjustSubtitleDelay(by: -0.1)
+                    }
+                    .controlSize(.small)
+
+                    Button("+0.1s") {
+                        subtitles.adjustSubtitleDelay(by: 0.1)
+                    }
+                    .controlSize(.small)
+
+                    if subtitles.subtitleDelay != 0 {
+                        Button("Reset") {
+                            subtitles.resetSubtitleDelay()
+                        }
+                        .controlSize(.small)
+                    }
+                }
+
+                Text("Use G / H during playback to adjust subtitle timing by 0.1s (⇧G / ⇧H for 0.5s, ⌥G to reset).")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Section("OpenSubtitles.com") {
                 HStack {
                     Text("Account Status")

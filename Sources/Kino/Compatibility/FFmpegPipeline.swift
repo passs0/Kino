@@ -8,6 +8,16 @@ public struct PipelineStats: Sendable {
     public let isReadyForPlayback: Bool
 }
 
+public struct PipelineSession: Sendable {
+    public let url: URL
+    public let actualStartTime: Double
+
+    public init(url: URL, actualStartTime: Double) {
+        self.url = url
+        self.actualStartTime = actualStartTime
+    }
+}
+
 public enum PipelineMode: Sendable {
     case remuxCopy
     case audioTranscodeOnly
@@ -55,8 +65,37 @@ public final class FFmpegPipeline: @unchecked Sendable {
         sessionDir
     }
 
-    /// Prepares and starts the FFmpeg streaming session, returning the local playback URL.
-    public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil, isHEVC: Bool = false) async throws -> URL {
+    /// Rapidly probes the nearest keyframe at or prior to targetSeconds using ffprobe demuxer seek.
+    public static func findNearestKeyframe(fileURL: URL, targetSeconds: Double) async -> Double? {
+        guard let ffprobePath = ToolLocator.shared.path(for: "ffprobe"), fileURL.isFileURL, targetSeconds > 0.5 else {
+            return nil
+        }
+        let interval = String(format: "%.2f%%+2", targetSeconds)
+        let args = [
+            "-v", "error",
+            "-read_intervals", interval,
+            "-select_streams", "v:0",
+            "-show_entries", "frame=pkt_dts_time,key_frame",
+            "-of", "compact",
+            fileURL.path
+        ]
+        guard let output = try? await ProcessRunner.run(executablePath: ffprobePath, arguments: args) else {
+            return nil
+        }
+        for line in output.stdout.components(separatedBy: .newlines) {
+            if line.contains("key_frame=1"), let dtsRange = line.range(of: "pkt_dts_time=") {
+                let sub = line[dtsRange.upperBound...]
+                let valStr = sub.prefix(while: { $0 != "|" && $0 != "\n" && $0 != "\r" })
+                if let val = Double(valStr) {
+                    return val
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Prepares and starts the FFmpeg streaming session, returning the active PipelineSession with aligned start time.
+    public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil, isHEVC: Bool = false) async throws -> PipelineSession {
         stop()
 
         guard let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg") else {
@@ -85,9 +124,18 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-y"
         ]
 
+        var effectiveSeekTime: Double = 0.0
         if let sTime = seekTime, sTime > 0.5 {
+            if inputURL.isFileURL, let keyframe = await Self.findNearestKeyframe(fileURL: inputURL, targetSeconds: sTime) {
+                effectiveSeekTime = keyframe
+            } else {
+                effectiveSeekTime = sTime
+            }
+            // Use -noaccurate_seek so FFmpeg aligns BOTH demuxed video and audio streams
+            // exactly at the keyframe boundary rather than discarding audio until sTime.
             args.append(contentsOf: [
-                "-ss", String(format: "%.2f", sTime)
+                "-noaccurate_seek",
+                "-ss", String(format: "%.3f", effectiveSeekTime)
             ])
         }
 
@@ -115,6 +163,17 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         let audioMap = (audioStreamIndex != nil) ? "0:\(audioStreamIndex!)" : "0:a:0?"
 
+        // Continuous audio/video synchronization filter:
+        // 1. first_pts=0 pads or aligns initial audio packets to match video presentation timestamp.
+        // 2. async=1000 dynamically stretches/squeezes/resamples audio up to 1000 samples/sec to lock onto video clock.
+        // 3. Optional dialogue enhancement speech normalization.
+        var audioFilters = ["aresample=async=1000:first_pts=0"]
+        let isDialogueActive = await AudioManager.shared.isEnhanceDialogueEnabled
+        if isDialogueActive {
+            audioFilters.insert("speechnorm=e=4:r=0.0001:l=1", at: 0)
+        }
+        let afArg = audioFilters.joined(separator: ",")
+
         switch mode {
         case .remuxCopy:
             // Zero video re-encoding: stream copy video, preserve multichannel audio in studio-grade high-fidelity AAC
@@ -130,6 +189,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-c:a", "aac",
                 "-b:a", "384k",
                 "-ar", "48000",
+                "-af", afArg,
                 "-max_muxing_queue_size", "4096",
                 "-avoid_negative_ts", "make_zero"
             ])
@@ -147,6 +207,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-c:a", "aac",
                 "-b:a", "384k",
                 "-ar", "48000",
+                "-af", afArg,
                 "-max_muxing_queue_size", "4096",
                 "-avoid_negative_ts", "make_zero"
             ])
@@ -162,15 +223,18 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-c:a", "aac",
                 "-b:a", "640k",
                 "-ar", "48000",
-                "-max_muxing_queue_size", "4096"
+                "-af", afArg,
+                "-max_muxing_queue_size", "4096",
+                "-avoid_negative_ts", "make_zero"
             ])
         }
 
-        // HLS segmentation parameters for fast startup (using modern Apple fMP4/CMAF)
+        // HLS segmentation parameters for fast startup (using modern Apple fMP4/CMAF with independent segments)
         args.append(contentsOf: [
             "-f", "hls",
             "-hls_time", "2",
             "-hls_list_size", "0",
+            "-hls_flags", "independent_segments",
             "-hls_segment_type", "fmp4",
             "-hls_fmp4_init_filename", initFileName,
             "-hls_segment_filename", segmentPattern,
@@ -204,8 +268,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         let playbackURL = streamingServer.serverURL?.appendingPathComponent("playlist.m3u8") ?? playlistFile
-        onLogLine?("✅ Local stream ready at \(playbackURL.absoluteString)")
-        return playbackURL
+        onLogLine?("✅ Local stream ready at \(playbackURL.absoluteString) (aligned at \(effectiveSeekTime)s)")
+        return PipelineSession(url: playbackURL, actualStartTime: effectiveSeekTime)
     }
 
     /// Serves a synthesized multi-variant HLS master playlist through the local HTTP server.
@@ -232,7 +296,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
     }
 
     /// Pipes yt-dlp stdout directly into ffmpeg stdin to stream online sources without 403 Forbidden errors.
-    public func startOnlinePipedSession(webURL: URL, seekTime: Double? = nil) async throws -> URL {
+    public func startOnlinePipedSession(webURL: URL, seekTime: Double? = nil) async throws -> PipelineSession {
         stop()
 
         guard let ytPath = ToolLocator.shared.path(for: "yt-dlp") else {
@@ -288,7 +352,14 @@ public final class FFmpegPipeline: @unchecked Sendable {
         ytProc.environment = env
 
         // ffmpeg process receiving from pipe:0
-        // Stream copies video (already AVC H.264) and transcodes audio to stereo AAC for immediate startup
+        // Stream copies video (already AVC H.264) and transcodes audio to stereo AAC with continuous clock lock
+        var audioFilters = ["aresample=async=1000:first_pts=0"]
+        let isDialogueOnlineActive = await AudioManager.shared.isEnhanceDialogueEnabled
+        if isDialogueOnlineActive {
+            audioFilters.insert("speechnorm=e=4:r=0.0001:l=1", at: 0)
+        }
+        let afArg = audioFilters.joined(separator: ",")
+
         let ffmpegProc = Process()
         ffmpegProc.executableURL = URL(fileURLWithPath: ffmpegPath)
         let ffmpegArgs = [
@@ -302,9 +373,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-ac", "2",
             "-b:a", "256k",
             "-ar", "48000",
+            "-af", afArg,
+            "-avoid_negative_ts", "make_zero",
             "-f", "hls",
             "-hls_time", "2",
             "-hls_list_size", "0",
+            "-hls_flags", "independent_segments",
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
         ]
@@ -364,8 +438,9 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         let playbackURL = streamingServer.serverURL?.appendingPathComponent("playlist.m3u8") ?? playlistFile
-        onLogLine?("✅ Online stream bridged successfully at \(playbackURL.absoluteString)")
-        return playbackURL
+        let actualStart = seekTime ?? 0.0
+        onLogLine?("✅ Online stream bridged successfully at \(playbackURL.absoluteString) (offset \(actualStart)s)")
+        return PipelineSession(url: playbackURL, actualStartTime: actualStart)
     }
 
     public func stop() {

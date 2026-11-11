@@ -269,9 +269,8 @@ public final class PlayerController: ObservableObject {
             return
         }
 
-        // Seeking within buffered data or direct native stream with sample-accurate tolerance
-        let exactTolerance = CMTime(seconds: 0.05, preferredTimescale: 600)
-        player.seek(to: cmTime, toleranceBefore: exactTolerance, toleranceAfter: exactTolerance) { [weak self] completed in
+        // Seeking within buffered data or direct native stream with sample-accurate zero tolerance
+        player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] completed in
             Task { @MainActor [weak self] in
                 guard let self = self, completed else { return }
                 self.isSeeking = false

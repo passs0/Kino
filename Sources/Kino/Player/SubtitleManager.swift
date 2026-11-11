@@ -11,6 +11,9 @@ public final class SubtitleManager: ObservableObject {
     @Published public private(set) var currentCueText: String? = nil
     @Published public private(set) var currentCuePosition: SubtitlePosition = .bottom
 
+    /// User subtitle timing delay adjustment in seconds (e.g. +0.5s delayed / -0.2s earlier).
+    @Published public private(set) var subtitleDelay: Double = 0.0
+
     private static let placementDefaultsKey = "KinoSubtitlePlacement"
     private static let legacyPlacementDefaultsKey = "SereinSubtitlePlacement"
 
@@ -48,6 +51,29 @@ public final class SubtitleManager: ObservableObject {
     public func togglePlacement() {
         let next: SubtitlePlacement = (placement == .letterbox) ? .mediaFrame : .letterbox
         setPlacement(next)
+    }
+
+    /// Adjusts the subtitle delay by a relative delta in seconds (e.g. -0.1s, +0.1s, -0.5s, +0.5s).
+    public func adjustSubtitleDelay(by delta: Double) {
+        setSubtitleDelay(subtitleDelay + delta)
+    }
+
+    /// Sets the subtitle delay in seconds, clamping to [-60.0, 60.0] and rounding to 1 decimal place.
+    public func setSubtitleDelay(_ newDelay: Double) {
+        let rounded = (newDelay * 10).rounded() / 10
+        let clamped = min(60.0, max(-60.0, rounded))
+        guard clamped != subtitleDelay else { return }
+        subtitleDelay = clamped
+        refreshDisplayedCue(for: PlayerController.shared.currentTime)
+
+        let sign = clamped > 0 ? "+" : ""
+        let msg = String(format: "Subtitles Delay: %@%.1fs", sign, clamped)
+        PlayerController.shared.showHUD(message: clamped == 0 ? "Subtitles Delay: 0.0s (Reset)" : msg, iconName: "captions.bubble")
+    }
+
+    /// Resets the subtitle timing delay back to 0.0s.
+    public func resetSubtitleDelay() {
+        setSubtitleDelay(0.0)
     }
 
     /// Sets the list of available subtitle tracks (from local probe, sidecars, or stream metadata).
@@ -434,11 +460,43 @@ public final class SubtitleManager: ObservableObject {
             return
         }
 
-        // Match the latest active cue, allowing a tiny 50ms tolerance bridge to eliminate micro-gaps and tick jitter
-        if let matching = activeCues.last(where: { currentTime >= ($0.startTime - 0.05) && currentTime <= ($0.endTime + 0.05) }) {
-            if currentCueText != matching.text || currentCuePosition != matching.position {
-                currentCueText = matching.text
-                currentCuePosition = matching.position
+        // Apply user subtitle timing delay:
+        // delay > 0 means subtitles appear later (so we look up a cue from currentTime - delay)
+        // delay < 0 means subtitles appear earlier (so we look up a cue from currentTime + |delay|)
+        let effectiveTime = currentTime - subtitleDelay
+        guard effectiveTime >= 0 else {
+            if currentCueText != nil {
+                currentCueText = nil
+                currentCuePosition = .bottom
+            }
+            return
+        }
+
+        // Match all active cues within a 50ms tolerance window
+        let matchingCues = activeCues.filter {
+            effectiveTime >= ($0.startTime - 0.05) && effectiveTime <= ($0.endTime + 0.05)
+        }
+
+        if !matchingCues.isEmpty {
+            // Deduplicate identical lines across overlapping cues
+            var seenLines = Set<String>()
+            var uniqueLines: [String] = []
+            for cue in matchingCues {
+                let lines = cue.text.components(separatedBy: .newlines)
+                for line in lines {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty && !seenLines.contains(trimmed) {
+                        seenLines.insert(trimmed)
+                        uniqueLines.append(trimmed)
+                    }
+                }
+            }
+            let joinedText = uniqueLines.joined(separator: "\n")
+            let preferredPosition = matchingCues.first(where: { $0.position == .top })?.position ?? matchingCues.first?.position ?? .bottom
+
+            if currentCueText != joinedText || currentCuePosition != preferredPosition {
+                currentCueText = joinedText.isEmpty ? nil : joinedText
+                currentCuePosition = preferredPosition
             }
             return
         }
@@ -506,6 +564,7 @@ public final class SubtitleManager: ObservableObject {
         currentCuePosition = .bottom
         nativeLegibleText = nil
         nativeLegiblePosition = .bottom
+        subtitleDelay = 0.0
         activeCues.removeAll()
         cuesCache.removeAll()
         downloadedRangesByTrack.removeAll()

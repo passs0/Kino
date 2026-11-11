@@ -160,6 +160,35 @@ public struct KinoApp: App {
 
                     Divider()
 
+                    Menu("Subtitle Delay") {
+                        Button("Earlier by 0.5s") {
+                            SubtitleManager.shared.adjustSubtitleDelay(by: -0.5)
+                        }
+                        .keyboardShortcut("G", modifiers: [.shift])
+
+                        Button("Earlier by 0.1s") {
+                            SubtitleManager.shared.adjustSubtitleDelay(by: -0.1)
+                        }
+                        .keyboardShortcut("g", modifiers: [])
+
+                        Button("Reset Delay to 0.0s") {
+                            SubtitleManager.shared.resetSubtitleDelay()
+                        }
+                        .keyboardShortcut("g", modifiers: [.option])
+
+                        Button("Later by 0.1s") {
+                            SubtitleManager.shared.adjustSubtitleDelay(by: 0.1)
+                        }
+                        .keyboardShortcut("h", modifiers: [])
+
+                        Button("Later by 0.5s") {
+                            SubtitleManager.shared.adjustSubtitleDelay(by: 0.5)
+                        }
+                        .keyboardShortcut("H", modifiers: [.shift])
+                    }
+
+                    Divider()
+
                     Menu("Placement") {
                         Button("In Letterbox Bar (Display Height)") {
                             SubtitleManager.shared.setPlacement(.letterbox)
