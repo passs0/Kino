@@ -35,6 +35,9 @@ private struct RawProbeStream: Codable {
     let pix_fmt: String?
     let r_frame_rate: String?
     let avg_frame_rate: String?
+    let color_primaries: String?
+    let color_transfer: String?
+    let color_space: String?
     let bit_rate: String?
     let sample_rate: String?
     let channels: Int?
@@ -153,6 +156,11 @@ public final class FFprobeService: Sendable {
             let lang = raw.tags?["language"] ?? raw.tags?["LANGUAGE"]
             let title = raw.tags?["title"] ?? raw.tags?["TITLE"] ?? raw.tags?["name"] ?? raw.tags?["NAME"]
 
+            let colorParts = [raw.color_primaries, raw.color_transfer, raw.color_space]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && $0 != "unknown" }
+            let colorInfo = colorParts.isEmpty ? nil : colorParts.joined(separator: " / ")
+
             let stream = MediaStream(
                 index: raw.index,
                 kind: kind,
@@ -165,6 +173,7 @@ public final class FFprobeService: Sendable {
                 fps: fps,
                 pixelFormat: raw.pix_fmt,
                 videoCodec: vCodec,
+                colorInfo: colorInfo,
                 sampleRate: sampleRate,
                 channels: raw.channels,
                 channelLayout: raw.channel_layout,

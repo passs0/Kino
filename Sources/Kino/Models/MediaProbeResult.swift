@@ -16,6 +16,7 @@ public struct MediaStream: Identifiable, Hashable, Sendable {
     public let fps: Double?
     public let pixelFormat: String?
     public let videoCodec: VideoCodec?
+    public let colorInfo: String?
 
     // Audio specific
     public let sampleRate: Int?
