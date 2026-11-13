@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/preview.png" width="720" alt="Kino Player Interface" />
+  <img src="assets/preview.png" width="640" alt="Kino Welcome Screen" />
 </p>
 
 ---
