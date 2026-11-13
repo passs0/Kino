@@ -66,6 +66,7 @@ public final class LiquidGlassSettings: ObservableObject {
     }
 
     /// Dynamic Glass material tuned to the macOS Liquid Glass appearance setting
+    @available(macOS 26.0, *)
     public var glass: Glass {
         if isReduceTransparencyActive {
             return Glass.regular.tint(Color.white.opacity(0.35))
@@ -127,7 +128,15 @@ public struct LiquidCircleButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .glassEffect(settings.glass, in: Circle())
+        .background {
+            if #available(macOS 26.0, *) {
+                Circle()
+                    .fill(Color.clear)
+                    .glassEffect(settings.glass, in: Circle())
+            } else {
+                Circle().fill(.regularMaterial)
+            }
+        }
         .scaleEffect(isHovering ? 1.06 : 1.0)
         .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isHovering)
         .onHover { h in isHovering = h }
@@ -167,11 +176,16 @@ public struct LiquidCapsuleButtonStyle: ButtonStyle {
             .foregroundColor(isProminent ? .white : .primary)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(isProminent ? Color.accentColor : Color.clear)
-            )
-            .glassEffect(settings.glass, in: Capsule())
+            .background {
+                if #available(macOS 26.0, *) {
+                    Capsule()
+                        .fill(isProminent ? Color.accentColor : Color.clear)
+                        .glassEffect(settings.glass, in: Capsule())
+                } else {
+                    Capsule()
+                        .fill(isProminent ? Color.accentColor : Color(nsColor: .controlBackgroundColor))
+                }
+            }
             .scaleEffect(configuration.isPressed ? 0.95 : (isHovering ? 1.02 : 1.0))
             .animation(.spring(response: 0.22, dampingFraction: 0.75), value: isHovering)
             .animation(.spring(response: 0.12, dampingFraction: 0.8), value: configuration.isPressed)

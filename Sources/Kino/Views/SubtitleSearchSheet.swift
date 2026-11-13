@@ -168,8 +168,8 @@ public struct SubtitleSearchSheet: View {
                 }
                 .pickerStyle(.menu)
                 .frame(width: 175)
-                .onChange(of: selectedLanguage) { _, newLang in
-                    service.preferredLanguage = newLang
+                .onChange(of: selectedLanguage) {
+                    service.preferredLanguage = selectedLanguage
                     performSearch()
                 }
 

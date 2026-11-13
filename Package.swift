@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Kino",
     platforms: [
-        .macOS(.v26)
+        .macOS(.v13)
     ],
     products: [
         .executable(

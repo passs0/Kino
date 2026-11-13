@@ -28,7 +28,7 @@ echo "📦 Compiling ${#SWIFT_FILES[@]} Swift source files..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 swiftc \
-    -target arm64-apple-macos26.0 \
+    -target arm64-apple-macos13.0 \
     -sdk "$SDK_PATH" \
     -module-cache-path "$MODULE_CACHE" \
     -O \
@@ -50,7 +50,7 @@ if [ -d "assets/Kino.icon.xcassets" ]; then
         xcrun actool "assets/Kino.icon.xcassets" \
             --compile "$RESOURCES_DIR" \
             --platform macosx \
-            --minimum-deployment-target 26.0 \
+            --minimum-deployment-target 13.0 \
             --app-icon Kino \
             --output-partial-info-plist "$PARTIAL_PLIST" \
             --output-format human-readable-text
