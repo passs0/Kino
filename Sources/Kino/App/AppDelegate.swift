@@ -16,6 +16,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         TrafficLightManager.shared.install()
         NowPlayingManager.shared.install()
         setupKeyboardShortcuts()
+        DispatchQueue.main.async { [weak self] in
+            self?.cleanupDuplicateMenus()
+        }
 
         // Handle file passed via CLI arguments if any
         let args = CommandLine.arguments.dropFirst().filter { !$0.starts(with: "-") }
@@ -24,6 +27,23 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 MediaCoordinator.shared.openLocalFile(url: url)
             }
+        }
+    }
+
+    private func cleanupDuplicateMenus() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+        var seenTitles = Set<String>()
+        var indicesToRemove: [Int] = []
+        for (idx, item) in mainMenu.items.enumerated() {
+            let title = item.title.trimmingCharacters(in: .whitespaces)
+            if !title.isEmpty && seenTitles.contains(title) {
+                indicesToRemove.append(idx)
+            } else if !title.isEmpty {
+                seenTitles.insert(title)
+            }
+        }
+        for idx in indicesToRemove.reversed() {
+            mainMenu.removeItem(at: idx)
         }
     }
 

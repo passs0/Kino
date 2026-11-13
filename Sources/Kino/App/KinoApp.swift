@@ -114,7 +114,7 @@ struct KinoCommands: Commands {
             .keyboardShortcut("w", modifiers: .command)
         }
 
-        CommandMenu("View") {
+        CommandGroup(replacing: .sidebar) {
             Button("Actual Size") {
                 WindowManager.shared.zoomToActualSize()
             }
