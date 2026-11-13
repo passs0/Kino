@@ -135,6 +135,9 @@ Unlike traditional players that demand manual command-line installations, Kino k
 | **`Space`** | Play / Pause |
 | **`←` (Left Arrow)** | Step Backward (`5s`) |
 | **`→` (Right Arrow)** | Step Forward (`5s`) |
+| **`,` / `.`** | Step Backward / Forward **1 Frame** |
+| **`⌘[` / `⌘]`** | Previous / Next **Chapter** |
+| **`⌥⌘L`** | Toggle **Loop** Playback |
 | **`+` / `=`** | Volume Up (`+10%`) |
 | **`-`** | Volume Down (`-10%`) |
 | **`M`** | Mute / Unmute |
@@ -189,6 +192,7 @@ cd kino
 - [x] Universal container support (`.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, `.flac`, `.alac`, `.thd`, `.mlp`)
 - [x] High-speed visionOS multi-variant HLS streaming with automated CDN fallback
 - [x] Variable speed playback with CoreAudio pitch correction (`0.5×`–`2.0×`)
+- [x] Loop playback (`⌥⌘L`), exact frame-by-frame stepping (`,` / `.`), and embedded chapter navigation (`⌘[` / `⌘]`)
 - [x] Native Picture-in-Picture (`AVPictureInPictureController`) with live subtitle overlay
 - [x] Display & system idle sleep prevention during active playback
 
@@ -222,10 +226,9 @@ cd kino
 - [x] Multi-encoding subtitle decoder (UTF-8 with BOM, UTF-16, GB18030, CP1252)
 
 ### Upcoming Milestones
-- [ ] **v1.1.0**: Playlist Queue with drag-and-drop, shuffle, repeat, & continuous playback
-- [ ] **v1.1.0**: Chapter markers navigation & thumbnail preview scrub tooltips
-- [ ] **v1.2.0**: Real-time 10-band audio equalizer & CoreAudio frequency visualizer
-- [ ] **v1.2.0**: Extended keyboard shortcut customization & vim-style navigation keys
+- [ ] **v1.1.0**: Multiple simultaneous playback windows (`WindowGroup`)
+- [ ] **v1.1.0**: Timeline thumbnail scrub preview tooltips
+- [ ] **v1.2.0**: Lightweight QuickTime-style Trim (`⌘T`), Rotate/Flip, & Export (`4K` / `1080p` / `Audio Only`)
 
 ---
 

@@ -19,6 +19,8 @@ public final class PlayerController: ObservableObject {
     }
     @Published public private(set) var isBuffering: Bool = false
     @Published public var isPictureInPictureActive: Bool = false
+    @Published public var isLoopEnabled: Bool = false
+    @Published public private(set) var chapters: [MediaChapter] = []
     @Published public var resumeNotificationText: String? = nil
     @Published public var hudMessage: String? = nil
     @Published public var hudIconName: String? = nil
@@ -316,6 +318,85 @@ public final class PlayerController: ObservableObject {
         seek(to: PlayerTimeState.shared.currentTime + seconds)
     }
 
+    /// Toggles continuous loop playback when reaching the end of the media.
+    public func toggleLoop() {
+        isLoopEnabled.toggle()
+        showHUD(
+            message: isLoopEnabled ? "Loop: On" : "Loop: Off",
+            iconName: isLoopEnabled ? "repeat.1" : "repeat"
+        )
+    }
+
+    /// Steps playback forward or backward by exact video frames (pauses first if playing).
+    public func stepFrame(by count: Int) {
+        guard count != 0 else { return }
+        if isPlaying {
+            pause()
+        }
+
+        if let item = player.currentItem,
+           ((count > 0 && item.canStepForward) || (count < 0 && item.canStepBackward)) {
+            item.step(byCount: count)
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 35_000_000)
+                guard let self = self else { return }
+                let sec = CMTimeGetSeconds(self.player.currentTime())
+                if sec.isFinite && !sec.isNaN {
+                    let effectiveTime = self.streamTimeOffset + sec
+                    PlayerTimeState.shared.currentTime = effectiveTime
+                    SubtitleManager.shared.updateTime(effectiveTime)
+                }
+            }
+            return
+        }
+
+        let fps = MediaCoordinator.shared.probeResult?.primaryVideo?.fps ?? 30.0
+        let frameDuration = 1.0 / max(1.0, fps)
+        seekRelative(seconds: Double(count) * frameDuration)
+    }
+
+    /// Updates available chapter markers for the active media.
+    public func setChapters(_ newChapters: [MediaChapter]) {
+        self.chapters = newChapters.sorted { $0.startTime < $1.startTime }
+    }
+
+    /// Returns the chapter currently containing the active playback timestamp.
+    public var currentChapter: MediaChapter? {
+        let t = PlayerTimeState.shared.currentTime
+        return chapters.last { $0.startTime <= t + 0.5 }
+    }
+
+    /// Seeks directly to the start of the specified chapter.
+    public func jumpToChapter(_ chapter: MediaChapter) {
+        seek(to: chapter.startTime)
+        showHUD(message: chapter.title, iconName: "list.bullet")
+    }
+
+    /// Jumps to the next chapter marker if available.
+    public func nextChapter() {
+        guard !chapters.isEmpty else { return }
+        let t = PlayerTimeState.shared.currentTime
+        if let next = chapters.first(where: { $0.startTime > t + 0.5 }) {
+            jumpToChapter(next)
+        }
+    }
+
+    /// Jumps to the previous chapter marker (or restarts the current chapter if > 3s into it).
+    public func previousChapter() {
+        guard !chapters.isEmpty else { return }
+        let t = PlayerTimeState.shared.currentTime
+        if let curIdx = chapters.lastIndex(where: { $0.startTime <= t + 0.5 }) {
+            let cur = chapters[curIdx]
+            if t - cur.startTime > 3.0 || curIdx == 0 {
+                jumpToChapter(cur)
+            } else {
+                jumpToChapter(chapters[curIdx - 1])
+            }
+        } else if let first = chapters.first {
+            jumpToChapter(first)
+        }
+    }
+
     public func togglePictureInPicture() {
         activePlayerNSView?.togglePiP()
     }
@@ -327,6 +408,7 @@ public final class PlayerController: ObservableObject {
         isSeeking = false
         seekTargetTime = nil
         streamTimeOffset = 0
+        chapters.removeAll()
         if let pip = activePlayerNSView?.pipController, pip.isPictureInPictureActive {
             pip.stopPictureInPicture()
         }
@@ -493,6 +575,31 @@ public final class PlayerController: ObservableObject {
                                 }
                             }
                         }
+
+                        // Auto-discover native AVAsset chapter markers if not already populated by FFprobe
+                        if self.chapters.isEmpty,
+                           let locales = try? await observedItem.asset.load(.availableChapterLocales),
+                           !locales.isEmpty {
+                            let groups = (try? await observedItem.asset.loadChapterMetadataGroups(bestMatchingPreferredLanguages: Locale.preferredLanguages)) ?? []
+                            var nativeChapters: [MediaChapter] = []
+                            for (idx, group) in groups.enumerated() {
+                                let start = CMTimeGetSeconds(group.timeRange.start)
+                                let dur = CMTimeGetSeconds(group.timeRange.duration)
+                                guard start.isFinite && !start.isNaN else { continue }
+                                let titleItem = AVMetadataItem.metadataItems(from: group.items, filteredByIdentifier: .commonIdentifierTitle).first
+                                let loadedTitle = try? await titleItem?.load(.stringValue)
+                                let title = loadedTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+                                nativeChapters.append(MediaChapter(
+                                    id: idx,
+                                    title: (title?.isEmpty == false) ? title! : "Chapter \(idx + 1)",
+                                    startTime: start,
+                                    endTime: start + (dur.isFinite ? dur : 0)
+                                ))
+                            }
+                            if !nativeChapters.isEmpty && self.chapters.isEmpty {
+                                self.setChapters(nativeChapters)
+                            }
+                        }
                     }
 
                     // Perform initial seek or auto-resume
@@ -585,7 +692,25 @@ public final class PlayerController: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
-                self.isPlaying = false
+                if self.isLoopEnabled {
+                    if self.streamTimeOffset > 0 {
+                        self.isPlaying = true
+                        self.seek(to: 0)
+                    } else {
+                        self.player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] completed in
+                            Task { @MainActor [weak self] in
+                                guard let self = self, completed else { return }
+                                PlayerTimeState.shared.currentTime = 0
+                                SubtitleManager.shared.updateTime(0)
+                                self.player.play()
+                                self.player.rate = self.playbackRate
+                                self.isPlaying = true
+                            }
+                        }
+                    }
+                } else {
+                    self.isPlaying = false
+                }
             }
         }
     }

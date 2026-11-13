@@ -287,6 +287,10 @@ public final class MediaCoordinator: ObservableObject {
                 if !localAudioTracks.isEmpty {
                     log("🔊 Detected \(localAudioTracks.count) audio track(s) in container.", level: .info)
                 }
+                if !p.chapters.isEmpty {
+                    PlayerController.shared.setChapters(p.chapters)
+                    log("📑 Detected \(p.chapters.count) chapter marker(s).", level: .info)
+                }
             }
         } catch {
             log("⚠️ FFprobe inspection warning: \(error.localizedDescription). Proceeding with extension heuristics.", level: .warning)
@@ -580,6 +584,10 @@ public final class MediaCoordinator: ObservableObject {
                 AudioManager.shared.setAvailableTracks(onlineAudioTracks)
                 if !onlineAudioTracks.isEmpty {
                     log("🔊 Loaded \(onlineAudioTracks.count) audio track(s) in online stream.", level: .info)
+                }
+                if !p.chapters.isEmpty {
+                    PlayerController.shared.setChapters(p.chapters)
+                    log("📑 Loaded \(p.chapters.count) chapter marker(s).", level: .info)
                 }
             }
         } catch {

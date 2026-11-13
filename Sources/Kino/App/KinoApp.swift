@@ -4,6 +4,7 @@ import AppKit
 public struct KinoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @ObservedObject var windowManager = WindowManager.shared
+    @ObservedObject var playerController = PlayerController.shared
 
     public init() {}
 
@@ -92,6 +93,44 @@ public struct KinoApp: App {
                 }
                 .keyboardShortcut("p", modifiers: [.command, .option])
 
+                Button(playerController.isLoopEnabled ? "Disable Loop" : "Loop") {
+                    PlayerController.shared.toggleLoop()
+                }
+                .keyboardShortcut("l", modifiers: [.option, .command])
+
+                Divider()
+
+                Menu("Chapters") {
+                    if playerController.chapters.isEmpty {
+                        Text("No Chapters")
+                    } else {
+                        Button("Previous Chapter") {
+                            PlayerController.shared.previousChapter()
+                        }
+                        .keyboardShortcut("[", modifiers: .command)
+
+                        Button("Next Chapter") {
+                            PlayerController.shared.nextChapter()
+                        }
+                        .keyboardShortcut("]", modifiers: .command)
+
+                        Divider()
+
+                        let currentChapID = playerController.currentChapter?.id
+                        ForEach(playerController.chapters) { chapter in
+                            Button {
+                                PlayerController.shared.jumpToChapter(chapter)
+                            } label: {
+                                if chapter.id == currentChapID {
+                                    Label("\(chapter.title) (\(chapter.formattedStartTime))", systemImage: "checkmark")
+                                } else {
+                                    Text("\(chapter.title) (\(chapter.formattedStartTime))")
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Divider()
 
                 Button("Movie Inspector") {
@@ -103,7 +142,7 @@ public struct KinoApp: App {
             }
 
             CommandMenu("Playback") {
-                Button(PlayerController.shared.isPlaying ? "Pause" : "Play") {
+                Button(playerController.isPlaying ? "Pause" : "Play") {
                     PlayerController.shared.togglePlayPause()
                 }
                 .keyboardShortcut(.space, modifiers: [])
@@ -127,6 +166,18 @@ public struct KinoApp: App {
                     PlayerController.shared.seekRelative(seconds: -30)
                 }
                 .keyboardShortcut(.leftArrow, modifiers: .command)
+
+                Divider()
+
+                Button("Step Forward 1 Frame") {
+                    PlayerController.shared.stepFrame(by: 1)
+                }
+                .keyboardShortcut(".", modifiers: [])
+
+                Button("Step Backward 1 Frame") {
+                    PlayerController.shared.stepFrame(by: -1)
+                }
+                .keyboardShortcut(",", modifiers: [])
 
                 Divider()
 

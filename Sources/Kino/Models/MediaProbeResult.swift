@@ -61,6 +61,26 @@ public struct MediaStream: Identifiable, Hashable, Sendable {
     }
 }
 
+/// Represents an embedded chapter marker within a media container.
+public struct MediaChapter: Identifiable, Hashable, Sendable {
+    public let id: Int
+    public let title: String
+    public let startTime: Double
+    public let endTime: Double
+
+    public var formattedStartTime: String {
+        let total = max(0, Int(startTime))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
+    }
+}
+
 /// Comprehensive probe result analyzing the container format and all streams.
 public struct MediaProbeResult: Hashable, Sendable {
     public let filename: String
@@ -72,6 +92,7 @@ public struct MediaProbeResult: Hashable, Sendable {
     public let containerFormat: ContainerFormat
     public let streams: [MediaStream]
     public let tags: [String: String]
+    public let chapters: [MediaChapter]
 
     public var primaryVideo: MediaStream? {
         streams.first { $0.kind == .video }

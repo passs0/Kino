@@ -4,6 +4,14 @@ import Foundation
 private struct RawProbeRoot: Codable {
     let streams: [RawProbeStream]?
     let format: RawProbeFormat?
+    let chapters: [RawProbeChapter]?
+}
+
+private struct RawProbeChapter: Codable {
+    let id: Int?
+    let start_time: String?
+    let end_time: String?
+    let tags: [String: String]?
 }
 
 private struct RawProbeFormat: Codable {
@@ -69,7 +77,8 @@ public final class FFprobeService: Sendable {
             "-v", "quiet",
             "-print_format", "json",
             "-show_format",
-            "-show_streams"
+            "-show_streams",
+            "-show_chapters"
         ]
 
         if !url.isFileURL {
@@ -167,6 +176,19 @@ public final class FFprobeService: Sendable {
             parsedStreams.append(stream)
         }
 
+        let parsedChapters: [MediaChapter] = (root.chapters ?? []).enumerated().compactMap { idx, raw in
+            guard let startStr = raw.start_time, let start = Double(startStr) else { return nil }
+            let end = raw.end_time.flatMap(Double.init) ?? start
+            let rawTitle = raw.tags?["title"] ?? raw.tags?["TITLE"] ?? ""
+            let title = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            return MediaChapter(
+                id: raw.id ?? idx,
+                title: title.isEmpty ? "Chapter \(idx + 1)" : title,
+                startTime: start,
+                endTime: end
+            )
+        }.sorted { $0.startTime < $1.startTime }
+
         return MediaProbeResult(
             filename: fmt?.filename ?? fallbackURL.lastPathComponent,
             formatName: formatName,
@@ -176,7 +198,8 @@ public final class FFprobeService: Sendable {
             overallBitrate: overallBitrate,
             containerFormat: container,
             streams: parsedStreams,
-            tags: tags
+            tags: tags,
+            chapters: parsedChapters
         )
     }
 

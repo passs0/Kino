@@ -189,6 +189,22 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 return nil
             }
 
+            // . (keyCode 47 or char "."): Step Forward 1 Frame
+            if !isShift && (keyCode == 47 || chars == ".") {
+                Task { @MainActor in
+                    PlayerController.shared.stepFrame(by: 1)
+                }
+                return nil
+            }
+
+            // , (keyCode 43 or char ","): Step Backward 1 Frame
+            if !isShift && (keyCode == 43 || chars == ",") {
+                Task { @MainActor in
+                    PlayerController.shared.stepFrame(by: -1)
+                }
+                return nil
+            }
+
             return event
         }
     }
