@@ -6,7 +6,7 @@
 - Removed duplicate legacy icon files while retaining Light, Dark, Clear, and Tinted app icon appearances.
 - Reduced the app bundle to approximately 3.2 MB and ad-hoc code-signed the GitHub Actions build.
 - Lowered the deployment target to macOS 13.0 and added a native material fallback for the Liquid Glass controls on older systems.
-- Built with Xcode 27 while retaining support for the oldest compatible macOS version.
+- Built with Xcode 26.6 while retaining support for the oldest compatible macOS version.
 
 ## v1.0.0 — The Modern QuickTime Player Successor
 

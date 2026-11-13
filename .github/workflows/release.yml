@@ -26,9 +26,7 @@ jobs:
       - name: Select Xcode with Icon Composer asset support
         run: |
           for xcode_path in \
-            "/Applications/Xcode_27.2.app" \
-            "/Applications/Xcode_27.1.app" \
-            "/Applications/Xcode_27.0.app" \
+            "/Applications/Xcode_26.6.app" \
             "/Applications/Xcode.app"; do
             if [ -d "$xcode_path" ]; then
               echo "Selecting $xcode_path"
@@ -38,8 +36,8 @@ jobs:
           done
           XCODE_VERSION="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
           XCODE_MAJOR="${XCODE_VERSION%%.*}"
-          if [ -z "$XCODE_MAJOR" ] || [ "$XCODE_MAJOR" -lt 27 ]; then
-            echo "Xcode 27 or later is required to compile the latest icon assets (found: ${XCODE_VERSION:-unknown})." >&2
+          if [ -z "$XCODE_MAJOR" ] || [ "$XCODE_MAJOR" -lt 26 ]; then
+            echo "Xcode 26.6 or later is required to compile the latest icon assets (found: ${XCODE_VERSION:-unknown})." >&2
             exit 1
           fi
           xcrun --find actool
