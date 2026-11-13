@@ -20,9 +20,6 @@ public struct VideoPlayerView: View {
     @State private var isHoveringOverControls = false
     @State private var hideTimer: Task<Void, Never>?
     @State private var isFullScreen = false
-    @State private var isDraggingScrubber = false
-    @State private var wasPlayingBeforeScrub = false
-    @State private var scrubTime: Double = 0
     @State private var transientFeedbackIcon: String? = nil
     @State private var transientFeedbackOpacity: Double = 0.0
     @State private var isDropTargeted = false
@@ -390,49 +387,14 @@ public struct VideoPlayerView: View {
             hudDivider
 
             // 2. Timeline Scrubber
-            HStack(spacing: 8) {
-                Text(formatTime(currentTimeValue))
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundColor(.white.opacity(0.85))
-                    .frame(minWidth: 36, alignment: .leading)
-
-                NativeSlider(
-                    value: Binding(
-                        get: { isDraggingScrubber ? scrubTime : PlayerTimeState.shared.currentTime },
-                        set: { target in
-                            scrubTime = target
-                            playerController.seek(to: target)
-                            registerUserActivity()
-                        }
-                    ),
-                    in: 0.0...max(PlayerTimeState.shared.duration, 1.0),
-                    trackFillColor: .white,
-                    onEditingChanged: { editing in
-                        if editing {
-                            isDraggingScrubber = true
-                            wasPlayingBeforeScrub = playerController.isPlaying
-                            if wasPlayingBeforeScrub { playerController.pause() }
-                        } else {
-                            isDraggingScrubber = false
-                            playerController.seek(to: scrubTime)
-                            if wasPlayingBeforeScrub {
-                                playerController.play()
-                                wasPlayingBeforeScrub = false
-                            }
-                        }
-                        registerUserActivity()
-                    }
-                )
-                .frame(minWidth: 40, maxWidth: .infinity)
-                .frame(height: 22)
-
-                Text(formatRemainingTime())
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundColor(.white.opacity(0.85))
-                    .frame(minWidth: 42, alignment: .trailing)
-            }
+            TimelineScrubberBar(
+                playerController: playerController,
+                fontSize: 11,
+                textOpacity: 0.85,
+                sliderHeight: 22,
+                sliderMinWidth: 40,
+                onUserActivity: registerUserActivity
+            )
 
             hudDivider
 
@@ -545,32 +507,6 @@ public struct VideoPlayerView: View {
         Rectangle()
             .fill(Color.white.opacity(0.16))
             .frame(width: 1, height: 16)
-    }
-
-    private var currentTimeValue: Double {
-        isDraggingScrubber ? scrubTime : PlayerTimeState.shared.currentTime
-    }
-
-    private func formatRemainingTime() -> String {
-        let maxD = PlayerTimeState.shared.duration
-        let cur = currentTimeValue
-        if maxD > 0 {
-            let rem = max(0, maxD - cur)
-            return "-\(formatTime(rem))"
-        }
-        return "--:--"
-    }
-
-    private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite && !seconds.isNaN else { return "00:00" }
-        let total = Int(seconds)
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        let s = total % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        }
-        return String(format: "%02d:%02d", m, s)
     }
 
     private var volumeIconName: String {
@@ -734,48 +670,14 @@ public struct VideoPlayerView: View {
             // Scrubber & Controls
             VStack(spacing: 12) {
                 // Scrubber
-                HStack(spacing: 8) {
-                    Text(formatTime(currentTimeValue))
-                        .font(.system(size: 11.5, weight: .medium))
-                        .monospacedDigit()
-                        .foregroundColor(.white.opacity(0.80))
-                        .frame(minWidth: 36, alignment: .leading)
-
-                    NativeSlider(
-                        value: Binding(
-                            get: { isDraggingScrubber ? scrubTime : PlayerTimeState.shared.currentTime },
-                            set: { target in
-                                scrubTime = target
-                                playerController.seek(to: target)
-                                registerUserActivity()
-                            }
-                        ),
-                        in: 0.0...max(PlayerTimeState.shared.duration, 1.0),
-                        trackFillColor: .white,
-                        onEditingChanged: { editing in
-                            if editing {
-                                isDraggingScrubber = true
-                                wasPlayingBeforeScrub = playerController.isPlaying
-                                if wasPlayingBeforeScrub { playerController.pause() }
-                            } else {
-                                isDraggingScrubber = false
-                                playerController.seek(to: scrubTime)
-                                if wasPlayingBeforeScrub {
-                                    playerController.play()
-                                    wasPlayingBeforeScrub = false
-                                }
-                            }
-                            registerUserActivity()
-                        }
-                    )
-                    .frame(height: 16)
-
-                    Text(formatRemainingTime())
-                        .font(.system(size: 11.5, weight: .medium))
-                        .monospacedDigit()
-                        .foregroundColor(.white.opacity(0.80))
-                        .frame(minWidth: 42, alignment: .trailing)
-                }
+                TimelineScrubberBar(
+                    playerController: playerController,
+                    fontSize: 11.5,
+                    textOpacity: 0.80,
+                    sliderHeight: 16,
+                    sliderMinWidth: nil,
+                    onUserActivity: registerUserActivity
+                )
                 .padding(.horizontal, 24)
 
                 // Transport: [Back 10] [Play/Pause] [Fwd 10]
@@ -1194,5 +1096,94 @@ public struct VideoPlayerView: View {
             recentDocuments = NSDocumentController.shared.recentDocumentURLs
             WindowManager.shared.transitionToWelcome(animated: false)
         }
+    }
+}
+
+/// Dedicated timeline scrubber view that observes PlayerTimeState independently
+/// so progress ticks every 100ms without invalidating the entire player HUD tree.
+private struct TimelineScrubberBar: View {
+    @ObservedObject var playerController: PlayerController
+    @ObservedObject private var timeState = PlayerTimeState.shared
+
+    let fontSize: CGFloat
+    let textOpacity: Double
+    let sliderHeight: CGFloat
+    let sliderMinWidth: CGFloat?
+    let onUserActivity: () -> Void
+
+    @State private var isDraggingScrubber = false
+    @State private var wasPlayingBeforeScrub = false
+    @State private var scrubTime: Double = 0
+
+    private var currentTimeValue: Double {
+        isDraggingScrubber ? scrubTime : timeState.currentTime
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(formatTime(currentTimeValue))
+                .font(.system(size: fontSize, weight: .medium))
+                .monospacedDigit()
+                .foregroundColor(.white.opacity(textOpacity))
+                .frame(minWidth: 36, alignment: .leading)
+
+            NativeSlider(
+                value: Binding(
+                    get: { currentTimeValue },
+                    set: { target in
+                        scrubTime = target
+                        playerController.seek(to: target)
+                        onUserActivity()
+                    }
+                ),
+                in: 0.0...max(timeState.duration, 1.0),
+                trackFillColor: .white,
+                onEditingChanged: { editing in
+                    if editing {
+                        isDraggingScrubber = true
+                        wasPlayingBeforeScrub = playerController.isPlaying
+                        if wasPlayingBeforeScrub { playerController.pause() }
+                    } else {
+                        isDraggingScrubber = false
+                        playerController.seek(to: scrubTime)
+                        if wasPlayingBeforeScrub {
+                            playerController.play()
+                            wasPlayingBeforeScrub = false
+                        }
+                    }
+                    onUserActivity()
+                }
+            )
+            .frame(minWidth: sliderMinWidth, maxWidth: .infinity)
+            .frame(height: sliderHeight)
+
+            Text(formatRemainingTime())
+                .font(.system(size: fontSize, weight: .medium))
+                .monospacedDigit()
+                .foregroundColor(.white.opacity(textOpacity))
+                .frame(minWidth: 42, alignment: .trailing)
+        }
+    }
+
+    private func formatRemainingTime() -> String {
+        let maxD = timeState.duration
+        let cur = currentTimeValue
+        if maxD > 0 {
+            let rem = max(0, maxD - cur)
+            return "-\(formatTime(rem))"
+        }
+        return "--:--"
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite && !seconds.isNaN else { return "00:00" }
+        let total = Int(seconds)
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%02d:%02d", m, s)
     }
 }
