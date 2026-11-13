@@ -25,6 +25,8 @@ while IFS= read -r file; do
 done < <(find Sources/Kino -name "*.swift")
 
 echo "📦 Compiling ${#SWIFT_FILES[@]} Swift source files..."
+rm -rf "$APP_BUNDLE"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 swiftc \
     -target arm64-apple-macos26.0 \
     -sdk "$SDK_PATH" \
@@ -41,12 +43,6 @@ strip -rSTx "$MACOS_DIR/$APP_NAME"
 
 echo "📄 Copying Info.plist and AppIcon.icns..."
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
-if [ -f "Resources/AppIcon.icns" ]; then
-    cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
-fi
-if [ -f "Resources/AppIcon.png" ]; then
-    cp "Resources/AppIcon.png" "$RESOURCES_DIR/AppIcon.png"
-fi
 if [ -d "assets/Kino.icon.xcassets" ]; then
     if xcrun --find actool >/dev/null 2>&1; then
         echo "🎨 Compiling the Light, Dark, Clear, and Tinted app icon variants..."
@@ -75,6 +71,12 @@ PY
     else
         echo "Warning: actool is unavailable; using the legacy static icon for this local build." >&2
     fi
+fi
+
+# Assets.car carries the four appearance variants; actool also creates a small
+# ICNS fallback. Keep the large legacy icon only when building without actool.
+if [ ! -f "$RESOURCES_DIR/Kino.icns" ] && [ -f "Resources/AppIcon.icns" ]; then
+    cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 
 # Clear quarantine and extended attributes
