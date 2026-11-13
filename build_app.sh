@@ -47,6 +47,10 @@ fi
 if [ -f "Resources/AppIcon.png" ]; then
     cp "Resources/AppIcon.png" "$RESOURCES_DIR/AppIcon.png"
 fi
+if [ -f "Resources/Assets.car" ]; then
+    echo "🎨 Copying precompiled dynamic multi-appearance iconstack Assets.car..."
+    cp "Resources/Assets.car" "$RESOURCES_DIR/Assets.car"
+fi
 
 if [ -d "assets/Kino.icon.xcassets" ] && xcrun actool --version >/dev/null 2>&1; then
     echo "🎨 Compiling dynamic multi-appearance iconstack into Assets.car..."
@@ -57,6 +61,9 @@ if [ -d "assets/Kino.icon.xcassets" ] && xcrun actool --version >/dev/null 2>&1;
         --app-icon Kino \
         --output-partial-info-plist /tmp/kino_partial.plist \
         --output-format human-readable-text || true
+    if [ -f "$RESOURCES_DIR/Assets.car" ]; then
+        cp "$RESOURCES_DIR/Assets.car" "Resources/Assets.car"
+    fi
 fi
 
 # Clear quarantine and extended attributes

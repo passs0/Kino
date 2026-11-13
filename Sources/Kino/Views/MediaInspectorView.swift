@@ -6,6 +6,7 @@ import AppKit
 public struct MediaInspectorView: View {
     @ObservedObject var coordinator: MediaCoordinator
     @ObservedObject private var playerController = PlayerController.shared
+    @ObservedObject private var metricsManager = LiveMetricsManager.shared
     var onClose: (() -> Void)?
 
     public init(coordinator: MediaCoordinator, onClose: (() -> Void)? = nil) {
@@ -151,7 +152,7 @@ public struct MediaInspectorView: View {
         )
         .task {
             while !Task.isCancelled {
-                await playerController.refreshLiveMetrics()
+                await metricsManager.refresh(from: playerController.player.currentItem)
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }
@@ -211,12 +212,12 @@ public struct MediaInspectorView: View {
     }
 
     private var effectiveFPS: Double? {
-        coordinator.probeResult?.primaryVideo?.fps ?? playerController.liveMetrics.fps
+        coordinator.probeResult?.primaryVideo?.fps ?? metricsManager.liveMetrics.fps
     }
 
     private var resolutionAndFPSString: String? {
-        let w = coordinator.probeResult?.primaryVideo?.width ?? playerController.liveMetrics.width
-        let h = coordinator.probeResult?.primaryVideo?.height ?? playerController.liveMetrics.height
+        let w = coordinator.probeResult?.primaryVideo?.width ?? metricsManager.liveMetrics.width
+        let h = coordinator.probeResult?.primaryVideo?.height ?? metricsManager.liveMetrics.height
         guard let width = w, let height = h, width > 0, height > 0 else {
             return nil
         }
@@ -230,9 +231,9 @@ public struct MediaInspectorView: View {
     }
 
     private var framesString: String? {
-        let w = coordinator.probeResult?.primaryVideo?.width ?? playerController.liveMetrics.width
+        let w = coordinator.probeResult?.primaryVideo?.width ?? metricsManager.liveMetrics.width
         guard w != nil else { return nil }
-        let dropped = playerController.liveMetrics.droppedFrames
+        let dropped = metricsManager.liveMetrics.droppedFrames
         if let fps = effectiveFPS, fps > 0 {
             let approxTotal = max(dropped, Int((PlayerTimeState.shared.currentTime * fps).rounded()))
             if approxTotal > 0 {
@@ -243,14 +244,14 @@ public struct MediaInspectorView: View {
     }
 
     private var codecsString: String? {
-        let vCodec = coordinator.probeResult?.primaryVideo?.codecName.uppercased() ?? playerController.liveMetrics.videoCodec
-        let aCodec = coordinator.probeResult?.primaryAudio?.codecName.uppercased() ?? playerController.liveMetrics.audioCodec
+        let vCodec = coordinator.probeResult?.primaryVideo?.codecName.uppercased() ?? metricsManager.liveMetrics.videoCodec
+        let aCodec = coordinator.probeResult?.primaryAudio?.codecName.uppercased() ?? metricsManager.liveMetrics.audioCodec
         let parts = [vCodec, aCodec].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " / ")
     }
 
     private var colorString: String? {
-        coordinator.probeResult?.primaryVideo?.colorInfo ?? playerController.liveMetrics.colorInfo
+        coordinator.probeResult?.primaryVideo?.colorInfo ?? metricsManager.liveMetrics.colorInfo
     }
 
     private var currentBitrate: String? {
@@ -260,7 +261,7 @@ public struct MediaInspectorView: View {
         if let br = coordinator.probeResult?.overallBitrate, br > 0 {
             return String(format: "%.1f Mbps", Double(br) / 1_000_000.0)
         }
-        if let ind = playerController.liveMetrics.indicatedBitrate, ind > 0 {
+        if let ind = metricsManager.liveMetrics.indicatedBitrate, ind > 0 {
             return String(format: "%.1f Mbps", ind / 1_000_000.0)
         }
         return nil

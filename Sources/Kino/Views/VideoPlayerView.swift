@@ -338,6 +338,55 @@ public struct VideoPlayerView: View {
         }
     }
 
+    private struct HUDSpeedButton: View {
+        let rate: Float
+        let action: () -> Void
+
+        @State private var isHovered = false
+
+        private var rateText: String {
+            if abs(rate - 1.0) < 0.01 {
+                return "1×"
+            }
+            return "\(PlaybackSpeedMenuPresenter.formatRate(rate))×"
+        }
+
+        var body: some View {
+            Button(action: action) {
+                Text(rateText)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(isHovered ? 1.0 : (abs(rate - 1.0) > 0.01 ? 1.0 : 0.88)))
+                    .padding(.horizontal, 5.5)
+                    .frame(height: 22)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(
+                                abs(rate - 1.0) > 0.01
+                                    ? Color.accentColor.opacity(isHovered ? 0.48 : 0.32)
+                                    : (isHovered ? Color.white.opacity(0.18) : Color.white.opacity(0.08))
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(
+                                abs(rate - 1.0) > 0.01
+                                    ? Color.accentColor.opacity(0.55)
+                                    : (isHovered ? Color.white.opacity(0.24) : Color.white.opacity(0.12)),
+                                lineWidth: 0.5
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .help("Playback Speed (\(rateText))")
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.12)) {
+                    isHovered = hovering
+                }
+            }
+        }
+    }
+
     // MARK: - Apple QuickTime Player Unified Floating HUD Bar
 
     private func quickTimeFloatingHUD(availableWidth: CGFloat) -> some View {
@@ -429,8 +478,13 @@ public struct VideoPlayerView: View {
 
             hudDivider
 
-            // 4. Auxiliary & Route Actions: [Subtitles & Audio] [PiP] [AirPlay] [Fullscreen]
+            // 4. Auxiliary & Route Actions: [Playback Speed] [Subtitles & Audio] [PiP] [AirPlay] [Fullscreen]
             HStack(spacing: groupSpacing) {
+                HUDSpeedButton(rate: playerController.playbackRate) {
+                    PlaybackSpeedMenuPresenter.shared.show()
+                    registerUserActivity()
+                }
+
                 HUDIconButton(
                     iconName: "quote.bubble",
                     size: 13,
@@ -472,7 +526,7 @@ public struct VideoPlayerView: View {
         }
         .padding(.horizontal, horizontalPadding)
         .frame(height: 48)
-        .frame(maxWidth: 620)
+        .frame(maxWidth: 654)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -737,6 +791,11 @@ public struct VideoPlayerView: View {
                     .frame(width: 80, height: 16)
 
                     Spacer()
+
+                    HUDSpeedButton(rate: playerController.playbackRate) {
+                        PlaybackSpeedMenuPresenter.shared.show()
+                        registerUserActivity()
+                    }
 
                     AirPlayRoutePicker(player: playerController.player, mode: .audio)
                         .frame(width: 22, height: 22)
