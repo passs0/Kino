@@ -12,7 +12,6 @@ import MetalFX
 public final class VideoEnhancer: ObservableObject {
     public static let shared = VideoEnhancer()
     private static let userDefaultsKey = "Kino_VideoEnhancementMode"
-    private static let legacyUserDefaultsKey = "Serein_VideoEnhancementMode"
     private static let autoSuperResKey = "Kino_AutoSuperResolution"
 
     @Published public var isAutomaticSuperResolutionEnabled: Bool {
@@ -82,7 +81,7 @@ public final class VideoEnhancer: ObservableObject {
         let isAuto = UserDefaults.standard.object(forKey: Self.autoSuperResKey) as? Bool ?? true
         self.isAutomaticSuperResolutionEnabled = isAuto
 
-        if let savedRaw = UserDefaults.standard.string(forKey: Self.userDefaultsKey) ?? UserDefaults.standard.string(forKey: Self.legacyUserDefaultsKey),
+        if let savedRaw = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
            let savedMode = EnhancementMode(rawValue: savedRaw) {
             self.activeMode = savedMode
         } else {

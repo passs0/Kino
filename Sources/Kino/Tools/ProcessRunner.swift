@@ -46,11 +46,10 @@ public final class ProcessRunner: @unchecked Sendable {
             process.arguments = arguments
 
             var env = ProcessInfo.processInfo.environment
-            // Ensure managed Kino/bin (and legacy Serein/bin), homebrew, and local bin are always in PATH for sub-commands
+            // Ensure managed Kino/bin, homebrew, and local bin are always in PATH for sub-commands
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             let kinoBin = appSupport?.appendingPathComponent("Kino/bin").path ?? ""
-            let sereinBin = appSupport?.appendingPathComponent("Serein/bin").path ?? ""
-            let extraPaths = "\(kinoBin):\(sereinBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+            let extraPaths = "\(kinoBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
             env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "")"
             if let customEnv = environment {
                 for (k, v) in customEnv { env[k] = v }
@@ -122,8 +121,7 @@ public final class ProcessRunner: @unchecked Sendable {
         var env = ProcessInfo.processInfo.environment
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         let kinoBin = appSupport?.appendingPathComponent("Kino/bin").path ?? ""
-        let sereinBin = appSupport?.appendingPathComponent("Serein/bin").path ?? ""
-        let extraPaths = "\(kinoBin):\(sereinBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        let extraPaths = "\(kinoBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
         env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "")"
         if let customEnv = environment {
             for (k, v) in customEnv { env[k] = v }

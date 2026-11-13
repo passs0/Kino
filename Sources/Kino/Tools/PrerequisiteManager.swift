@@ -11,12 +11,7 @@ public final class PrerequisiteManager: ObservableObject {
     /// ~/Library/Application Support/Kino/bin/
     public static var managedBinDirectory: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let kinoBin = appSupport.appendingPathComponent("Kino/bin", isDirectory: true)
-        let legacyBin = appSupport.appendingPathComponent("Serein/bin", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: kinoBin.path) && FileManager.default.fileExists(atPath: legacyBin.path) {
-            try? FileManager.default.copyItem(at: legacyBin, to: kinoBin)
-        }
-        return kinoBin
+        return appSupport.appendingPathComponent("Kino/bin", isDirectory: true)
     }
 
     @Published public private(set) var isDownloading: Bool = false

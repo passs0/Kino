@@ -5,7 +5,6 @@ public final class PlaybackResumeManager: @unchecked Sendable {
     public static let shared = PlaybackResumeManager()
 
     private let userDefaultsKey = "Kino_PlaybackPositions_v1"
-    private let legacyUserDefaultsKey = "Serein_PlaybackPositions_v1"
     private let lock = NSLock()
 
     private init() {}
@@ -25,9 +24,7 @@ public final class PlaybackResumeManager: @unchecked Sendable {
         let k = key(for: source)
         lock.lock()
         defer { lock.unlock() }
-        let dict = (UserDefaults.standard.dictionary(forKey: userDefaultsKey) as? [String: Double])
-            ?? (UserDefaults.standard.dictionary(forKey: legacyUserDefaultsKey) as? [String: Double])
-            ?? [:]
+        let dict = (UserDefaults.standard.dictionary(forKey: userDefaultsKey) as? [String: Double]) ?? [:]
         guard let pos = dict[k], pos > 3.0 else { return nil }
         return pos
     }

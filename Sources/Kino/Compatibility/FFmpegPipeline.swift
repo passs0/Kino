@@ -322,8 +322,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         var env = ProcessInfo.processInfo.environment
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         let kinoBin = appSupport?.appendingPathComponent("Kino/bin").path ?? ""
-        let sereinBin = appSupport?.appendingPathComponent("Serein/bin").path ?? ""
-        env["PATH"] = "\(kinoBin):\(sereinBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
+        env["PATH"] = "\(kinoBin):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
 
         // yt-dlp extraction process outputting to pipe:
         let ytProc = Process()

@@ -104,13 +104,12 @@ Kino/
 ## 3. Key Subsystems & Design Choices
 
 ### A. PrerequisiteManager & On-Demand Engines
-- **Location**: Helper binaries are installed into `~/Library/Application Support/Kino/bin/` (with automatic fallback migration from legacy `Serein/bin/`).
+- **Location**: Helper binaries are installed into `~/Library/Application Support/Kino/bin/`.
 - **Search Order**:
   1. `~/Library/Application Support/Kino/bin/` (Managed)
-  2. `~/Library/Application Support/Serein/bin/` (Legacy managed fallback)
-  3. `/opt/homebrew/bin/` (Homebrew ARM64)
-  4. `/usr/local/bin/` (Homebrew Intel)
-  5. Standard `$PATH`
+  2. `/opt/homebrew/bin/` (Homebrew ARM64)
+  3. `/usr/local/bin/` (Homebrew Intel)
+  4. Standard `$PATH`
 - **Integrity**: Keeping helper binaries in user Application Support avoids breaking Gatekeeper code signatures on `Kino.app` when updating `yt-dlp` (`yt-dlp -U`).
 
 ### B. Subtitles & MediaAccessibility

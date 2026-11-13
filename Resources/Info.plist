@@ -45,7 +45,6 @@
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>kino</string>
-                <string>serein</string>
             </array>
         </dict>
     </array>

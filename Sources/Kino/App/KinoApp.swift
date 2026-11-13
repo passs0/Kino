@@ -42,7 +42,7 @@ public struct KinoApp: App {
         }
 
         let scheme = url.scheme?.lowercased() ?? ""
-        if scheme == "kino" || scheme == "serein" {
+        if scheme == "kino" {
             if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
                 if components.host?.lowercased() == "open" {
                     if let targetURL = components.queryItems?.first(where: { $0.name == "url" })?.value {
@@ -55,13 +55,11 @@ public struct KinoApp: App {
             }
 
             let absolute = url.absoluteString
-            for prefix in ["kino://", "serein://"] {
-                if absolute.hasPrefix(prefix) {
-                    let stripped = String(absolute.dropFirst(prefix.count))
-                    if stripped.hasPrefix("http://") || stripped.hasPrefix("https://") {
-                        MediaCoordinator.shared.openOnlineURL(string: stripped)
-                        return
-                    }
+            if absolute.hasPrefix("kino://") {
+                let stripped = String(absolute.dropFirst("kino://".count))
+                if stripped.hasPrefix("http://") || stripped.hasPrefix("https://") {
+                    MediaCoordinator.shared.openOnlineURL(string: stripped)
+                    return
                 }
             }
         }

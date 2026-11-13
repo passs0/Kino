@@ -15,12 +15,11 @@ public final class SubtitleManager: ObservableObject {
     @Published public private(set) var subtitleDelay: Double = 0.0
 
     private static let placementDefaultsKey = "KinoSubtitlePlacement"
-    private static let legacyPlacementDefaultsKey = "SereinSubtitlePlacement"
 
     /// Subtitle layout positioning: .letterbox (sits according to display height in black bar)
     /// vs .mediaFrame (sits according to media height inside the video picture).
     @Published public private(set) var placement: SubtitlePlacement = {
-        if let saved = UserDefaults.standard.string(forKey: placementDefaultsKey) ?? UserDefaults.standard.string(forKey: legacyPlacementDefaultsKey),
+        if let saved = UserDefaults.standard.string(forKey: placementDefaultsKey),
            let p = SubtitlePlacement(rawValue: saved) {
             return p
         }

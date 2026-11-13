@@ -16,7 +16,6 @@ public final class ToolLocator: @unchecked Sendable {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         let paths: [String?] = [
             appSupport?.appendingPathComponent("Kino/bin").path,
-            appSupport?.appendingPathComponent("Serein/bin").path,
             "/opt/homebrew/bin",
             "/usr/local/bin",
             "/usr/bin",
