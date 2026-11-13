@@ -59,22 +59,22 @@ public struct MainWindowView: View {
             .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
                 handleCloseMedia()
             }
-            .onChange(of: coordinator.currentSource) {
-                handleSourceChange(coordinator.currentSource)
+            .onChange(of: coordinator.currentSource) { newSource in
+                handleSourceChange(newSource)
             }
-            .onChange(of: coordinator.activePlayableURL) {
-                handlePlayableURLChange(coordinator.activePlayableURL)
+            .onChange(of: coordinator.activePlayableURL) { newURL in
+                handlePlayableURLChange(newURL)
             }
-            .onChange(of: coordinator.probeResult) {
-                handleProbeChange(coordinator.probeResult)
+            .onChange(of: coordinator.probeResult) { newProbe in
+                handleProbeChange(newProbe)
             }
-            .onChange(of: coordinator.extractedOnlineInfo?.duration) {
-                if let d = coordinator.extractedOnlineInfo?.duration, d > 0 {
+            .onChange(of: coordinator.extractedOnlineInfo?.duration) { newDuration in
+                if let d = newDuration, d > 0 {
                     playerController.setKnownDuration(d)
                 }
             }
-            .onChange(of: coordinator.extractedOnlineInfo?.title) {
-                if let t = coordinator.extractedOnlineInfo?.title, !t.isEmpty {
+            .onChange(of: coordinator.extractedOnlineInfo?.title) { newTitle in
+                if let t = newTitle, !t.isEmpty {
                     windowManager.setMediaDocument(url: nil, title: t)
                 }
             }
