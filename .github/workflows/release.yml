@@ -23,13 +23,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Select Xcode with Icon Composer asset support
         run: |
           for xcode_path in \
-            "/Applications/Xcode_16.2.app" \
-            "/Applications/Xcode_16.1.app" \
-            "/Applications/Xcode_16.0.app" \
-            "/Applications/Xcode_16.app" \
+            "/Applications/Xcode_26.6.app" \
             "/Applications/Xcode.app"; do
             if [ -d "$xcode_path" ]; then
               echo "Selecting $xcode_path"
@@ -37,8 +34,18 @@ jobs:
               break
             fi
           done
-          xcrun actool --version || true
+          XCODE_VERSION="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          XCODE_MAJOR="${XCODE_VERSION%%.*}"
+          if [ -z "$XCODE_MAJOR" ] || [ "$XCODE_MAJOR" -lt 26 ]; then
+            echo "Xcode 26.6 or later is required to compile the latest icon assets (found: ${XCODE_VERSION:-unknown})." >&2
+            exit 1
+          fi
+          xcrun --find actool
+          xcrun actool --version
           swift --version
+
+      - name: Validate Swift package manifest
+        run: swift package dump-package >/dev/null
 
       - name: Extract Tag or Version
         id: get_version
@@ -46,7 +53,7 @@ jobs:
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION="1.0.0-${GITHUB_SHA::7}"
+            VERSION="1.0.1-${GITHUB_SHA::7}"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 

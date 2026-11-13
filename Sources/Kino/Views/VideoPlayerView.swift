@@ -744,6 +744,7 @@ public struct VideoPlayerView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Rewind 10 seconds")
+                    .accessibilityLabel("Rewind 10 seconds")
 
                     Button(action: {
                         playerController.togglePlayPause()
@@ -757,6 +758,7 @@ public struct VideoPlayerView: View {
                     }
                     .buttonStyle(.plain)
                     .help(playerController.isPlaying ? "Pause" : "Play")
+                    .accessibilityLabel(playerController.isPlaying ? "Pause" : "Play")
 
                     Button(action: { playerController.seekRelative(seconds: 10) }) {
                         Image(systemName: "goforward.10")
@@ -766,6 +768,7 @@ public struct VideoPlayerView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Forward 10 seconds")
+                    .accessibilityLabel("Forward 10 seconds")
                 }
 
                 // Bottom Shelf: Volume & AirPlay & Options
@@ -776,6 +779,8 @@ public struct VideoPlayerView: View {
                             .foregroundColor(.white.opacity(0.85))
                     }
                     .buttonStyle(.plain)
+                    .help(playerController.isMuted ? "Unmute" : "Mute")
+                    .accessibilityLabel(playerController.isMuted ? "Unmute" : "Mute")
 
                     NativeSlider(
                         value: Binding(
@@ -789,6 +794,7 @@ public struct VideoPlayerView: View {
                         trackFillColor: .white
                     )
                     .frame(width: 80, height: 16)
+                    .accessibilityLabel("Volume")
 
                     Spacer()
 
@@ -808,8 +814,8 @@ public struct VideoPlayerView: View {
                             .frame(width: 24, height: 24)
                     }
                     .buttonStyle(.plain)
-                    .help("Subtitles and Audio")
                     .help("Audio Options & Media Statistics")
+                    .accessibilityLabel("Audio Options and Media Statistics")
                 }
                 .padding(.horizontal, 24)
             }

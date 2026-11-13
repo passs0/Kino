@@ -25,8 +25,10 @@ while IFS= read -r file; do
 done < <(find Sources/Kino -name "*.swift")
 
 echo "📦 Compiling ${#SWIFT_FILES[@]} Swift source files..."
+rm -rf "$APP_BUNDLE"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 swiftc \
-    -target arm64-apple-macos26.0 \
+    -target arm64-apple-macos13.0 \
     -sdk "$SDK_PATH" \
     -module-cache-path "$MODULE_CACHE" \
     -O \
@@ -41,29 +43,40 @@ strip -rSTx "$MACOS_DIR/$APP_NAME"
 
 echo "📄 Copying Info.plist and AppIcon.icns..."
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
-if [ -f "Resources/AppIcon.icns" ]; then
-    cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
-fi
-if [ -f "Resources/AppIcon.png" ]; then
-    cp "Resources/AppIcon.png" "$RESOURCES_DIR/AppIcon.png"
-fi
-if [ -f "Resources/Assets.car" ]; then
-    echo "🎨 Copying precompiled dynamic multi-appearance iconstack Assets.car..."
-    cp "Resources/Assets.car" "$RESOURCES_DIR/Assets.car"
+if [ -d "assets/Kino.icon.xcassets" ]; then
+    if xcrun --find actool >/dev/null 2>&1; then
+        echo "🎨 Compiling the Light, Dark, Clear, and Tinted app icon variants..."
+        PARTIAL_PLIST="$(mktemp "$BUILD_DIR/icon-partial.XXXXXX")"
+        xcrun actool "assets/Kino.icon.xcassets" \
+            --compile "$RESOURCES_DIR" \
+            --platform macosx \
+            --minimum-deployment-target 13.0 \
+            --app-icon Kino \
+            --output-partial-info-plist "$PARTIAL_PLIST" \
+            --output-format human-readable-text
+        python3 - "$PARTIAL_PLIST" "$CONTENTS_DIR/Info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], "rb") as f:
+    additions = plistlib.load(f)
+with open(sys.argv[2], "rb") as f:
+    info = plistlib.load(f)
+info.update(additions)
+with open(sys.argv[2], "wb") as f:
+    plistlib.dump(info, f)
+PY
+        rm -f "$PARTIAL_PLIST"
+    elif [ "${CI:-}" = "true" ]; then
+        echo "Error: Xcode with actool is required to build the dynamic app icon." >&2
+        exit 1
+    else
+        echo "Warning: actool is unavailable; using the legacy static icon for this local build." >&2
+    fi
 fi
 
-if [ -d "assets/Kino.icon.xcassets" ] && xcrun actool --version >/dev/null 2>&1; then
-    echo "🎨 Compiling dynamic multi-appearance iconstack into Assets.car..."
-    xcrun actool "assets/Kino.icon.xcassets" \
-        --compile "$RESOURCES_DIR" \
-        --platform macosx \
-        --minimum-deployment-target 14.0 \
-        --app-icon Kino \
-        --output-partial-info-plist /tmp/kino_partial.plist \
-        --output-format human-readable-text || true
-    if [ -f "$RESOURCES_DIR/Assets.car" ]; then
-        cp "$RESOURCES_DIR/Assets.car" "Resources/Assets.car"
-    fi
+# Assets.car carries the four appearance variants; actool also creates a small
+# ICNS fallback. Keep the large legacy icon only when building without actool.
+if [ ! -f "$RESOURCES_DIR/Kino.icns" ] && [ -f "Resources/AppIcon.icns" ]; then
+    cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 
 # Clear quarantine and extended attributes
@@ -71,6 +84,7 @@ xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
 echo "🔐 Ad-hoc code signing $APP_NAME.app..."
 codesign --force --deep --sign - "$APP_BUNDLE"
+codesign --verify --deep --strict "$APP_BUNDLE"
 
 echo "✅ Successfully built $APP_BUNDLE"
 ls -ld "$APP_BUNDLE"

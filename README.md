@@ -11,9 +11,9 @@
 
 <p align="center">
   <a href="https://github.com/passs0/Kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version 1.0.1" />
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
-  <img src="https://img.shields.io/badge/bundle-2.8%20MB-success" alt="Bundle Size" />
+  <img src="https://img.shields.io/badge/bundle-3.2%20MB-success" alt="Bundle Size" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
@@ -38,7 +38,7 @@ For decades, **QuickTime Player** has set the standard for macOS media playback:
 **Kino is the modern successor:**
 - **QuickTime Aesthetics & Efficiency:** Native Cocoa chrome, fluid animations, and 0% CPU consumption on standard formats.
 - **Universal Codec & Container Support:** Plays `.mkv`, `.webm`, `.avi`, `.ts`, `.mp4`, `.mov`, `.flac`, `.alac`, `.thd`, `.mlp`, VP9, AV1, Opus, and Dolby TrueHD seamlessly.
-- **macOS 26 Continuous Squircles & Optical Alignment:** Engineered for macOS 26 window geometry with continuous 26pt squircles, generous traffic light insets (`X: 26, Y: 16`), single-axis titlebar alignment, and Apple San Francisco tabular digits (`tnum` / `.monospacedDigit()`).
+- **Version-aware window styling:** Supports macOS 13 and later. macOS 26 and later use Liquid Glass controls; earlier versions use native material fallbacks. The four dynamic icon appearances are shown by macOS 26 and later, with a static icon fallback on earlier systems.
 - **Pure Apple Native Video Enhancement:** Built-in Apple MetalFX Spatial Super-Resolution and CoreImage GPU filters with zero file bloat.
 - **Multi-Channel Surround Audio:** Preserves discrete 5.1 and 7.1 audio tracks and Dolby Atmos Spatial Audio pass-through.
 - **Zero-Friction In-App Engine Setup:** Automatically manages helper engines with 1 click in user space—no Terminal commands, no Homebrew, and no `sudo` required!
@@ -65,7 +65,7 @@ Kino includes a zero-bloat GPU video enhancement suite integrated directly via h
 - **Edge & Outline Enhancer (`CIUnsharpMask`):** High-contrast edge restoration tuned with a tight radius for animation, cel-shading, cartoons, line art, and interface text.
 - **Noise & Grain Suppression (`CINoiseReduction`):** Spatial bilateral noise reduction smoothing macroblocking and sensor grain while keeping edge boundaries razor-sharp.
 - **Cinematic Contrast & Color:** Compound dynamic range filter combining luminance clarity with rich contrast and color vibrance.
-- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **2.8 MB**.
+- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **3.2 MB**.
 
 ### 3. Discrete Multi-Channel Surround Sound & Dolby Atmos
 - **Discrete 5.1 & 7.1 Preservation:** Retains discrete multi-channel surround tracks at high studio bitrates (384–640 kbps) without downmixing to stereo.
@@ -120,7 +120,7 @@ Kino treats subtitles as a first-class citizen with both local media intelligenc
 
 ## ⚡️ Zero-Friction Setup: No Terminal Required
 
-Unlike traditional players that demand manual command-line installations, Kino keeps the core application download ultra-compact (**~2.8 MB app, 1.6 MB .dmg**) and provides an **automated in-app engine installer**:
+Unlike traditional players that demand manual command-line installations, Kino keeps the core application download ultra-compact (**~3.2 MB app, ~2.7 MB .dmg**) and provides an **automated in-app engine installer**:
 
 1. **Automatic Detection:** If you already have Homebrew (`brew install ffmpeg yt-dlp`), Kino detects and uses them immediately with zero configuration.
 2. **1-Click In-App Download:** On fresh Macs without Homebrew, Kino prompts you with a clean native setup sheet (`⌘,`) and downloads managed static binaries directly into `~/Library/Application Support/Kino/bin/`.
@@ -164,7 +164,7 @@ Unlike traditional players that demand manual command-line installations, Kino k
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **[`Kino-v1.0.0.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
+1. Download **[`Kino-v1.0.1.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
 2. Open the downloaded `.dmg` and drag **`Kino.app`** directly into the **`Applications`** folder shortcut.
 3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
    - Right-click `Kino.app` ➔ **Open**, or run:
@@ -225,13 +225,12 @@ cd kino
 - [x] Remote MKV streaming progressive subtitle demuxing with sparse range tracking
 - [x] Multi-encoding subtitle decoder (UTF-8 with BOM, UTF-16, GB18030, CP1252)
 
-### Upcoming Milestones
-- [ ] **v1.1.0**: Multiple simultaneous playback windows (`WindowGroup`)
-- [ ] **v1.1.0**: Timeline thumbnail scrub preview tooltips
-- [ ] **v1.2.0**: Lightweight QuickTime-style Trim (`⌘T`), Rotate/Flip, & Export (`4K` / `1080p` / `Audio Only`)
+See the [roadmap](ROADMAP.md) for future ideas under consideration.
 
 ---
 
 ## 📄 License
 
 Released under the [MIT License](LICENSE).
+
+See the [release notes](RELEASE_NOTES.md) and [roadmap](ROADMAP.md).
