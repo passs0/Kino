@@ -47,22 +47,33 @@ fi
 if [ -f "Resources/AppIcon.png" ]; then
     cp "Resources/AppIcon.png" "$RESOURCES_DIR/AppIcon.png"
 fi
-if [ -f "Resources/Assets.car" ]; then
-    echo "🎨 Copying precompiled dynamic multi-appearance iconstack Assets.car..."
-    cp "Resources/Assets.car" "$RESOURCES_DIR/Assets.car"
-fi
-
-if [ -d "assets/Kino.icon.xcassets" ] && xcrun actool --version >/dev/null 2>&1; then
-    echo "🎨 Compiling dynamic multi-appearance iconstack into Assets.car..."
-    xcrun actool "assets/Kino.icon.xcassets" \
-        --compile "$RESOURCES_DIR" \
-        --platform macosx \
-        --minimum-deployment-target 14.0 \
-        --app-icon Kino \
-        --output-partial-info-plist /tmp/kino_partial.plist \
-        --output-format human-readable-text || true
-    if [ -f "$RESOURCES_DIR/Assets.car" ]; then
-        cp "$RESOURCES_DIR/Assets.car" "Resources/Assets.car"
+if [ -d "assets/Kino.icon.xcassets" ]; then
+    if xcrun --find actool >/dev/null 2>&1; then
+        echo "🎨 Compiling the Light, Dark, Clear, and Tinted app icon variants..."
+        PARTIAL_PLIST="$(mktemp "$BUILD_DIR/icon-partial.XXXXXX")"
+        xcrun actool "assets/Kino.icon.xcassets" \
+            --compile "$RESOURCES_DIR" \
+            --platform macosx \
+            --minimum-deployment-target 26.0 \
+            --app-icon Kino \
+            --output-partial-info-plist "$PARTIAL_PLIST" \
+            --output-format human-readable-text
+        python3 - "$PARTIAL_PLIST" "$CONTENTS_DIR/Info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], "rb") as f:
+    additions = plistlib.load(f)
+with open(sys.argv[2], "rb") as f:
+    info = plistlib.load(f)
+info.update(additions)
+with open(sys.argv[2], "wb") as f:
+    plistlib.dump(info, f)
+PY
+        rm -f "$PARTIAL_PLIST"
+    elif [ "${CI:-}" = "true" ]; then
+        echo "Error: Xcode with actool is required to build the dynamic app icon." >&2
+        exit 1
+    else
+        echo "Warning: actool is unavailable; using the legacy static icon for this local build." >&2
     fi
 fi
 
