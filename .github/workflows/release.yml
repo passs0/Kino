@@ -51,6 +51,9 @@ jobs:
           xcrun actool --version
           swift --version
 
+      - name: Validate Swift package manifest
+        run: swift package dump-package >/dev/null
+
       - name: Extract Tag or Version
         id: get_version
         run: |

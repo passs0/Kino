@@ -1,9 +1,18 @@
-# Kino v1.0.0 — The Modern QuickTime Player Successor
+# Kino Release Notes
 
-> **Version:** 1.0.0  
-> **Target Platform:** macOS 13.0+ (Apple Silicon)  
-> **Disk Image:** `Kino-v1.0.0.dmg` (2.8 MB)  
-> **SHA-256 Checksum:** `d6515ad567f60179251720b6b94434935f14c286adb1996f6dcb4762a1a11c7f`
+## v1.0.1 — Quality-of-life update
+
+- Added explicit accessibility labels and help for playback, mute, volume, and audio-options controls.
+- Removed duplicate legacy icon files while retaining Light, Dark, Clear, and Tinted app icon appearances.
+- Reduced the app bundle to approximately 3.2 MB and ad-hoc code-signed the GitHub Actions build.
+- Corrected the build and package minimum platform to macOS 26.0, matching the delivered app.
+
+## v1.0.0 — The Modern QuickTime Player Successor
+
+> **Version:** 1.0.0
+> **Target Platform:** macOS 26.0+ (Apple Silicon)
+> **Disk Image:** `Kino-v1.0.0.dmg` (4.8 MB)
+> **SHA-256 Checksum:** `91544a082e63f9a22d869a699fec96a7608577fea9c62d2d80b461fb36c67ad9`
 
 ---
 
@@ -124,7 +133,7 @@ Kino combines the clean elegance, battery efficiency, and fluid animations of Ap
 4. Verify checksum:
    ```zsh
    shasum -a 256 Kino-v1.0.0.dmg
-   # Expected: caa39459649a2c05984556ab876017dc30ca0816c983ae675ea97704fbf598cd
+   # Expected: 91544a082e63f9a22d869a699fec96a7608577fea9c62d2d80b461fb36c67ad9
    ```
 
 ---

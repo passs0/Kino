@@ -11,9 +11,9 @@
 
 <p align="center">
   <a href="https://github.com/passs0/Kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0" />
-  <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
-  <img src="https://img.shields.io/badge/bundle-2.8%20MB-success" alt="Bundle Size" />
+  <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version 1.0.1" />
+  <img src="https://img.shields.io/badge/macOS-26.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 26.0+" />
+  <img src="https://img.shields.io/badge/bundle-3.2%20MB-success" alt="Bundle Size" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
@@ -164,7 +164,7 @@ Unlike traditional players that demand manual command-line installations, Kino k
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **[`Kino-v1.0.0.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
+1. Download **[`Kino-v1.0.1.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
 2. Open the downloaded `.dmg` and drag **`Kino.app`** directly into the **`Applications`** folder shortcut.
 3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
    - Right-click `Kino.app` ➔ **Open**, or run:
@@ -225,13 +225,12 @@ cd kino
 - [x] Remote MKV streaming progressive subtitle demuxing with sparse range tracking
 - [x] Multi-encoding subtitle decoder (UTF-8 with BOM, UTF-16, GB18030, CP1252)
 
-### Upcoming Milestones
-- [ ] **v1.1.0**: Multiple simultaneous playback windows (`WindowGroup`)
-- [ ] **v1.1.0**: Timeline thumbnail scrub preview tooltips
-- [ ] **v1.2.0**: Lightweight QuickTime-style Trim (`⌘T`), Rotate/Flip, & Export (`4K` / `1080p` / `Audio Only`)
+See the [roadmap](ROADMAP.md) for future ideas under consideration.
 
 ---
 
 ## 📄 License
 
 Released under the [MIT License](LICENSE).
+
+See the [release notes](RELEASE_NOTES.md) and [roadmap](ROADMAP.md).

@@ -84,6 +84,7 @@ xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
 echo "🔐 Ad-hoc code signing $APP_NAME.app..."
 codesign --force --deep --sign - "$APP_BUNDLE"
+codesign --verify --deep --strict "$APP_BUNDLE"
 
 echo "✅ Successfully built $APP_BUNDLE"
 ls -ld "$APP_BUNDLE"
