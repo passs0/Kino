@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 APP_NAME="Kino"
-VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$SCRIPT_DIR/Resources/Info.plist" 2>/dev/null || echo "1.1.0")
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$SCRIPT_DIR/Resources/Info.plist" 2>/dev/null || echo "1.1.1")
 DMG_NAME="Kino-v${VERSION}.dmg"
 STAGING_DIR="/tmp/kino_dmg_staging"
 RW_DMG="/tmp/kino_rw.dmg"
