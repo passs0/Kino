@@ -163,7 +163,7 @@ public final class OpenSubtitlesService: ObservableObject {
 
     private static let defaultApiKey = "02WzVTIcNbbJ0IOQH3vZIATriQj9slZx"
     private static let baseURL = "https://api.opensubtitles.com/api/v1"
-    private static let userAgent = "Kino v1.0.1"
+    private static let userAgent = "Kino v1.1.0"
 
     private static let customApiKeyDefaultsKey = "KinoOpenSubtitlesCustomApiKey"
     private static let userTokenDefaultsKey = "KinoOpenSubtitlesUserToken"

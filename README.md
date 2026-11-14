@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/passs0/Kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
-  <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version 1.0.1" />
+  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
   <img src="https://img.shields.io/badge/bundle-3.2%20MB-success" alt="Bundle Size" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
@@ -111,7 +111,7 @@ Kino treats subtitles as a first-class citizen with both local media intelligenc
 
 ### 7. Unified Audio Mode & Clean Presentation
 - **Unified Player Architecture:** Audio mode and Video mode share the same refined control layout, shortcuts, and interaction model.
-- **Clean Minimalist Audio Canvas:** Clean, distraction-free display featuring high-resolution album artwork, track title, artist, and album typography.
+- **Responsive Music Canvas:** Album artwork scales with the window, while track details and playback controls stay within the available height. A subtle, blurred wash from the cover art adds atmosphere while keeping text and controls legible.
 - **Lossless Audio Engine (0% CPU):** Direct hardware playback for `.flac`, `.alac`, `.m4a`, `.mp3`, `.wav`, and `.aiff`.
 - **Pure Swift Album Art Parser:** Extracts high-resolution embedded cover artwork directly from FLAC `METADATA_BLOCK_PICTURE` headers, MP3 ID3 APIC frames, and M4A `covr` atoms in `< 1ms` with zero subprocesses.
 - **Desktop Always-On-Top Pinning (`⌥⌘P`):** Float the player above code editors, browsers, and terminal windows with a single click on the pin button (`📌`).
@@ -164,7 +164,7 @@ Unlike traditional players that demand manual command-line installations, Kino k
 ## 🛠️ Building & Installing
 
 ### Option 1: Direct Download (Pre-built macOS Disk Image)
-1. Download **[`Kino-v1.0.1.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
+1. Download **[`Kino-v1.1.0.dmg`](https://github.com/passs0/Kino/releases/latest)** from [GitHub Releases](https://github.com/passs0/Kino/releases).
 2. Open the downloaded `.dmg` and drag **`Kino.app`** directly into the **`Applications`** folder shortcut.
 3. If macOS Gatekeeper flags the downloaded binary on first launch (ad-hoc signed):
    - Right-click `Kino.app` ➔ **Open**, or run:
