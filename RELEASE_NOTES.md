@@ -1,5 +1,13 @@
 # Kino Release Notes
 
+## v1.1.0 — Responsive music canvas
+
+- Adapt album-art size, spacing, and transport controls to the available window height so the bottom shelf remains visible as the window is resized. Extremely short windows keep the full content reachable by scrolling.
+- Add a subtle blurred album-art backdrop under a dark readability gradient, using the existing cover image with no added assets or dependencies.
+- Keep the music controls visually consistent with Kino’s dark playback canvas and native player controls.
+- Built with Xcode 26.6 and ad-hoc code-signed in GitHub Actions; supports macOS 13 and later.
+
+
 ## v1.0.1 — Quality-of-life update
 
 - Added explicit accessibility labels and help for playback, mute, volume, and audio-options controls.

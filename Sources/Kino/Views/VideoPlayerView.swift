@@ -650,83 +650,81 @@ public struct VideoPlayerView: View {
     // MARK: - Audio Mode (Apple Music Aesthetics)
 
     private var audioArtworkAndMetadataView: some View {
-        VStack(spacing: 20) {
-            // Album Artwork (220x220, squircle, soft elevation shadow)
-            ZStack {
-                if let art = coordinator.currentArtwork {
-                    Image(nsImage: art)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 220, height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        GeometryReader { geometry in
+            let availableSize = geometry.size
+            let compact = availableSize.height < 560
+            let artworkSize = min(
+                220,
+                max(96, min(availableSize.width * 0.58, availableSize.height * (compact ? 0.32 : 0.40)))
+            )
+
+            Group {
+                if availableSize.height < 340 {
+                    ScrollView(.vertical) {
+                        audioLayout(
+                            artworkSize: artworkSize,
+                            compact: true,
+                            availableHeight: availableSize.height
                         )
-                        .shadow(color: Color.black.opacity(0.40), radius: 24, x: 0, y: 10)
+                    }
                 } else {
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.blue.opacity(0.40), Color.purple.opacity(0.30), Color.black.opacity(0.60)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 220, height: 220)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                        )
-                        .shadow(color: Color.blue.opacity(0.20), radius: 20, x: 0, y: 8)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: 64, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.85))
-                        )
+                    audioLayout(
+                        artworkSize: artworkSize,
+                        compact: compact,
+                        availableHeight: availableSize.height
+                    )
                 }
             }
+            .frame(width: availableSize.width, height: availableSize.height)
+            .background {
+                audioAmbientBackground(size: availableSize)
+            }
+            .clipped()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            // Track Title, Artist, Album, and Format Pill
-            VStack(spacing: 6) {
+    private func audioLayout(artworkSize: CGFloat, compact: Bool, availableHeight: CGFloat) -> some View {
+        VStack(spacing: compact ? 10 : 20) {
+            audioArtworkView(size: artworkSize)
+
+            // Keep track information readable while allowing the artwork to yield space first.
+            VStack(spacing: compact ? 4 : 6) {
                 Text(audioTrackTitle)
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.system(size: compact ? 17 : 19, weight: .bold))
                     .foregroundColor(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.72)
                     .padding(.horizontal, 24)
 
                 if let artistAlbum = audioArtistAndAlbumString {
                     Text(artistAlbum)
-                        .font(.system(size: 13.5, weight: .medium))
-                        .foregroundColor(.white.opacity(0.72))
+                        .font(.system(size: compact ? 12 : 13.5, weight: .medium))
+                        .foregroundColor(.white.opacity(0.78))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.72)
                         .padding(.horizontal, 24)
                 }
 
                 if let badge = audioCodecBadgeString {
                     Text(badge)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.85))
+                        .font(.system(size: compact ? 9 : 10, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.88))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.12))
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                        )
-                        .padding(.top, 2)
+                        .padding(.vertical, compact ? 2 : 3)
+                        .background(Capsule().fill(Color.white.opacity(0.12)))
+                        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                        .padding(.top, compact ? 1 : 2)
                 }
             }
 
-            // Scrubber & Controls
-            VStack(spacing: 12) {
-                // Scrubber
+            // The transport and volume shelf stay together as the window changes size.
+            VStack(spacing: compact ? 8 : 12) {
                 TimelineScrubberBar(
                     playerController: playerController,
-                    fontSize: 11.5,
+                    fontSize: compact ? 10.5 : 11.5,
                     textOpacity: 0.80,
                     sliderHeight: 16,
                     sliderMinWidth: nil,
@@ -734,11 +732,10 @@ public struct VideoPlayerView: View {
                 )
                 .padding(.horizontal, 24)
 
-                // Transport: [Back 10] [Play/Pause] [Fwd 10]
-                HStack(spacing: 32) {
+                HStack(spacing: compact ? 24 : 32) {
                     Button(action: { playerController.seekRelative(seconds: -10) }) {
                         Image(systemName: "gobackward.10")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: compact ? 16 : 18, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 36, height: 36)
                     }
@@ -746,13 +743,11 @@ public struct VideoPlayerView: View {
                     .help("Rewind 10 seconds")
                     .accessibilityLabel("Rewind 10 seconds")
 
-                    Button(action: {
-                        playerController.togglePlayPause()
-                    }) {
+                    Button(action: { playerController.togglePlayPause() }) {
                         Image(systemName: playerController.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 26, weight: .bold))
+                            .font(.system(size: compact ? 22 : 26, weight: .bold))
                             .foregroundColor(.white)
-                            .frame(width: 56, height: 56)
+                            .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
                             .background(Circle().fill(Color.white.opacity(0.15)))
                             .offset(x: playerController.isPlaying ? 0 : 2)
                     }
@@ -762,7 +757,7 @@ public struct VideoPlayerView: View {
 
                     Button(action: { playerController.seekRelative(seconds: 10) }) {
                         Image(systemName: "goforward.10")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: compact ? 16 : 18, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 36, height: 36)
                     }
@@ -771,61 +766,125 @@ public struct VideoPlayerView: View {
                     .accessibilityLabel("Forward 10 seconds")
                 }
 
-                // Bottom Shelf: Volume & AirPlay & Options
-                HStack(spacing: 12) {
-                    Button(action: { playerController.toggleMute() }) {
-                        Image(systemName: volumeIconName)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .buttonStyle(.plain)
-                    .help(playerController.isMuted ? "Unmute" : "Mute")
-                    .accessibilityLabel(playerController.isMuted ? "Unmute" : "Mute")
-
-                    NativeSlider(
-                        value: Binding(
-                            get: { Double(playerController.isMuted ? 0 : playerController.volume) },
-                            set: { newVal in
-                                playerController.isMuted = false
-                                playerController.volume = Float(newVal)
-                            }
-                        ),
-                        in: 0.0...1.0,
-                        trackFillColor: .white
-                    )
-                    .frame(width: 80, height: 16)
-                    .accessibilityLabel("Volume")
-
-                    Spacer()
-
-                    HUDSpeedButton(rate: playerController.playbackRate) {
-                        PlaybackSpeedMenuPresenter.shared.show()
-                        registerUserActivity()
-                    }
-
-                    AirPlayRoutePicker(player: playerController.player, mode: .audio)
-                        .frame(width: 22, height: 22)
-                        .help("AirPlay Audio")
-
-                    Button(action: { OptionsMenuPresenter.shared.show() }) {
-                        Image(systemName: "quote.bubble")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.85))
-                            .frame(width: 24, height: 24)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Audio Options & Media Statistics")
-                    .accessibilityLabel("Audio Options and Media Statistics")
-                }
-                .padding(.horizontal, 24)
+                audioBottomShelf(compact: compact)
             }
         }
-        .padding(.vertical, 24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            Color.black.opacity(0.85)
-                .ignoresSafeArea()
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, compact ? 8 : 24)
+        .frame(maxWidth: .infinity, minHeight: availableHeight, alignment: .center)
+    }
+
+    @ViewBuilder
+    private func audioArtworkView(size: CGFloat) -> some View {
+        let cornerRadius = min(26, size * 0.12)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+        if let art = coordinator.currentArtwork {
+            Image(nsImage: art)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size, height: size)
+                .clipShape(shape)
+                .overlay(shape.stroke(Color.white.opacity(0.14), lineWidth: 1))
+                .shadow(color: Color.black.opacity(0.38), radius: 22, x: 0, y: 8)
+                .accessibilityLabel("Album artwork")
+        } else {
+            shape
+                .fill(LinearGradient(
+                    colors: [Color.blue.opacity(0.40), Color.purple.opacity(0.30), Color.black.opacity(0.60)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: size, height: size)
+                .overlay(shape.stroke(Color.white.opacity(0.14), lineWidth: 1))
+                .overlay {
+                    Image(systemName: "music.note")
+                        .font(.system(size: size * 0.28, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+                .shadow(color: Color.blue.opacity(0.18), radius: 18, x: 0, y: 6)
+                .accessibilityLabel("No album artwork")
+        }
+    }
+
+    private func audioBottomShelf(compact: Bool) -> some View {
+        HStack(spacing: 12) {
+            Button(action: { playerController.toggleMute() }) {
+                Image(systemName: volumeIconName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+            }
+            .buttonStyle(.plain)
+            .help(playerController.isMuted ? "Unmute" : "Mute")
+            .accessibilityLabel(playerController.isMuted ? "Unmute" : "Mute")
+
+            NativeSlider(
+                value: Binding(
+                    get: { Double(playerController.isMuted ? 0 : playerController.volume) },
+                    set: { newVal in
+                        playerController.isMuted = false
+                        playerController.volume = Float(newVal)
+                    }
+                ),
+                in: 0.0...1.0,
+                trackFillColor: .white
+            )
+            .frame(width: compact ? 64 : 80, height: 16)
+            .accessibilityLabel("Volume")
+
+            Spacer(minLength: 8)
+
+            HUDSpeedButton(rate: playerController.playbackRate) {
+                PlaybackSpeedMenuPresenter.shared.show()
+                registerUserActivity()
+            }
+
+            AirPlayRoutePicker(player: playerController.player, mode: .audio)
+                .frame(width: 22, height: 22)
+                .help("AirPlay Audio")
+
+            Button(action: { OptionsMenuPresenter.shared.show() }) {
+                Image(systemName: "quote.bubble")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .help("Audio Options & Media Statistics")
+            .accessibilityLabel("Audio Options and Media Statistics")
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private func audioAmbientBackground(size: CGSize) -> some View {
+        ZStack {
+            Color.black
+            if let art = coordinator.currentArtwork {
+                Image(nsImage: art)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+                    .scaleEffect(1.14)
+                    .blur(radius: 34)
+                    .opacity(0.62)
+            } else {
+                LinearGradient(
+                    colors: [Color.blue.opacity(0.38), Color.purple.opacity(0.24), Color.black.opacity(0.82)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+            LinearGradient(
+                colors: [Color.black.opacity(0.42), Color.black.opacity(0.54), Color.black.opacity(0.72)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .frame(width: size.width, height: size.height)
+        .clipped()
+        .accessibilityHidden(true)
+        .ignoresSafeArea()
     }
 
     private var audioTrackTitle: String {
