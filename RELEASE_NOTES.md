@@ -1,5 +1,13 @@
 # Kino Release Notes
 
+## v1.1.1 — Smooth music resizing
+
+- Replace the compact-mode size jump with continuous scaling of artwork, typography, spacing, and controls while the window is resized.
+- Keep a single scrollable music canvas so all controls remain reachable at very short heights without switching layouts.
+- Preserve the album-art ambient background and the existing small app footprint.
+- Built with Xcode 26.6 and ad-hoc code-signed in GitHub Actions; supports macOS 13 and later.
+
+
 ## v1.1.0 — Responsive music canvas
 
 - Adapt album-art size, spacing, and transport controls to the available window height so the bottom shelf remains visible as the window is resized. Extremely short windows keep the full content reachable by scrolling.

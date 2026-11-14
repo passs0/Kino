@@ -652,28 +652,19 @@ public struct VideoPlayerView: View {
     private var audioArtworkAndMetadataView: some View {
         GeometryReader { geometry in
             let availableSize = geometry.size
-            let compact = availableSize.height < 560
+            let compactProgress = min(max((560 - availableSize.height) / 180, 0), 1)
+            let artworkScale = 0.32 + (1 - compactProgress) * 0.08
             let artworkSize = min(
                 220,
-                max(96, min(availableSize.width * 0.58, availableSize.height * (compact ? 0.32 : 0.40)))
+                max(96, min(availableSize.width * 0.58, availableSize.height * artworkScale))
             )
 
-            Group {
-                if availableSize.height < 340 {
-                    ScrollView(.vertical) {
-                        audioLayout(
-                            artworkSize: artworkSize,
-                            compact: true,
-                            availableHeight: availableSize.height
-                        )
-                    }
-                } else {
-                    audioLayout(
-                        artworkSize: artworkSize,
-                        compact: compact,
-                        availableHeight: availableSize.height
-                    )
-                }
+            ScrollView(.vertical) {
+                audioLayout(
+                    artworkSize: artworkSize,
+                    compactProgress: compactProgress,
+                    availableHeight: availableSize.height
+                )
             }
             .frame(width: availableSize.width, height: availableSize.height)
             .background {
@@ -684,14 +675,14 @@ public struct VideoPlayerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func audioLayout(artworkSize: CGFloat, compact: Bool, availableHeight: CGFloat) -> some View {
-        VStack(spacing: compact ? 10 : 20) {
+    private func audioLayout(artworkSize: CGFloat, compactProgress: CGFloat, availableHeight: CGFloat) -> some View {
+        VStack(spacing: 20 - 10 * compactProgress) {
             audioArtworkView(size: artworkSize)
 
             // Keep track information readable while allowing the artwork to yield space first.
-            VStack(spacing: compact ? 4 : 6) {
+            VStack(spacing: 6 - 2 * compactProgress) {
                 Text(audioTrackTitle)
-                    .font(.system(size: compact ? 17 : 19, weight: .bold))
+                    .font(.system(size: 19 - 2 * compactProgress, weight: .bold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
@@ -699,7 +690,7 @@ public struct VideoPlayerView: View {
 
                 if let artistAlbum = audioArtistAndAlbumString {
                     Text(artistAlbum)
-                        .font(.system(size: compact ? 12 : 13.5, weight: .medium))
+                        .font(.system(size: 13.5 - 1.5 * compactProgress, weight: .medium))
                         .foregroundColor(.white.opacity(0.78))
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
@@ -708,23 +699,23 @@ public struct VideoPlayerView: View {
 
                 if let badge = audioCodecBadgeString {
                     Text(badge)
-                        .font(.system(size: compact ? 9 : 10, weight: .semibold))
+                        .font(.system(size: 10 - compactProgress, weight: .semibold))
                         .foregroundColor(.white.opacity(0.88))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, compact ? 2 : 3)
+                        .padding(.vertical, 3 - compactProgress)
                         .background(Capsule().fill(Color.white.opacity(0.12)))
                         .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                        .padding(.top, compact ? 1 : 2)
+                        .padding(.top, 2 - compactProgress)
                 }
             }
 
             // The transport and volume shelf stay together as the window changes size.
-            VStack(spacing: compact ? 8 : 12) {
+            VStack(spacing: 12 - 4 * compactProgress) {
                 TimelineScrubberBar(
                     playerController: playerController,
-                    fontSize: compact ? 10.5 : 11.5,
+                    fontSize: 11.5 - compactProgress,
                     textOpacity: 0.80,
                     sliderHeight: 16,
                     sliderMinWidth: nil,
@@ -732,10 +723,10 @@ public struct VideoPlayerView: View {
                 )
                 .padding(.horizontal, 24)
 
-                HStack(spacing: compact ? 24 : 32) {
+                HStack(spacing: 32 - 8 * compactProgress) {
                     Button(action: { playerController.seekRelative(seconds: -10) }) {
                         Image(systemName: "gobackward.10")
-                            .font(.system(size: compact ? 16 : 18, weight: .semibold))
+                            .font(.system(size: 18 - 2 * compactProgress, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 36, height: 36)
                     }
@@ -743,11 +734,12 @@ public struct VideoPlayerView: View {
                     .help("Rewind 10 seconds")
                     .accessibilityLabel("Rewind 10 seconds")
 
+                    let playButtonSize = 56 - 8 * compactProgress
                     Button(action: { playerController.togglePlayPause() }) {
                         Image(systemName: playerController.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: compact ? 22 : 26, weight: .bold))
+                            .font(.system(size: 26 - 4 * compactProgress, weight: .bold))
                             .foregroundColor(.white)
-                            .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
+                            .frame(width: playButtonSize, height: playButtonSize)
                             .background(Circle().fill(Color.white.opacity(0.15)))
                             .offset(x: playerController.isPlaying ? 0 : 2)
                     }
@@ -757,7 +749,7 @@ public struct VideoPlayerView: View {
 
                     Button(action: { playerController.seekRelative(seconds: 10) }) {
                         Image(systemName: "goforward.10")
-                            .font(.system(size: compact ? 16 : 18, weight: .semibold))
+                            .font(.system(size: 18 - 2 * compactProgress, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 36, height: 36)
                     }
@@ -766,11 +758,11 @@ public struct VideoPlayerView: View {
                     .accessibilityLabel("Forward 10 seconds")
                 }
 
-                audioBottomShelf(compact: compact)
+                audioBottomShelf(compactProgress: compactProgress)
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, compact ? 8 : 24)
+        .padding(.vertical, 24 - 16 * compactProgress)
         .frame(maxWidth: .infinity, minHeight: availableHeight, alignment: .center)
     }
 
@@ -807,7 +799,7 @@ public struct VideoPlayerView: View {
         }
     }
 
-    private func audioBottomShelf(compact: Bool) -> some View {
+    private func audioBottomShelf(compactProgress: CGFloat) -> some View {
         HStack(spacing: 12) {
             Button(action: { playerController.toggleMute() }) {
                 Image(systemName: volumeIconName)
@@ -829,7 +821,7 @@ public struct VideoPlayerView: View {
                 in: 0.0...1.0,
                 trackFillColor: .white
             )
-            .frame(width: compact ? 64 : 80, height: 16)
+            .frame(width: 80 - 16 * compactProgress, height: 16)
             .accessibilityLabel("Volume")
 
             Spacer(minLength: 8)
