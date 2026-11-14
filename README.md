@@ -13,7 +13,7 @@
   <a href="https://github.com/passs0/Kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
-  <img src="https://img.shields.io/badge/bundle-3.2%20MB-success" alt="Bundle Size" />
+  <img src="https://img.shields.io/badge/bundle-3.3%20MB-success" alt="Bundle Size" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
@@ -65,7 +65,7 @@ Kino includes a zero-bloat GPU video enhancement suite integrated directly via h
 - **Edge & Outline Enhancer (`CIUnsharpMask`):** High-contrast edge restoration tuned with a tight radius for animation, cel-shading, cartoons, line art, and interface text.
 - **Noise & Grain Suppression (`CINoiseReduction`):** Spatial bilateral noise reduction smoothing macroblocking and sensor grain while keeping edge boundaries razor-sharp.
 - **Cinematic Contrast & Color:** Compound dynamic range filter combining luminance clarity with rich contrast and color vibrance.
-- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **3.2 MB**.
+- **Zero CPU & Zero Bundle Bloat:** Filters run directly inside the GPU display compositor at the native display refresh rate (including 120Hz ProMotion). The entire application bundle remains ultra-compact at just **3.3 MB**.
 
 ### 3. Discrete Multi-Channel Surround Sound & Dolby Atmos
 - **Discrete 5.1 & 7.1 Preservation:** Retains discrete multi-channel surround tracks at high studio bitrates (384–640 kbps) without downmixing to stereo.
@@ -120,7 +120,7 @@ Kino treats subtitles as a first-class citizen with both local media intelligenc
 
 ## ⚡️ Zero-Friction Setup: No Terminal Required
 
-Unlike traditional players that demand manual command-line installations, Kino keeps the core application download ultra-compact (**~3.2 MB app, ~2.7 MB .dmg**) and provides an **automated in-app engine installer**:
+Unlike traditional players that demand manual command-line installations, Kino keeps the core application download ultra-compact (**~3.3 MB app, ~2.7 MB .dmg**) and provides an **automated in-app engine installer**:
 
 1. **Automatic Detection:** If you already have Homebrew (`brew install ffmpeg yt-dlp`), Kino detects and uses them immediately with zero configuration.
 2. **1-Click In-App Download:** On fresh Macs without Homebrew, Kino prompts you with a clean native setup sheet (`⌘,`) and downloads managed static binaries directly into `~/Library/Application Support/Kino/bin/`.
