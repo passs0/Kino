@@ -50,7 +50,7 @@
 ## Installation
 
 ### Download Release
-1. Download **`Kino-v1.1.1.dmg`** from [GitHub Releases](https://github.com/passs0/Kino/releases/latest) and drag **`Kino.app`** to `/Applications`.
+1. Download **`Kino-v1.1.2.dmg`** from [GitHub Releases](https://github.com/passs0/Kino/releases/latest) and drag **`Kino.app`** to `/Applications`.
 2. On first launch, right-click `Kino.app` ➔ **Open**, or run `xattr -cr /Applications/Kino.app`.
 
 ### Build from Source

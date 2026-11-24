@@ -43,15 +43,18 @@ strip -rSTx "$MACOS_DIR/$APP_NAME"
 
 echo "📄 Copying Info.plist and AppIcon.icns..."
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
-if [ -d "assets/Kino.icon.xcassets" ]; then
+if [ -d "assets/Kino.icon" ]; then
     if xcrun --find actool >/dev/null 2>&1; then
         echo "🎨 Compiling the Light, Dark, Clear, and Tinted app icon variants..."
         PARTIAL_PLIST="$(mktemp "$BUILD_DIR/icon-partial.XXXXXX")"
-        xcrun actool "assets/Kino.icon.xcassets" \
+        xcrun actool "assets/Kino.icon" \
             --compile "$RESOURCES_DIR" \
             --platform macosx \
             --minimum-deployment-target 13.0 \
             --app-icon Kino \
+            --enable-on-demand-resources NO \
+            --development-region en \
+            --target-device mac \
             --output-partial-info-plist "$PARTIAL_PLIST" \
             --output-format human-readable-text
         python3 - "$PARTIAL_PLIST" "$CONTENTS_DIR/Info.plist" <<'PY'
