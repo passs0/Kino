@@ -20,12 +20,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.cleanupDuplicateMenus()
         }
 
-        // Handle file passed via CLI arguments if any
+        // Handle file passed via CLI arguments if any; otherwise present NSOpenPanel like QuickTime Player
         let args = CommandLine.arguments.dropFirst().filter { !$0.starts(with: "-") }
         if let first = args.first {
             let url = URL(fileURLWithPath: first)
             Task { @MainActor in
                 MediaCoordinator.shared.openLocalFile(url: url)
+            }
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                if MediaCoordinator.shared.state == .idle && MediaCoordinator.shared.currentSource == nil {
+                    KinoCommands.openFileDialog()
+                }
             }
         }
     }

@@ -78,6 +78,9 @@ public struct MainWindowView: View {
                     windowManager.setMediaDocument(url: nil, title: t)
                 }
             }
+            .onChange(of: coordinator.isInspectorPresented) { isPresented in
+                InspectorPanelController.shared.setVisible(isPresented, relativeTo: windowManager.mainWindow)
+            }
     }
 
     private var mainContent: some View {
@@ -94,30 +97,8 @@ public struct MainWindowView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .ignoresSafeArea()
-
-            if coordinator.isInspectorPresented {
-                inspectorOverlay
-            }
         }
         .preferredColorScheme(coordinator.state == .idle ? nil : .dark)
-    }
-
-    private var inspectorOverlay: some View {
-        VStack {
-            HStack {
-                Spacer()
-                MediaInspectorView(coordinator: coordinator) {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                        coordinator.isInspectorPresented = false
-                    }
-                }
-                .padding(.top, 48)
-                .padding(.trailing, 20)
-            }
-            Spacer()
-        }
-        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topTrailing)))
-        .zIndex(200)
     }
 
     private func handleCloseMedia() {

@@ -7,7 +7,7 @@ public struct KinoApp: App {
     public init() {}
 
     public var body: some Scene {
-        Window("Kino", id: "main") {
+        WindowGroup("Kino") {
             MainWindowView()
                 .ignoresSafeArea()
                 .onOpenURL { url in
@@ -76,14 +76,14 @@ struct KinoCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button("Open Media File…") {
-                openFileDialog()
+                KinoCommands.openFileDialog()
             }
             .keyboardShortcut("o", modifiers: .command)
 
-            Button("Open Online URL…") {
+            Button("Open Location…") {
                 NotificationCenter.default.post(name: .openURLSheetNotification, object: nil)
             }
-            .keyboardShortcut("u", modifiers: .command)
+            .keyboardShortcut("l", modifiers: .command)
 
             Menu("Open Recent") {
                 let recents = NSDocumentController.shared.recentDocumentURLs
@@ -321,7 +321,8 @@ struct KinoCommands: Commands {
         }
     }
 
-    private func openFileDialog() {
+    @MainActor
+    public static func openFileDialog() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false

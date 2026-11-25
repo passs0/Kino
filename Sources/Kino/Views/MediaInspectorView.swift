@@ -15,39 +15,8 @@ public struct MediaInspectorView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Inspector Header
-            HStack(spacing: 8) {
-                Image(systemName: "info.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.accentColor)
-
-                Text("Movie Inspector")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-
-                Spacer()
-
-                if let onClose = onClose {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.60))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Close Inspector (⌘I / Esc)")
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-
-            Divider()
-                .overlay(Color.white.opacity(0.12))
-
-            // QuickTime Metric Rows
-            VStack(alignment: .leading, spacing: 9) {
-                // 1. Source / Format
+        VStack(alignment: .leading, spacing: 9) {
+            // 1. Source / Format
                 inspectorRow(
                     label: "Source",
                     value: sourceName,
@@ -139,18 +108,8 @@ public struct MediaInspectorView: View {
                 }
             }
             .padding(14)
-        }
-        .frame(width: 292)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.40), radius: 24, x: 0, y: 12)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.16), lineWidth: 1)
-        )
-        .task {
+            .frame(width: 296)
+            .task {
             while !Task.isCancelled {
                 await metricsManager.refresh(from: playerController.player.currentItem)
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -265,5 +224,60 @@ public struct MediaInspectorView: View {
             return String(format: "%.1f Mbps", ind / 1_000_000.0)
         }
         return nil
+    }
+}
+
+/// Manages the native QuickTime-style floating Movie Inspector utility panel (⌘I).
+@MainActor
+public final class InspectorPanelController: NSObject, NSWindowDelegate {
+    public static let shared = InspectorPanelController()
+
+    private var panel: NSPanel?
+
+    private override init() {
+        super.init()
+    }
+
+    public func setVisible(_ visible: Bool, relativeTo parentWindow: NSWindow?) {
+        if visible {
+            show(relativeTo: parentWindow)
+        } else {
+            panel?.orderOut(nil)
+        }
+    }
+
+    private func show(relativeTo parentWindow: NSWindow?) {
+        if panel == nil {
+            let p = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 296, height: 260),
+                styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
+                backing: .buffered,
+                defer: false
+            )
+            p.title = "Movie Inspector"
+            p.isFloatingPanel = true
+            p.hidesOnDeactivate = true
+            p.level = .floating
+            p.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+            p.isReleasedWhenClosed = false
+            p.delegate = self
+            p.contentViewController = NSHostingController(
+                rootView: MediaInspectorView(coordinator: MediaCoordinator.shared)
+                    .preferredColorScheme(.dark)
+            )
+            if let parent = parentWindow {
+                let targetX = parent.frame.maxX + 12
+                let targetY = parent.frame.maxY - p.frame.height
+                p.setFrameOrigin(NSPoint(x: targetX, y: targetY))
+            } else {
+                p.center()
+            }
+            self.panel = p
+        }
+        panel?.orderFront(nil)
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        MediaCoordinator.shared.isInspectorPresented = false
     }
 }

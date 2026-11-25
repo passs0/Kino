@@ -322,7 +322,7 @@ public struct VideoPlayerView: View {
             Button(action: action) {
                 Image(systemName: iconName)
                     .font(.system(size: size, weight: weight))
-                    .foregroundColor(isSelected ? .cyan : (isHovered ? .white : .white.opacity(0.82)))
+                    .foregroundColor(isSelected ? .accentColor : (isHovered ? .white : .white.opacity(0.82)))
                     .offset(x: xOffset)
                     .frame(width: frameSize, height: frameSize)
                     .contentShape(Rectangle())
@@ -355,24 +355,15 @@ public struct VideoPlayerView: View {
             Button(action: action) {
                 Text(rateText)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(isHovered ? 1.0 : (abs(rate - 1.0) > 0.01 ? 1.0 : 0.88)))
-                    .padding(.horizontal, 5.5)
+                    .foregroundColor(abs(rate - 1.0) > 0.01 ? .accentColor : .white.opacity(isHovered ? 1.0 : 0.82))
+                    .padding(.horizontal, 6)
                     .frame(height: 22)
                     .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        Capsule()
                             .fill(
                                 abs(rate - 1.0) > 0.01
-                                    ? Color.accentColor.opacity(isHovered ? 0.48 : 0.32)
-                                    : (isHovered ? Color.white.opacity(0.18) : Color.white.opacity(0.08))
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(
-                                abs(rate - 1.0) > 0.01
-                                    ? Color.accentColor.opacity(0.55)
-                                    : (isHovered ? Color.white.opacity(0.24) : Color.white.opacity(0.12)),
-                                lineWidth: 0.5
+                                    ? Color.accentColor.opacity(isHovered ? 0.28 : 0.18)
+                                    : (isHovered ? Color.white.opacity(0.14) : Color.clear)
                             )
                     )
             }
