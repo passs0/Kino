@@ -1120,39 +1120,33 @@ public struct VideoPlayerView: View {
                 Image(nsImage: icon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 80, height: 80)
-                    .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
+                    .frame(width: 88, height: 88)
+                    .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 4)
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.05, green: 0.50, blue: 1.0), Color(red: 0.0, green: 0.35, blue: 0.90)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 80, height: 80)
+                        .fill(Color.accentColor.gradient)
+                        .frame(width: 88, height: 88)
 
                     Image(systemName: "play.fill")
-                        .font(.system(size: 32, weight: .semibold))
+                        .font(.system(size: 34, weight: .semibold))
                         .foregroundColor(.white)
                         .offset(x: 2)
                 }
-                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
+                .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 4)
             }
 
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 Text("Kino")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.primary)
+                    .font(.title.weight(.semibold))
+                    .foregroundStyle(.primary)
 
-                Text("Drop video or audio here to play")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                Text("Drop a video, audio file, or URL to play")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Button(action: onOpenFile) {
                     Label("Open File…", systemImage: "folder")
                 }
@@ -1161,11 +1155,11 @@ public struct VideoPlayerView: View {
                 .keyboardShortcut(.defaultAction)
 
                 Button(action: onOpenURL) {
-                    Label("Open URL…", systemImage: "globe")
+                    Label("Open Location…", systemImage: "link")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                .keyboardShortcut("u", modifiers: .command)
+                .keyboardShortcut("l", modifiers: .command)
             }
             .padding(.top, 4)
 
@@ -1182,22 +1176,21 @@ public struct VideoPlayerView: View {
                         recentDocuments = []
                     }
                 } label: {
-                    Label("Recent Files", systemImage: "clock")
+                    Label("Open Recent", systemImage: "clock")
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .menuStyle(.borderlessButton)
-                .padding(.top, 4)
+                .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .padding(32)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                .padding(6)
-                .opacity(isDropTargeted ? 1.0 : 0.0)
-                .animation(.easeInOut(duration: 0.2), value: isDropTargeted)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.accentColor.opacity(isDropTargeted ? 0.12 : 0.0))
+                .padding(12)
+                .animation(.easeInOut(duration: 0.18), value: isDropTargeted)
         )
         .onAppear {
             recentDocuments = NSDocumentController.shared.recentDocumentURLs
