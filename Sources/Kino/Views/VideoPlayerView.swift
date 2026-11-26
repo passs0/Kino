@@ -493,7 +493,7 @@ public struct VideoPlayerView: View {
                 }
 
                 AirPlayRoutePicker(player: playerController.player, mode: .video)
-                    .frame(width: 17, height: 17)
+                    .frame(width: 15, height: 15)
                     .frame(width: 28, height: 28)
                     .help("AirPlay Video (Apple TV / External Display)")
 
@@ -817,7 +817,7 @@ public struct VideoPlayerView: View {
             }
 
             AirPlayRoutePicker(player: playerController.player, mode: .audio)
-                .frame(width: 17, height: 17)
+                .frame(width: 15, height: 15)
                 .frame(width: 24, height: 24)
                 .help("AirPlay Audio")
 
