@@ -4,8 +4,14 @@ import SwiftUI
 @MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: Any?
+    private var isCleaningMenus = false
+
+    public func applicationWillFinishLaunching(_ notification: Notification) {
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        NSWindow.allowsAutomaticWindowTabbing = false
         NSSetUncaughtExceptionHandler { exception in
             NSLog("🔥 UNCAUGHT EXCEPTION: %@ - %@", exception.name.rawValue, exception.reason ?? "no reason")
             NSLog("🔥 CALL STACK: %@", exception.callStackSymbols.joined(separator: "\n"))
@@ -16,8 +22,33 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         TrafficLightManager.shared.install()
         NowPlayingManager.shared.install()
         setupKeyboardShortcuts()
+        
+        cleanupDuplicateMenus()
         DispatchQueue.main.async { [weak self] in
             self?.cleanupDuplicateMenus()
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.cleanupDuplicateMenus()
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: NSMenu.didAddItemNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notif in
+            Task { @MainActor [weak self] in
+                guard let self = self, !self.isCleaningMenus else { return }
+                if (notif.object as? NSMenu) === NSApp.mainMenu {
+                    self.cleanupDuplicateMenus()
+                }
+            }
         }
 
         // Handle file passed via CLI arguments if any
@@ -31,19 +62,58 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func cleanupDuplicateMenus() {
-        guard let mainMenu = NSApp.mainMenu else { return }
-        var seenTitles = Set<String>()
-        var indicesToRemove: [Int] = []
+        guard let mainMenu = NSApp.mainMenu, !isCleaningMenus else { return }
+        isCleaningMenus = true
+        defer { isCleaningMenus = false }
+
+        var seenTitles = [String: Int]()
+        var indicesToRemove = Set<Int>()
+
         for (idx, item) in mainMenu.items.enumerated() {
-            let title = item.title.trimmingCharacters(in: .whitespaces)
-            if !title.isEmpty && seenTitles.contains(title) {
-                indicesToRemove.append(idx)
-            } else if !title.isEmpty {
-                seenTitles.insert(title)
+            let title = (item.title.isEmpty ? item.submenu?.title : item.title)?
+                .trimmingCharacters(in: .whitespaces) ?? ""
+            guard !title.isEmpty else { continue }
+
+            // Strip out auto-injected Tab Bar commands from View or Window menus
+            if let sub = item.submenu {
+                var subToRemove = [Int]()
+                for (sIdx, sItem) in sub.items.enumerated() {
+                    let sTitle = sItem.title.lowercased()
+                    let selName = sItem.action.map { NSStringFromSelector($0).lowercased() } ?? ""
+                    if sTitle.contains("tab bar") || sTitle.contains("all tabs") || selName.contains("tabbar") {
+                        subToRemove.append(sIdx)
+                    }
+                }
+                for sIdx in subToRemove.reversed() {
+                    sub.removeItem(at: sIdx)
+                }
+            }
+
+            if let prevIdx = seenTitles[title] {
+                // If we already saw this menu title (e.g. "View"), keep the one with Kino's custom content
+                let prevItem = mainMenu.items[prevIdx]
+                let prevCount = prevItem.submenu?.items.count ?? 0
+                let currentCount = item.submenu?.items.count ?? 0
+
+                let currentHasKinoCommands = item.submenu?.items.contains(where: {
+                    $0.title.contains("Actual Size") || $0.title.contains("Movie Inspector") || $0.title.contains("Chapters")
+                }) ?? false
+
+                if currentHasKinoCommands || currentCount > prevCount {
+                    indicesToRemove.insert(prevIdx)
+                    seenTitles[title] = idx
+                } else {
+                    indicesToRemove.insert(idx)
+                }
+            } else {
+                seenTitles[title] = idx
             }
         }
-        for idx in indicesToRemove.reversed() {
-            mainMenu.removeItem(at: idx)
+
+        for idx in indicesToRemove.sorted().reversed() {
+            if idx < mainMenu.items.count {
+                mainMenu.removeItem(at: idx)
+            }
         }
     }
 

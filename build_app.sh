@@ -68,6 +68,20 @@ with open(sys.argv[2], "wb") as f:
     plistlib.dump(info, f)
 PY
         rm -f "$PARTIAL_PLIST"
+        if [ -f "$RESOURCES_DIR/Assets.car" ]; then
+            cp "$RESOURCES_DIR/Assets.car" "Resources/Assets.car"
+        fi
+    elif [ -f "Resources/Assets.car" ]; then
+        echo "🎨 Using precompiled dynamic Assets.car (Light, Dark, Clear, and Tinted variants)..."
+        cp "Resources/Assets.car" "$RESOURCES_DIR/Assets.car"
+        python3 - "$CONTENTS_DIR/Info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], "rb") as f:
+    info = plistlib.load(f)
+info["CFBundleIconName"] = "Kino"
+with open(sys.argv[1], "wb") as f:
+    plistlib.dump(info, f)
+PY
     elif [ "${CI:-}" = "true" ]; then
         echo "Error: Xcode with actool is required to build the dynamic app icon." >&2
         exit 1

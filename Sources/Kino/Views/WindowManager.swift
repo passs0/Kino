@@ -40,6 +40,7 @@ public final class WindowManager: NSObject, ObservableObject {
         // for full screen enter/exit frame restoration and scene management.
         setupWindowNotifications(for: window)
 
+        window.tabbingMode = .disallowed
         window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
         window.collectionBehavior = [.fullScreenPrimary, .managed]
         window.isMovableByWindowBackground = true
@@ -163,7 +164,8 @@ public final class WindowManager: NSObject, ObservableObject {
             window.contentMinSize = Self.videoMinSize
             window.maxSize = CGSize(width: 10000, height: 10000)
             window.contentMaxSize = CGSize(width: 10000, height: 10000)
-            window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+            window.tabbingMode = .disallowed
+        window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
             window.backgroundColor = .black
             window.appearance = NSAppearance(named: .darkAqua)
 
@@ -240,6 +242,7 @@ public final class WindowManager: NSObject, ObservableObject {
         window.contentMinSize = CGSize(width: 320, height: 180)
         window.maxSize = CGSize(width: 10000, height: 10000)
         window.contentMaxSize = CGSize(width: 10000, height: 10000)
+        window.tabbingMode = .disallowed
         window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
         window.backgroundColor = .windowBackgroundColor
         window.appearance = nil

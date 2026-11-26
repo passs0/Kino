@@ -205,6 +205,7 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.titlebarAppearsTransparent = true
             window.titlebarSeparatorStyle = .none
             window.titleVisibility = isIdle ? .hidden : .visible
+            window.tabbingMode = .disallowed
             window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
             window.isMovableByWindowBackground = isIdle
 

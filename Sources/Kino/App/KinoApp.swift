@@ -4,7 +4,9 @@ import AppKit
 public struct KinoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    public init() {}
+    public init() {
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
 
     public var body: some Scene {
         WindowGroup("Kino") {
@@ -18,12 +20,12 @@ public struct KinoApp: App {
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 580, height: 380)
+        .commands {
+            KinoCommands()
+        }
 
         Settings {
             SettingsView()
-        }
-        .commands {
-            KinoCommands()
         }
     }
 
