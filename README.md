@@ -27,6 +27,27 @@
 - **MetalFX & CoreImage filters:** Real-time GPU spatial upscaling, sharpening, and noise reduction.
 - **Subtitles & audio:** Built-in OpenSubtitles.com search (`⌥⌘S`) with `MovieHash` matching, delay controls (`G` / `H`), sidecar `.srt`/`.ass`/`.vtt` discovery, 5.1/7.1 surround, Dolby Atmos, and lossless `.flac`/`.alac` playback with cover art.
 
+## How it compares
+
+| | Kino | QuickTime Player | IINA | VLC | Infuse |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **App size** | ~3 MB | Built-in | ~140 MB | ~140 MB | ~80 MB |
+| **Price / License** | Free (MIT) | Free | Free (GPL) | Free (GPL) | Freemium / Sub |
+| **Native `AVPlayer` path** | Yes | Yes | No (`mpv`) | No (`libvlc`) | Custom Metal |
+| **MKV / WebM / VP9 / AV1** | Yes (via `ffmpeg`) | No | Yes | Yes | Yes |
+| **Web URLs (`yt-dlp`)** | Built-in | No | Built-in | Limited | No |
+| **Apple MetalFX upscaling** | Yes | No | No | No | No |
+| **OpenSubtitles search** | Built-in (`MovieHash`) | No | Plugin / built-in | Extension | Built-in |
+| **SMB / Plex / Jellyfin library** | No | No | No | Yes | Yes |
+| **Playlists & video editing** | No | Trim / Split | Playlists | Playlists | Library |
+| **Intel Mac support** | No (Apple Silicon) | Yes | Yes | Yes | Yes |
+
+**Where Kino falls short:**
+- **No media library or network shares:** Unlike Infuse or VLC, Kino doesn't browse SMB/NFS shares, Plex, or Jellyfin libraries—it's a single-file/URL player.
+- **No playlists or trim/export tools:** QuickTime handles quick trimming and screen recording; IINA and VLC support playlists and deeper `mpv`/shader scripting.
+- **Depends on `ffmpeg`/`yt-dlp` for non-native formats:** `.mkv`, VP9, AV1, and web streams require Kino's user-space helper download on first use, and seeking on heavy software-decoded streams isn't as instant as `mpv` in IINA.
+- **Apple Silicon & macOS 13+ only:** No Intel Mac, iOS, or tvOS builds.
+
 ## Install
 
 Download **`Kino-v1.1.2.dmg`** from [Releases](https://github.com/passs0/Kino/releases/latest) and drag `Kino.app` to `/Applications`.
