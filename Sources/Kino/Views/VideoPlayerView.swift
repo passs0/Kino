@@ -354,18 +354,11 @@ public struct VideoPlayerView: View {
         var body: some View {
             Button(action: action) {
                 Text(rateText)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundColor(abs(rate - 1.0) > 0.01 ? .accentColor : .white.opacity(isHovered ? 1.0 : 0.82))
-                    .padding(.horizontal, 6)
-                    .frame(height: 22)
-                    .background(
-                        Capsule()
-                            .fill(
-                                abs(rate - 1.0) > 0.01
-                                    ? Color.accentColor.opacity(isHovered ? 0.28 : 0.18)
-                                    : (isHovered ? Color.white.opacity(0.14) : Color.clear)
-                            )
-                    )
+                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                    .foregroundColor(isHovered ? .white : .white.opacity(0.82))
+                    .frame(height: 28)
+                    .padding(.horizontal, 4)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
