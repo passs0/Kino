@@ -82,18 +82,7 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(subsItem)
 
             menu.addItem(NSMenuItem.separator())
-            let enhanceDialogueItem = NSMenuItem(
-                title: "Enhance Dialogue",
-                action: #selector(handleToggleEnhanceDialogue),
-                keyEquivalent: ""
-            )
-            enhanceDialogueItem.target = self
-            enhanceDialogueItem.state = AudioManager.shared.isEnhanceDialogueEnabled ? .on : .off
-            if let img = NSImage(systemSymbolName: "quote.bubble.fill", accessibilityDescription: "Enhance Dialogue") {
-                img.isTemplate = true
-                enhanceDialogueItem.image = img
-            }
-            menu.addItem(enhanceDialogueItem)
+            menu.addItem(makeEnhanceDialogueItem())
 
         } else {
             // MARK: - Video Mode (Spacious & Clean Options Menu)
@@ -245,18 +234,7 @@ public final class OptionsMenuPresenter: NSObject {
             menu.addItem(audioItem)
 
             menu.addItem(NSMenuItem.separator())
-            let enhanceDialogueItem = NSMenuItem(
-                title: "Enhance Dialogue",
-                action: #selector(handleToggleEnhanceDialogue),
-                keyEquivalent: ""
-            )
-            enhanceDialogueItem.target = self
-            enhanceDialogueItem.state = AudioManager.shared.isEnhanceDialogueEnabled ? .on : .off
-            if let img = NSImage(systemSymbolName: "quote.bubble.fill", accessibilityDescription: "Enhance Dialogue") {
-                img.isTemplate = true
-                enhanceDialogueItem.image = img
-            }
-            menu.addItem(enhanceDialogueItem)
+            menu.addItem(makeEnhanceDialogueItem())
         }
 
         // Pop up the menu at the cursor event position or comfortably above the HUD pill
@@ -270,6 +248,16 @@ public final class OptionsMenuPresenter: NSObject {
             let pt = NSPoint(x: mousePt.x, y: mousePt.y + 26)
             menu.popUp(positioning: menu.items.last, at: pt, in: cv)
         }
+    }
+
+    private func makeEnhanceDialogueItem() -> NSMenuItem {
+        let item = createMenuItem(
+            title: "Enhance Dialogue",
+            systemImage: "person.wave.2",
+            action: #selector(handleToggleEnhanceDialogue)
+        )
+        item.state = AudioManager.shared.isEnhanceDialogueEnabled ? .on : .off
+        return item
     }
 
     private func createMenuItem(

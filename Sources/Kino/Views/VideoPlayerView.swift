@@ -828,8 +828,8 @@ public struct VideoPlayerView: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
-            .help("Audio Options & Media Statistics")
-            .accessibilityLabel("Audio Options and Media Statistics")
+            .help("Audio Options")
+            .accessibilityLabel("Audio Options")
         }
         .padding(.horizontal, 24)
     }

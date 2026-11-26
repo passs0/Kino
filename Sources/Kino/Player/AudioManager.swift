@@ -29,7 +29,7 @@ public final class AudioManager: ObservableObject {
 
         PlayerController.shared.showHUD(
             message: enabled ? "Enhance Dialogue: On" : "Enhance Dialogue: Off",
-            iconName: enabled ? "quote.bubble.fill" : "quote.bubble"
+            iconName: enabled ? "person.wave.2.fill" : "person.wave.2"
         )
     }
 
