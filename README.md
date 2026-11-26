@@ -64,9 +64,7 @@ git clone https://github.com/passs0/Kino.git && cd Kino
 cp -R build/Kino.app /Applications/
 ```
 
-## AI Scope
-
-All code, UI/assets, and documentation in this project were generated with [Google Antigravity](https://antigravity.google). Human involvement was limited to direction, design feedback, and hands-on testing.
+Built with [Google Antigravity](https://antigravity.google) — 100% AI-written code and UI, steered and tested by hand.
 
 ## License
 
