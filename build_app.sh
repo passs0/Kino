@@ -32,6 +32,7 @@ swiftc \
     -sdk "$SDK_PATH" \
     -module-cache-path "$MODULE_CACHE" \
     -O \
+    -Xlinker -dead_strip \
     "${SWIFT_FILES[@]}" \
     -o "$MACOS_DIR/$APP_NAME"
 
@@ -90,9 +91,8 @@ PY
     fi
 fi
 
-# Assets.car carries the four appearance variants; actool also creates a small
-# ICNS fallback. Keep the large legacy icon only when building without actool.
-if [ ! -f "$RESOURCES_DIR/Kino.icns" ] && [ -f "Resources/AppIcon.icns" ]; then
+# Assets.car carries the four appearance variants; keep the legacy ICNS only when Assets.car is absent.
+if [ ! -f "$RESOURCES_DIR/Assets.car" ] && [ ! -f "$RESOURCES_DIR/Kino.icns" ] && [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 

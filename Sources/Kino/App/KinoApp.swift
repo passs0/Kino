@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 public struct KinoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -328,6 +329,14 @@ struct KinoCommands: Commands {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        let mediaExtensions = [
+            "flac", "alac", "m4a", "aac", "wav", "aiff", "ogg", "opus",
+            "mkv", "webm", "avi", "ts", "flv", "m4v", "thd", "truehd"
+        ]
+        panel.allowedContentTypes = [
+            .movie, .video, .quickTimeMovie, .mpeg4Movie, .audio, .mp3
+        ] + mediaExtensions.compactMap { UTType(filenameExtension: $0) }
         if panel.runModal() == .OK, let url = panel.url {
             Task { @MainActor in
                 MediaCoordinator.shared.openLocalFile(url: url)

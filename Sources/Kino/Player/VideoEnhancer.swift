@@ -2,11 +2,9 @@ import AppKit
 import AVFoundation
 import CoreImage
 import Combine
-import Metal
-import MetalFX
 
 /// Real-time GPU video upscaling and enhancement engine for Kino.
-/// Leverages macOS native CoreAnimation, CoreImage, and Apple MetalFX hardware pipelines
+/// Leverages macOS native CoreAnimation and CoreImage hardware pipelines
 /// for zero-battery-drain, zero-file-bloat spatial sharpening and super-resolution.
 @MainActor
 public final class VideoEnhancer: ObservableObject {
@@ -111,25 +109,24 @@ public final class VideoEnhancer: ObservableObject {
         )
     }
 
+    private func makeSpatialSuperResFilters() -> [CIFilter] {
+        var filters: [CIFilter] = []
+        if let filter = CIFilter(name: "CISharpenLuminance") {
+            filter.setValue(0.85, forKey: "inputSharpness")
+            filter.setValue(1.8, forKey: "inputRadius")
+            filters.append(filter)
+        }
+        if let unsharp = CIFilter(name: "CIUnsharpMask") {
+            unsharp.setValue(0.60, forKey: "inputIntensity")
+            unsharp.setValue(0.90, forKey: "inputRadius")
+            filters.append(unsharp)
+        }
+        return filters
+    }
+
     private func applyCurrentMode(to layer: AVPlayerLayer) {
         if activeMode == .off {
-            if isAutomaticSuperResolutionEnabled {
-                // Apple MetalFX Spatial Super-Resolution automatic profile
-                var filters: [CIFilter] = []
-                if let filter = CIFilter(name: "CISharpenLuminance") {
-                    filter.setValue(0.85, forKey: "inputSharpness")
-                    filter.setValue(1.8, forKey: "inputRadius")
-                    filters.append(filter)
-                }
-                if let unsharp = CIFilter(name: "CIUnsharpMask") {
-                    unsharp.setValue(0.60, forKey: "inputIntensity")
-                    unsharp.setValue(0.90, forKey: "inputRadius")
-                    filters.append(unsharp)
-                }
-                layer.filters = filters
-            } else {
-                layer.filters = nil
-            }
+            layer.filters = isAutomaticSuperResolutionEnabled ? makeSpatialSuperResFilters() : nil
             return
         }
 
@@ -138,20 +135,7 @@ public final class VideoEnhancer: ObservableObject {
             layer.filters = nil
 
         case .metalFX:
-            // Apple MetalFX Spatial Super-Resolution profile:
-            // Pairs Apple's high-frequency perceptual luminance filter with adaptive edge enhancement
-            var filters: [CIFilter] = []
-            if let filter = CIFilter(name: "CISharpenLuminance") {
-                filter.setValue(0.85, forKey: "inputSharpness")
-                filter.setValue(1.8, forKey: "inputRadius")
-                filters.append(filter)
-            }
-            if let unsharp = CIFilter(name: "CIUnsharpMask") {
-                unsharp.setValue(0.60, forKey: "inputIntensity")
-                unsharp.setValue(0.90, forKey: "inputRadius")
-                filters.append(unsharp)
-            }
-            layer.filters = filters
+            layer.filters = makeSpatialSuperResFilters()
 
         case .luminanceDetail:
             // Apple CISharpenLuminance: sharpens brightness channel only, keeping chroma neutral
@@ -191,40 +175,5 @@ public final class VideoEnhancer: ObservableObject {
             }
             layer.filters = filters
         }
-    }
-}
-
-/// Helper verifying Apple Silicon MetalFX hardware capability on the current device.
-public final class AppleMetalFXEngine: @unchecked Sendable {
-    public static let shared = AppleMetalFXEngine()
-
-    public let device: MTLDevice?
-    public let isSupported: Bool
-
-    private init() {
-        if let dev = MTLCreateSystemDefaultDevice() {
-            self.device = dev
-            self.isSupported = MTLFXSpatialScalerDescriptor.supportsDevice(dev)
-        } else {
-            self.device = nil
-            self.isSupported = false
-        }
-    }
-
-    /// Creates an Apple MTLFXSpatialScaler instance for arbitrary resolution upscaling.
-    public func createSpatialScaler(inputWidth: Int, inputHeight: Int, outputWidth: Int, outputHeight: Int) -> MTLFXSpatialScaler? {
-        guard let device = device, isSupported else { return nil }
-        guard inputWidth > 0, inputHeight > 0, outputWidth > 0, outputHeight > 0 else { return nil }
-
-        let desc = MTLFXSpatialScalerDescriptor()
-        desc.inputWidth = inputWidth
-        desc.inputHeight = inputHeight
-        desc.outputWidth = outputWidth
-        desc.outputHeight = outputHeight
-        desc.colorTextureFormat = .bgra8Unorm
-        desc.outputTextureFormat = .bgra8Unorm
-        desc.colorProcessingMode = .perceptual
-
-        return desc.makeSpatialScaler(device: device)
     }
 }

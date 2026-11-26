@@ -357,7 +357,9 @@ public struct AirPlayRoutePicker: NSViewRepresentable {
         picker.isRoutePickerButtonBordered = false
         picker.setValue(mode == .video, forKey: "prioritizesVideoDevices")
         picker.appearance = NSAppearance(named: .darkAqua)
-        picker.setRoutePickerButtonColor(.white, for: .normal)
+        picker.setRoutePickerButtonColor(NSColor.white.withAlphaComponent(0.82), for: .normal)
+        picker.setRoutePickerButtonColor(.white, for: .normalHighlighted)
+        picker.setRoutePickerButtonColor(NSColor.controlAccentColor, for: .active)
         picker.setRoutePickerButtonColor(NSColor.controlAccentColor, for: .activeHighlighted)
         return picker
     }
@@ -371,7 +373,9 @@ public struct AirPlayRoutePicker: NSViewRepresentable {
             nsView.setValue(shouldPrioritize, forKey: "prioritizesVideoDevices")
         }
         nsView.appearance = NSAppearance(named: .darkAqua)
-        nsView.setRoutePickerButtonColor(.white, for: .normal)
+        nsView.setRoutePickerButtonColor(NSColor.white.withAlphaComponent(0.82), for: .normal)
+        nsView.setRoutePickerButtonColor(.white, for: .normalHighlighted)
+        nsView.setRoutePickerButtonColor(NSColor.controlAccentColor, for: .active)
         nsView.setRoutePickerButtonColor(NSColor.controlAccentColor, for: .activeHighlighted)
     }
 }

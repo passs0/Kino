@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import UniformTypeIdentifiers
 
 /// Minimalist Liquid Glass Main Window (macOS 26+)
 public struct MainWindowView: View {
@@ -92,7 +91,7 @@ public struct MainWindowView: View {
             VideoPlayerView(
                 coordinator: coordinator,
                 playerController: playerController,
-                onOpenFile: openFilePicker,
+                onOpenFile: { KinoCommands.openFileDialog() },
                 onOpenURL: { showURLSheet = true }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -146,41 +145,6 @@ public struct MainWindowView: View {
         if let video = probe?.primaryVideo, let w = video.width, let h = video.height, w > 0, h > 0 {
             let size = CGSize(width: w, height: h)
             windowManager.transitionToMedia(isAudio: false, videoSize: size)
-        }
-    }
-
-    private func openFilePicker() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [
-            .movie,
-            .video,
-            .quickTimeMovie,
-            .mpeg4Movie,
-            .audio,
-            .mp3,
-            UTType(filenameExtension: "flac") ?? .data,
-            UTType(filenameExtension: "alac") ?? .data,
-            UTType(filenameExtension: "m4a") ?? .data,
-            UTType(filenameExtension: "aac") ?? .data,
-            UTType(filenameExtension: "wav") ?? .data,
-            UTType(filenameExtension: "aiff") ?? .data,
-            UTType(filenameExtension: "ogg") ?? .data,
-            UTType(filenameExtension: "opus") ?? .data,
-            UTType(filenameExtension: "mkv") ?? .data,
-            UTType(filenameExtension: "webm") ?? .data,
-            UTType(filenameExtension: "avi") ?? .data,
-            UTType(filenameExtension: "ts") ?? .data,
-            UTType(filenameExtension: "flv") ?? .data,
-            UTType(filenameExtension: "m4v") ?? .data,
-            UTType(filenameExtension: "thd") ?? .data,
-            UTType(filenameExtension: "truehd") ?? .data
-        ]
-
-        if panel.runModal() == .OK, let url = panel.url {
-            coordinator.openLocalFile(url: url)
         }
     }
 }

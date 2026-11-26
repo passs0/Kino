@@ -482,7 +482,7 @@ public struct VideoPlayerView: View {
 
                 HUDIconButton(
                     iconName: playerController.isPictureInPictureActive ? "pip.exit" : "pip.enter",
-                    size: 12.5,
+                    size: 13,
                     weight: .semibold,
                     frameSize: 28,
                     helpText: "Picture in Picture",
@@ -493,12 +493,13 @@ public struct VideoPlayerView: View {
                 }
 
                 AirPlayRoutePicker(player: playerController.player, mode: .video)
-                    .frame(width: 22, height: 22)
+                    .frame(width: 17, height: 17)
+                    .frame(width: 28, height: 28)
                     .help("AirPlay Video (Apple TV / External Display)")
 
                 HUDIconButton(
                     iconName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
-                    size: 12,
+                    size: 13,
                     weight: .semibold,
                     frameSize: 28,
                     helpText: isFullScreen ? "Exit Full Screen (^⌘F)" : "Enter Full Screen (^⌘F)"
@@ -816,13 +817,14 @@ public struct VideoPlayerView: View {
             }
 
             AirPlayRoutePicker(player: playerController.player, mode: .audio)
-                .frame(width: 22, height: 22)
+                .frame(width: 17, height: 17)
+                .frame(width: 24, height: 24)
                 .help("AirPlay Audio")
 
             Button(action: { OptionsMenuPresenter.shared.show() }) {
                 Image(systemName: "quote.bubble")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(.white.opacity(0.82))
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -1099,11 +1101,7 @@ public struct VideoPlayerView: View {
     // MARK: - Minimalist Welcome Screen (Apple Native macOS Aesthetics)
 
     private var appIconImage: NSImage? {
-        if let path = Bundle.main.path(forResource: "AppIcon", ofType: "png") ?? Bundle.main.path(forResource: "AppIcon", ofType: "icns"),
-           let img = NSImage(contentsOfFile: path) {
-            return img
-        }
-        return NSApp.applicationIconImage
+        NSApp.applicationIconImage
     }
 
     private var idleStateView: some View {
