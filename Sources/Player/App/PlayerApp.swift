@@ -321,6 +321,13 @@ struct PlayerCommands: Commands {
                 PlayerController.shared.toggleLetterbox()
             }
             .keyboardShortcut("c", modifiers: [])
+
+            Divider()
+
+            Button("Take Screenshot") {
+                PlayerController.shared.takeScreenshot()
+            }
+            .keyboardShortcut("s", modifiers: .command)
         }
     }
 

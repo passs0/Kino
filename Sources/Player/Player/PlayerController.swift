@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import AVKit
 import Combine
+import CoreImage
 import SwiftUI
 
 /// Controller managing the AVPlayer instance, playback state, seeking, and metrics.
@@ -106,6 +107,7 @@ public final class PlayerController: ObservableObject {
     private var itemKeepUpObserver: NSKeyValueObservation?
     private var itemEndObserver: NSObjectProtocol?
     private var legibleOutput: AVPlayerItemLegibleOutput?
+    private var videoOutput: AVPlayerItemVideoOutput?
     private lazy var legibleDelegateBridge = LegibleOutputBridge { [weak self] text in
         Task { @MainActor [weak self] in
             guard self != nil else { return }
@@ -356,6 +358,145 @@ public final class PlayerController: ObservableObject {
         seekRelative(seconds: Double(count) * frameDuration)
     }
 
+    /// Captures the current video frame (preserving 10-bit+ HDR color when present) and saves it to Desktop.
+    public func takeScreenshot() {
+        guard let item = player.currentItem,
+              case .ready = MediaCoordinator.shared.state,
+              !MediaCoordinator.shared.isAudioMode else { return }
+
+        let itemTime = item.currentTime()
+        let pixelBuffer = videoOutput?.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: nil)
+        let asset = item.asset
+
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+
+            let videoTrack = try? await asset.loadTracks(withMediaType: .video).first
+            let preferredTransform = (try? await videoTrack?.load(.preferredTransform)) ?? .identity
+            let characteristics = (try? await videoTrack?.load(.mediaCharacteristics)) ?? []
+            let trackIsHDR = characteristics.contains(.containsHDRVideo)
+
+            var fallbackCGImage: CGImage? = nil
+            if pixelBuffer == nil {
+                let generator = AVAssetImageGenerator(asset: asset)
+                generator.appliesPreferredTrackTransform = true
+                generator.requestedTimeToleranceBefore = .zero
+                generator.requestedTimeToleranceAfter = .zero
+                fallbackCGImage = try? await generator.image(at: itemTime).image
+            }
+
+            let capturedBuffer = pixelBuffer.map { SendableBox($0) }
+            let capturedCG = fallbackCGImage.map { SendableBox($0) }
+
+            let result: (url: URL, isHDR: Bool)? = await Task.detached(priority: .userInitiated) {
+                Self.renderAndSaveScreenshot(
+                    pixelBuffer: capturedBuffer?.value,
+                    fallbackCGImage: capturedCG?.value,
+                    preferredTransform: preferredTransform,
+                    trackIsHDR: trackIsHDR
+                )
+            }.value
+
+            if let result = result {
+                self.showHUD(
+                    message: result.isHDR ? "HDR Screenshot Saved" : "Screenshot Saved",
+                    iconName: "camera.fill"
+                )
+            } else {
+                self.showHUD(message: "Screenshot Failed", iconName: "exclamationmark.triangle")
+            }
+        }
+    }
+
+    private nonisolated static func renderAndSaveScreenshot(
+        pixelBuffer: CVPixelBuffer?,
+        fallbackCGImage: CGImage?,
+        preferredTransform: CGAffineTransform,
+        trackIsHDR: Bool
+    ) -> (url: URL, isHDR: Bool)? {
+        var ciImage: CIImage
+        var isHDR = trackIsHDR
+
+        if let pb = pixelBuffer {
+            let transfer = CVBufferCopyAttachment(pb, kCVImageBufferTransferFunctionKey, nil) as? String
+            if transfer == (kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ as String)
+                || transfer == (kCVImageBufferTransferFunction_ITU_R_2100_HLG as String)
+                || transfer == (kCVImageBufferTransferFunction_Linear as String) {
+                isHDR = true
+            }
+            ciImage = CIImage(cvPixelBuffer: pb).oriented(exifOrientation(for: preferredTransform))
+        } else if let cg = fallbackCGImage {
+            if let csName = cg.colorSpace?.name as String? {
+                let hdrSpaces: Set<String> = [
+                    CGColorSpace.itur_2100_PQ as String,
+                    CGColorSpace.itur_2100_HLG as String,
+                    CGColorSpace.displayP3_PQ as String,
+                    CGColorSpace.displayP3_HLG as String,
+                    CGColorSpace.extendedLinearITUR_2020 as String,
+                    CGColorSpace.extendedLinearDisplayP3 as String,
+                    CGColorSpace.extendedITUR_2020 as String,
+                    CGColorSpace.extendedDisplayP3 as String
+                ]
+                if hdrSpaces.contains(csName) {
+                    isHDR = true
+                }
+            }
+            ciImage = CIImage(cgImage: cg)
+        } else {
+            return nil
+        }
+
+        let workingSpace = CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020)
+        let ciContext = CIContext(options: workingSpace.map { [.workingColorSpace: $0] } ?? [:])
+
+        let pngData: Data?
+        if isHDR, let pqSpace = CGColorSpace(name: CGColorSpace.itur_2100_PQ) {
+            pngData = ciContext.pngRepresentation(of: ciImage, format: .RGBA16, colorSpace: pqSpace)
+        } else {
+            let sdrSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
+            pngData = ciContext.pngRepresentation(of: ciImage, format: .RGBA8, colorSpace: sdrSpace)
+        }
+
+        guard let data = pngData, let destURL = nextScreenshotURL() else { return nil }
+        do {
+            try data.write(to: destURL, options: .atomic)
+            return (destURL, isHDR)
+        } catch {
+            return nil
+        }
+    }
+
+    private nonisolated static func exifOrientation(for t: CGAffineTransform) -> CGImagePropertyOrientation {
+        if abs(t.a) < 0.01 && abs(t.d) < 0.01 {
+            if t.b > 0 && t.c < 0 { return .right }
+            if t.b < 0 && t.c > 0 { return .left }
+        } else if t.a < -0.5 && t.d < -0.5 {
+            return .down
+        }
+        return .up
+    }
+
+    private nonisolated static func nextScreenshotURL() -> URL? {
+        let fm = FileManager.default
+        let baseDir = fm.urls(for: .desktopDirectory, in: .userDomainMask).first
+            ?? fm.urls(for: .picturesDirectory, in: .userDomainMask).first
+        guard let dir = baseDir else { return nil }
+
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+        let stamp = df.string(from: Date())
+        let baseName = "Player Screenshot \(stamp)"
+
+        var candidate = dir.appendingPathComponent("\(baseName).png")
+        var counter = 2
+        while fm.fileExists(atPath: candidate.path) {
+            candidate = dir.appendingPathComponent("\(baseName) (\(counter)).png")
+            counter += 1
+        }
+        return candidate
+    }
+
     /// Updates available chapter markers for the active media.
     public func setChapters(_ newChapters: [MediaChapter]) {
         self.chapters = newChapters.sorted { $0.startTime < $1.startTime }
@@ -529,6 +670,11 @@ public final class PlayerController: ObservableObject {
         output.setDelegate(legibleDelegateBridge, queue: .main)
         item.add(output)
         self.legibleOutput = output
+
+        let vOutput = AVPlayerItemVideoOutput(pixelBufferAttributes: nil)
+        vOutput.suppressesPlayerRendering = false
+        item.add(vOutput)
+        self.videoOutput = vOutput
 
         itemStatusObserver = item.observe(\.status, options: [.initial, .new]) { [weak self] observedItem, _ in
             Task { @MainActor [weak self] in
@@ -733,6 +879,10 @@ public final class PlayerController: ObservableObject {
             currentItem.remove(output)
         }
         legibleOutput = nil
+        if let vOutput = videoOutput, let currentItem = player.currentItem {
+            currentItem.remove(vOutput)
+        }
+        videoOutput = nil
         itemStatusObserver?.invalidate()
         itemStatusObserver = nil
         itemDurationObserver?.invalidate()
@@ -897,4 +1047,9 @@ private final class LegibleOutputBridge: NSObject, AVPlayerItemLegibleOutputPush
     func outputSequenceWasFlushed(_ output: AVPlayerItemOutput) {
         onText(nil)
     }
+}
+
+private struct SendableBox<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
 }
