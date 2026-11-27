@@ -105,24 +105,17 @@ public final class NativeAppKitSlider: NSSlider {
         isTrackingMouse = true
         onEditingChanged?(true)
 
-        func updateValue(for ev: NSEvent) {
-            let point = convert(ev.locationInWindow, from: nil)
-            let knobInset: CGFloat = 6.0
-            let usableWidth = max(1.0, bounds.width - knobInset * 2.0)
-            let fraction = max(0.0, min(1.0, (point.x - knobInset) / usableWidth))
-            doubleValue = minValue + fraction * (maxValue - minValue)
-            sendAction(action, to: target)
-        }
+        // Move the thumb directly under the cursor first so clicking anywhere on the track
+        // jumps immediately, then hand off to super.mouseDown so AppKit renders the native
+        // macOS Liquid Glass thumb magnification and drag physics.
+        let point = convert(event.locationInWindow, from: nil)
+        let knobInset: CGFloat = 6.0
+        let usableWidth = max(1.0, bounds.width - knobInset * 2.0)
+        let fraction = max(0.0, min(1.0, (point.x - knobInset) / usableWidth))
+        doubleValue = minValue + fraction * (maxValue - minValue)
+        sendAction(action, to: target)
 
-        updateValue(for: event)
-
-        while let next = window?.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
-            updateValue(for: next)
-            if next.type == .leftMouseUp {
-                break
-            }
-        }
-
+        super.mouseDown(with: event)
         isTrackingMouse = false
         onEditingChanged?(false)
     }
