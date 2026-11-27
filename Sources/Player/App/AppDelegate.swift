@@ -298,6 +298,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    public func application(_ application: NSApplication, open urls: [URL]) {
+        guard let first = urls.first else { return }
+        Task { @MainActor in
+            if first.isFileURL {
+                MediaCoordinator.shared.openLocalFile(url: first)
+            } else {
+                MediaCoordinator.shared.openOnlineURL(string: first.absoluteString)
+            }
+            WindowManager.shared.mainWindow?.makeKeyAndOrderFront(nil)
+        }
+    }
+
     public func application(_ application: NSApplication, openFiles filenames: [String]) {
         guard let first = filenames.first else { return }
         let url = URL(fileURLWithPath: first)

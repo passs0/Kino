@@ -241,7 +241,8 @@ public final class PlayerController: ObservableObject {
     public func seek(to seconds: Double, accurate: Bool = true) {
         let maxD = max(PlayerTimeState.shared.duration, MediaCoordinator.shared.knownDuration ?? 0)
         let targetSec = max(0, min(seconds, maxD > 0 ? maxD : seconds))
-        let relativeSec = max(0, targetSec - streamTimeOffset)
+        let rawRelativeSec = targetSec - streamTimeOffset
+        let relativeSec = max(0, rawRelativeSec)
         let cmTime = CMTime(seconds: relativeSec, preferredTimescale: 600)
         SubtitleManager.shared.handleUserSeek(to: targetSec)
 
@@ -259,8 +260,10 @@ public final class PlayerController: ObservableObject {
             self?.seekTargetTime = nil
         }
 
-        // Check if the target timestamp is already buffered in AVPlayer
-        let isLoaded = isTimestampBuffered(relativeSec)
+        // Check if the target timestamp is already buffered in AVPlayer.
+        // If targetSec < streamTimeOffset (rawRelativeSec < -0.5), it lies before the current stream start
+        // and MUST re-seek the FFmpeg pipeline.
+        let isLoaded = rawRelativeSec >= -0.5 && isTimestampBuffered(relativeSec)
 
         if !isLoaded && MediaCoordinator.shared.isPipelineActive {
             // Seeking to an unloaded timestamp in an active transcoding / HLS stream:

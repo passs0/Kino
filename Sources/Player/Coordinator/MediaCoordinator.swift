@@ -731,12 +731,18 @@ public final class MediaCoordinator: ObservableObject {
     }
 
     public var isPipelineActive: Bool {
-        ffmpegPipeline.isRunning
+        if ffmpegPipeline.isRunning { return true }
+        switch activeStrategy {
+        case .some(.remuxOnly), .some(.audioTranscodeOnly), .some(.fullTranscode), .some(.onlineTranscode):
+            return true
+        case .some(.directNative), .some(.onlineDirect), .none:
+            return false
+        }
     }
 
     /// Fast-forwards / seeks an active streaming or transcoding session directly to an unloaded timestamp.
     public func seekPipeline(to targetSeconds: Double) async {
-        guard let source = currentSource, ffmpegPipeline.isRunning else { return }
+        guard let source = currentSource, isPipelineActive else { return }
         log("⏩ Seeking stream pipeline to \(formatSeconds(targetSeconds))...", level: .info)
 
         let selectedAudioIndex = AudioManager.shared.selectedTrack?.streamIndex
