@@ -238,7 +238,7 @@ public final class PlayerController: ObservableObject {
         return false
     }
 
-    public func seek(to seconds: Double) {
+    public func seek(to seconds: Double, accurate: Bool = true) {
         let maxD = max(PlayerTimeState.shared.duration, MediaCoordinator.shared.knownDuration ?? 0)
         let targetSec = max(0, min(seconds, maxD > 0 ? maxD : seconds))
         let relativeSec = max(0, targetSec - streamTimeOffset)
@@ -274,8 +274,9 @@ public final class PlayerController: ObservableObject {
             return
         }
 
-        // Seeking within buffered data or direct native stream with sample-accurate zero tolerance
-        player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] completed in
+        // Seeking within buffered data or direct native stream
+        let tolerance = accurate ? CMTime.zero : CMTime(seconds: 0.5, preferredTimescale: 600)
+        player.seek(to: cmTime, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] completed in
             Task { @MainActor [weak self] in
                 guard let self = self, completed else { return }
                 self.isSeeking = false
@@ -636,7 +637,7 @@ public final class PlayerController: ObservableObject {
 
                 // If user is actively seeking or awaiting stream repositioning:
                 if self.isSeeking, let target = self.seekTargetTime {
-                    if abs(effectiveTime - target) <= 2.0 || self.player.rate > 0 {
+                    if abs(effectiveTime - target) <= 2.0 {
                         self.isSeeking = false
                         self.seekTargetTime = nil
                         self.seekTimeoutTask?.cancel()

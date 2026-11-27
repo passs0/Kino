@@ -1225,7 +1225,7 @@ private struct TimelineScrubberBar: View {
                     get: { currentTimeValue },
                     set: { target in
                         scrubTime = target
-                        playerController.seek(to: target)
+                        playerController.seek(to: target, accurate: !isDraggingScrubber)
                         onUserActivity()
                     }
                 ),
@@ -1233,12 +1233,13 @@ private struct TimelineScrubberBar: View {
                 trackFillColor: .white,
                 onEditingChanged: { editing in
                     if editing {
+                        scrubTime = timeState.currentTime
                         isDraggingScrubber = true
                         wasPlayingBeforeScrub = playerController.isPlaying
                         if wasPlayingBeforeScrub { playerController.pause() }
                     } else {
                         isDraggingScrubber = false
-                        playerController.seek(to: scrubTime)
+                        playerController.seek(to: scrubTime, accurate: true)
                         if wasPlayingBeforeScrub {
                             playerController.play()
                             wasPlayingBeforeScrub = false

@@ -152,16 +152,55 @@ public final class LocalStreamingServer: @unchecked Sendable {
 
         do {
             let fileData = try Data(contentsOf: fileURL, options: .mappedIfSafe)
-            let headers: [String: String] = [
+            let totalSize = fileData.count
+
+            // Parse optional HTTP Range: bytes=start-end
+            var rangeStart = 0
+            var rangeEnd = max(0, totalSize - 1)
+            var isPartial = false
+
+            if totalSize > 0,
+               let rangeHeader = lines.first(where: { $0.lowercased().hasPrefix("range:") }),
+               let bytesRange = rangeHeader.split(separator: "=", maxSplits: 1).last?
+                   .trimmingCharacters(in: .whitespacesAndNewlines) {
+                let bounds = bytesRange.split(separator: "-", omittingEmptySubsequences: false)
+                if bounds.count == 2 {
+                    let startStr = String(bounds[0]).trimmingCharacters(in: .whitespaces)
+                    let endStr = String(bounds[1]).trimmingCharacters(in: .whitespaces)
+                    if let s = Int(startStr), s >= 0, s < totalSize {
+                        rangeStart = s
+                        if let e = Int(endStr), e >= s {
+                            rangeEnd = min(e, totalSize - 1)
+                        }
+                        isPartial = true
+                    } else if startStr.isEmpty, let suffix = Int(endStr), suffix > 0 {
+                        rangeStart = max(0, totalSize - suffix)
+                        rangeEnd = totalSize - 1
+                        isPartial = true
+                    }
+                }
+            }
+
+            let slice = isPartial ? fileData.subdata(in: rangeStart..<(rangeEnd + 1)) : fileData
+            var headers: [String: String] = [
                 "Content-Type": mime,
-                "Content-Length": "\(fileData.count)",
+                "Content-Length": "\(slice.count)",
                 "Access-Control-Allow-Origin": "*",
                 "Accept-Ranges": "bytes",
                 "Cache-Control": ext == "m3u8" ? "no-cache, no-store" : "public, max-age=3600",
                 "Connection": "close"
             ]
-            let body = (method == "HEAD") ? Data() : fileData
-            sendResponse(connection: connection, statusCode: 200, statusText: "OK", headers: headers, body: body)
+            if isPartial {
+                headers["Content-Range"] = "bytes \(rangeStart)-\(rangeEnd)/\(totalSize)"
+            }
+            let body = (method == "HEAD") ? Data() : slice
+            sendResponse(
+                connection: connection,
+                statusCode: isPartial ? 206 : 200,
+                statusText: isPartial ? "Partial Content" : "OK",
+                headers: headers,
+                body: body
+            )
         } catch {
             sendResponse(connection: connection, statusCode: 500, statusText: "Read Error", headers: [:], body: Data())
         }

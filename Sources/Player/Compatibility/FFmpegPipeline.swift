@@ -70,7 +70,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
         guard let ffprobePath = ToolLocator.shared.path(for: "ffprobe"), fileURL.isFileURL, targetSeconds > 0.5 else {
             return nil
         }
-        let interval = String(format: "%.2f%%+2", targetSeconds)
+        let searchStart = max(0, targetSeconds - 2.0)
+        let interval = String(format: "%.2f%%+8", searchStart)
         let args = [
             "-v", "error",
             "-read_intervals", interval,
@@ -232,9 +233,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
         // HLS segmentation parameters for fast startup (using modern Apple fMP4/CMAF with independent segments)
         args.append(contentsOf: [
             "-f", "hls",
+            "-hls_playlist_type", "event",
             "-hls_time", "2",
             "-hls_list_size", "0",
-            "-hls_flags", "independent_segments",
+            "-hls_flags", "independent_segments+temp_file",
             "-hls_segment_type", "fmp4",
             "-hls_fmp4_init_filename", initFileName,
             "-hls_segment_filename", segmentPattern,
@@ -375,9 +377,10 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-af", afArg,
             "-avoid_negative_ts", "make_zero",
             "-f", "hls",
+            "-hls_playlist_type", "event",
             "-hls_time", "2",
             "-hls_list_size", "0",
-            "-hls_flags", "independent_segments",
+            "-hls_flags", "independent_segments+temp_file",
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
         ]
