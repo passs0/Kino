@@ -138,6 +138,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         if let sTime = seekTime, sTime > 0.5 {
             effectiveSeekTime = sTime
             args.append(contentsOf: [
+                "-noaccurate_seek",
                 "-ss", String(format: "%.3f", effectiveSeekTime)
             ])
         }
@@ -164,18 +165,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-i", inputURL.isFileURL ? inputURL.path : inputURL.absoluteString
         ])
 
-        // Continuous audio/video synchronization filter:
-        // 1. first_pts=0 pads or aligns initial audio packets to match video presentation timestamp.
-        // 2. async=1000 dynamically stretches/squeezes/resamples audio up to 1000 samples/sec to lock onto video clock.
-        // 3. Optional dialogue enhancement speech normalization.
-        var audioFilters = ["aresample=async=1000:first_pts=0"]
-        if isDialogueActive {
-            audioFilters.insert("highpass=f=80,equalizer=f=2800:t=q:w=1.2:g=4,acompressor=threshold=-20dB:ratio=2.5:attack=5:release=100:makeup=2", at: 0)
-        }
-        let afArg = audioFilters.joined(separator: ",")
+        let dialogueFilter: String? = isDialogueActive
+            ? "highpass=f=80,equalizer=f=2800:t=q:w=1.2:g=4,acompressor=threshold=-20dB:ratio=2.5:attack=5:release=100:makeup=2"
+            : nil
 
         switch mode {
-        case .remuxCopy:
+        case .remuxCopy, .audioTranscodeOnly:
             // Zero video re-encoding: stream copy video, preserve multichannel audio in studio-grade high-fidelity AAC
             args.append(contentsOf: [
                 "-map", "0:v:0?",
@@ -188,26 +183,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             args.append(contentsOf: [
                 "-c:a", "aac",
                 "-b:a", "384k",
-                "-ar", "48000",
-                "-af", afArg,
-                "-max_muxing_queue_size", "4096",
-                "-avoid_negative_ts", "make_zero"
+                "-ar", "48000"
             ])
-        case .audioTranscodeOnly:
-            // Copy native video stream, transcode audio to studio-grade high-fidelity AAC preserving multichannel audio
-            args.append(contentsOf: [
-                "-map", "0:v:0?",
-                "-map", audioMap,
-                "-c:v", "copy"
-            ])
-            if isHEVC {
-                args.append(contentsOf: ["-tag:v", "hvc1"])
+            if let af = dialogueFilter {
+                args.append(contentsOf: ["-af", af])
             }
             args.append(contentsOf: [
-                "-c:a", "aac",
-                "-b:a", "384k",
-                "-ar", "48000",
-                "-af", afArg,
                 "-max_muxing_queue_size", "4096",
                 "-avoid_negative_ts", "make_zero"
             ])
@@ -222,8 +203,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 "-b:v", "6000k",
                 "-c:a", "aac",
                 "-b:a", "640k",
-                "-ar", "48000",
-                "-af", afArg,
+                "-ar", "48000"
+            ])
+            if let af = dialogueFilter {
+                args.append(contentsOf: ["-af", af])
+            }
+            args.append(contentsOf: [
                 "-max_muxing_queue_size", "4096",
                 "-avoid_negative_ts", "make_zero"
             ])
@@ -352,17 +337,15 @@ public final class FFmpegPipeline: @unchecked Sendable {
         ytProc.environment = env
 
         // ffmpeg process receiving from pipe:0
-        // Stream copies video (already AVC H.264) and transcodes audio to stereo AAC with continuous clock lock
-        var audioFilters = ["aresample=async=1000:first_pts=0"]
+        // Stream copies video (already AVC H.264) and transcodes audio to stereo AAC
         let isDialogueOnlineActive = await AudioManager.shared.isEnhanceDialogueEnabled
-        if isDialogueOnlineActive {
-            audioFilters.insert("highpass=f=80,equalizer=f=2800:t=q:w=1.2:g=4,acompressor=threshold=-20dB:ratio=2.5:attack=5:release=100:makeup=2", at: 0)
-        }
-        let afArg = audioFilters.joined(separator: ",")
+        let onlineDialogueFilter: String? = isDialogueOnlineActive
+            ? "highpass=f=80,equalizer=f=2800:t=q:w=1.2:g=4,acompressor=threshold=-20dB:ratio=2.5:attack=5:release=100:makeup=2"
+            : nil
 
         let ffmpegProc = Process()
         ffmpegProc.executableURL = URL(fileURLWithPath: ffmpegPath)
-        let ffmpegArgs = [
+        var ffmpegArgs = [
             "-nostdin",
             "-y",
             "-i", "pipe:0",
@@ -372,8 +355,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-c:a", "aac",
             "-ac", "2",
             "-b:a", "256k",
-            "-ar", "48000",
-            "-af", afArg,
+            "-ar", "48000"
+        ]
+        if let af = onlineDialogueFilter {
+            ffmpegArgs.append(contentsOf: ["-af", af])
+        }
+        ffmpegArgs.append(contentsOf: [
             "-avoid_negative_ts", "make_zero",
             "-f", "hls",
             "-hls_playlist_type", "event",
@@ -382,7 +369,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-hls_flags", "independent_segments+temp_file",
             "-hls_segment_filename", segmentPattern,
             playlistFile.path
-        ]
+        ])
         ffmpegProc.arguments = ffmpegArgs
         ffmpegProc.environment = env
 

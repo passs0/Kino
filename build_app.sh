@@ -75,11 +75,15 @@ PY
     elif [ -f "Resources/Assets.car" ]; then
         echo "🎨 Using precompiled dynamic Assets.car (Light, Dark, Clear, and Tinted variants)..."
         cp "Resources/Assets.car" "$RESOURCES_DIR/Assets.car"
+        if [ -f "Resources/Player.icns" ]; then
+            cp "Resources/Player.icns" "$RESOURCES_DIR/Player.icns"
+        fi
         python3 - "$CONTENTS_DIR/Info.plist" <<'PY'
 import plistlib, sys
 with open(sys.argv[1], "rb") as f:
     info = plistlib.load(f)
 info["CFBundleIconName"] = "Player"
+info["CFBundleIconFile"] = "Player"
 with open(sys.argv[1], "wb") as f:
     plistlib.dump(info, f)
 PY
