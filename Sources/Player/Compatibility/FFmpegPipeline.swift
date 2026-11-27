@@ -65,37 +65,48 @@ public final class FFmpegPipeline: @unchecked Sendable {
         sessionDir
     }
 
-    /// Zero-decode container packet scan to find the exact keyframe timestamp at or before `targetSeconds`.
-    /// Keeps `streamTimeOffset` (and therefore subtitles) frame-accurate when using `-noaccurate_seek`.
-    private static func findPreviousKeyframe(fileURL: URL, targetSeconds: Double) async -> Double? {
-        guard let ffprobePath = ToolLocator.shared.path(for: "ffprobe"), fileURL.isFileURL, targetSeconds > 0.5 else {
-            return nil
-        }
-        let searchStart = max(0, targetSeconds - 10.0)
-        let interval = String(format: "%.2f%%+12", searchStart)
+    /// Runs the exact same `-noaccurate_seek -ss <seekTime>` demuxer seek via `-f framecrc -` (~80ms, zero decode)
+    /// to read the exact PTS of frame 0 that FFmpeg actually lands on, keeping subtitles frame-accurate.
+    private static func probeActualSeekStart(ffmpegPath: String, fileURL: URL, seekTime: Double) async -> Double? {
+        guard fileURL.isFileURL, seekTime > 0.5 else { return nil }
         let args = [
             "-v", "error",
-            "-select_streams", "v:0",
-            "-read_intervals", interval,
-            "-show_entries", "packet=pts_time,flags",
-            "-of", "compact",
-            fileURL.path
+            "-nostdin",
+            "-noaccurate_seek",
+            "-ss", String(format: "%.3f", seekTime),
+            "-i", fileURL.path,
+            "-frames:v", "1",
+            "-map", "0:v:0",
+            "-c:v", "copy",
+            "-copyts",
+            "-f", "framecrc",
+            "-"
         ]
-        guard let output = try? await ProcessRunner.run(executablePath: ffprobePath, arguments: args) else {
+        guard let output = try? await ProcessRunner.run(executablePath: ffmpegPath, arguments: args),
+              output.exitCode == 0 else {
             return nil
         }
-        var bestKeyframe: Double? = nil
-        for line in output.stdout.components(separatedBy: .newlines) {
-            guard line.contains("flags=K"), let ptsRange = line.range(of: "pts_time=") else { continue }
-            let sub = line[ptsRange.upperBound...]
-            let valStr = sub.prefix(while: { $0 != "|" && $0 != "\n" && $0 != "\r" })
-            if let val = Double(valStr), val <= targetSeconds + 0.05 {
-                if bestKeyframe == nil || val > bestKeyframe! {
-                    bestKeyframe = val
+
+        var tbNum: Double = 1.0
+        var tbDen: Double = 1000.0
+        for rawLine in output.stdout.components(separatedBy: .newlines) {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("#tb 0:") {
+                let frac = line.dropFirst("#tb 0:".count).trimmingCharacters(in: .whitespaces)
+                let parts = frac.split(separator: "/")
+                if parts.count == 2, let n = Double(parts[0]), let d = Double(parts[1]), d > 0 {
+                    tbNum = n
+                    tbDen = d
+                }
+            } else if !line.isEmpty && !line.hasPrefix("#") {
+                // Format: stream_index, dts, pts, duration, size, crc
+                let cols = line.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                if cols.count >= 3, let pts = Double(cols[2]) {
+                    return pts * (tbNum / tbDen)
                 }
             }
         }
-        return bestKeyframe
+        return nil
     }
 
     /// Prepares and starts the FFmpeg streaming session, returning the active PipelineSession with aligned start time.
@@ -169,14 +180,16 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         var effectiveSeekTime: Double = 0.0
         if let sTime = seekTime, sTime > 0.5 {
-            if inputURL.isFileURL, let kf = await Self.findPreviousKeyframe(fileURL: inputURL, targetSeconds: sTime) {
-                effectiveSeekTime = kf
+            // Pass the exact requested `sTime` to FFmpeg, and probe the exact frame-0 PTS it lands on
+            // so `actualStartTime` / `streamTimeOffset` matches video, audio, and subtitles to the millisecond.
+            if inputURL.isFileURL, let actualPts = await Self.probeActualSeekStart(ffmpegPath: ffmpegPath, fileURL: inputURL, seekTime: sTime) {
+                effectiveSeekTime = actualPts
             } else {
                 effectiveSeekTime = sTime
             }
             args.append(contentsOf: [
                 "-noaccurate_seek",
-                "-ss", String(format: "%.3f", effectiveSeekTime)
+                "-ss", String(format: "%.3f", sTime)
             ])
         }
 
