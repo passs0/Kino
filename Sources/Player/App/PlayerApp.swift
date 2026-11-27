@@ -10,7 +10,7 @@ public struct PlayerApp: App {
     }
 
     public var body: some Scene {
-        WindowGroup("Player") {
+        Window("Player", id: "main") {
             MainWindowView()
                 .ignoresSafeArea()
                 .onOpenURL { url in

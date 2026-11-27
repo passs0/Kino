@@ -95,6 +95,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 let remuxFile = tempDir.appendingPathComponent("remux.mp4")
                 var remuxArgs = [
                     "-nostdin", "-y",
+                    "-fflags", "+genpts",
                     "-i", inputURL.path,
                     "-map", "0:v:0?",
                     "-map", audioMap,
@@ -105,6 +106,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
                 }
                 remuxArgs.append(contentsOf: [
                     "-c:a", "copy",
+                    "-avoid_negative_ts", "make_zero",
                     "-movflags", "+faststart",
                     remuxFile.path
                 ])
