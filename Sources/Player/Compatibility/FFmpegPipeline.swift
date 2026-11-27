@@ -130,7 +130,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
         // Build FFmpeg arguments based on requested mode
         var args: [String] = [
             "-nostdin",
-            "-y"
+            "-y",
+            "-fflags", "+genpts"
         ]
 
         var effectiveSeekTime: Double = 0.0
@@ -169,7 +170,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         // 3. Optional dialogue enhancement speech normalization.
         var audioFilters = ["aresample=async=1000:first_pts=0"]
         if isDialogueActive {
-            audioFilters.insert("speechnorm=e=4:r=0.0001:l=1", at: 0)
+            audioFilters.insert("highpass=f=80,equalizer=f=2800:t=q:w=1.2:g=4,acompressor=threshold=-20dB:ratio=2.5:attack=5:release=100:makeup=2", at: 0)
         }
         let afArg = audioFilters.joined(separator: ",")
 
@@ -355,7 +356,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         var audioFilters = ["aresample=async=1000:first_pts=0"]
         let isDialogueOnlineActive = await AudioManager.shared.isEnhanceDialogueEnabled
         if isDialogueOnlineActive {
-            audioFilters.insert("speechnorm=e=4:r=0.0001:l=1", at: 0)
+            audioFilters.insert("highpass=f=80,equalizer=f=2800:t=q:w=1.2:g=4,acompressor=threshold=-20dB:ratio=2.5:attack=5:release=100:makeup=2", at: 0)
         }
         let afArg = audioFilters.joined(separator: ",")
 
