@@ -397,7 +397,11 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         ytErrPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
-            guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
+            if chunk.isEmpty {
+                handle.readabilityHandler = nil
+                return
+            }
+            guard let text = String(data: chunk, encoding: .utf8) else { return }
             let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !line.isEmpty {
                 self?.onLogLine?("[yt-dlp] \(line)")
@@ -406,7 +410,11 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         ffmpegErrPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
-            guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
+            if chunk.isEmpty {
+                handle.readabilityHandler = nil
+                return
+            }
+            guard let text = String(data: chunk, encoding: .utf8) else { return }
             let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !line.isEmpty {
                 self?.parseProgress(line: line)
@@ -508,9 +516,12 @@ public final class FFmpegPipeline: @unchecked Sendable {
         let initURL = playlistURL.deletingLastPathComponent().appendingPathComponent("init.mp4")
 
         while Date() < deadline {
-            if fm.fileExists(atPath: playlistURL.path) && fm.fileExists(atPath: initURL.path) {
-                if let content = try? String(contentsOf: playlistURL, encoding: .utf8),
-                   (content.contains(".m4s") || content.contains(".ts")) {
+            if fm.fileExists(atPath: playlistURL.path),
+               let content = try? String(contentsOf: playlistURL, encoding: .utf8) {
+                if content.contains(".ts") {
+                    return true
+                }
+                if content.contains(".m4s") && fm.fileExists(atPath: initURL.path) {
                     return true
                 }
             }

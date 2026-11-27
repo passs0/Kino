@@ -67,14 +67,18 @@ public final class ProcessRunner: @unchecked Sendable {
 
             outPipe.fileHandleForReading.readabilityHandler = { handle in
                 let chunk = handle.availableData
-                if !chunk.isEmpty {
+                if chunk.isEmpty {
+                    handle.readabilityHandler = nil
+                } else {
                     queue.sync { stdoutData.append(chunk) }
                 }
             }
 
             errPipe.fileHandleForReading.readabilityHandler = { handle in
                 let chunk = handle.availableData
-                if !chunk.isEmpty {
+                if chunk.isEmpty {
+                    handle.readabilityHandler = nil
+                } else {
                     queue.sync { stderrData.append(chunk) }
                 }
             }
@@ -97,6 +101,8 @@ public final class ProcessRunner: @unchecked Sendable {
             do {
                 try process.run()
             } catch {
+                outPipe.fileHandleForReading.readabilityHandler = nil
+                errPipe.fileHandleForReading.readabilityHandler = nil
                 continuation.resume(throwing: error)
             }
         }

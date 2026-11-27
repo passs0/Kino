@@ -249,7 +249,6 @@ public final class WindowManager: NSObject, ObservableObject {
         window.styleMask.insert([.titled, .closable, .miniaturizable, .fullSizeContentView])
         window.styleMask.remove(.resizable)
         window.standardWindowButton(.zoomButton)?.isEnabled = false
-        window.standardWindowButton(.zoomButton)?.isEnabled = true
         window.backgroundColor = .windowBackgroundColor
         window.appearance = nil
         window.representedURL = nil

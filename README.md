@@ -24,7 +24,7 @@
 
 - **Zero-overhead native path:** Plays `.mp4` and `.mov` directly with `AVPlayer` at ~0% CPU, and remuxes `.mkv`/`.webm` to local HLS in `< 100ms` without re-encoding video.
 - **Hardware transcode & streams:** Uses Apple VideoToolbox for VP9/AV1 and bridges web URLs via `yt-dlp` + `ffmpeg` (auto-managed in user space with no Homebrew required).
-- **MetalFX & CoreImage filters:** Real-time GPU spatial upscaling, sharpening, and noise reduction.
+- **CoreImage GPU filters:** Real-time GPU sharpening, contrast enhancement, and noise reduction.
 - **Subtitles & audio:** Built-in OpenSubtitles.com search (`⌥⌘S`) with `MovieHash` matching, delay controls (`G` / `H`), sidecar `.srt`/`.ass`/`.vtt` discovery, 5.1/7.1 surround, Dolby Atmos, and lossless `.flac`/`.alac` playback with cover art.
 
 ## How it compares
@@ -36,7 +36,7 @@
 | **Native `AVPlayer` path** | Yes | Yes | No (`mpv`) | No (`libvlc`) | Custom Metal |
 | **MKV / WebM / VP9 / AV1** | Yes (via `ffmpeg`) | No | Yes | Yes | Yes |
 | **Web URLs (`yt-dlp`)** | Built-in | No | Built-in | Limited | No |
-| **Apple MetalFX upscaling** | Yes | No | No | No | No |
+| **CoreImage GPU sharpening** | Yes | No | Custom shaders | Basic | Custom |
 | **OpenSubtitles search** | Built-in (`MovieHash`) | No | Plugin / built-in | Extension | Built-in |
 | **SMB / Plex / Jellyfin library** | No | No | No | Yes | Yes |
 | **Playlists & video editing** | No | Trim / Split | Playlists | Playlists | Library |
@@ -50,7 +50,7 @@
 
 ## Install
 
-Download **`Kino-v1.1.2.dmg`** from [Releases](https://github.com/passs0/Kino/releases/latest) and drag `Kino.app` to `/Applications`.
+Download **`Kino-v1.1.3.dmg`** from [Releases](https://github.com/passs0/Kino/releases/latest) and drag `Kino.app` to `/Applications`.
 
 If Gatekeeper blocks the first launch:
 ```zsh

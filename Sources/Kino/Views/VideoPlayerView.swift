@@ -577,11 +577,13 @@ public struct VideoPlayerView: View {
     }
 
     private func registerUserActivity() {
-        withAnimation(.easeInOut(duration: 0.18)) {
-            showControls = true
+        if !showControls {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                showControls = true
+            }
+            NSCursor.unhide()
+            WindowManager.shared.updateTitlebarVisibility(visible: true)
         }
-        NSCursor.unhide()
-        WindowManager.shared.updateTitlebarVisibility(visible: true)
 
         hideTimer?.cancel()
         guard !isHoveringOverControls else { return }

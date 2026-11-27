@@ -36,16 +36,18 @@ public enum ArtworkExtractor {
                 "-i", fileURL.path,
                 "-an",
                 "-vcodec", "copy",
+                "-frames:v", "1",
                 "-f", "image2pipe",
                 "-"
             ]
             let pipe = Pipe()
             proc.standardOutput = pipe
-            proc.standardError = Pipe()
+            proc.standardError = FileHandle.nullDevice
 
             do {
                 try proc.run()
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                try? pipe.fileHandleForReading.close()
                 proc.waitUntilExit()
                 if !data.isEmpty, let img = NSImage(data: data) {
                     return img
