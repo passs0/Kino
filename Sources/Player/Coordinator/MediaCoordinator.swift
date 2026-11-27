@@ -744,6 +744,9 @@ public final class MediaCoordinator: ObservableObject {
     }
 
     public var isPipelineActive: Bool {
+        if let url = activePlayableURL, url.isFileURL, url.pathExtension.lowercased() == "mp4" {
+            return false
+        }
         if ffmpegPipeline.isRunning { return true }
         switch activeStrategy {
         case .some(.remuxOnly), .some(.audioTranscodeOnly), .some(.fullTranscode), .some(.onlineTranscode):

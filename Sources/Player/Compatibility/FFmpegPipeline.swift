@@ -83,6 +83,42 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
         self.sessionDir = tempDir
 
+        let audioMap = (audioStreamIndex != nil) ? "0:\(audioStreamIndex!)" : "0:a:0?"
+        let isDialogueActive = await AudioManager.shared.isEnhanceDialogueEnabled
+
+        // Fast-path for local stream-copy remux (e.g. MKV with H.264/HEVC + AAC):
+        // Remuxing directly to a local faststart .mp4 takes <1s for a typical 1080p episode and gives
+        // AVPlayer 100% native local seeking with zero HLS segmentation or HTTP streaming overhead.
+        if inputURL.isFileURL && mode == .remuxCopy && seekTime == nil && !isDialogueActive {
+            let fileSize = (try? FileManager.default.attributesOfItem(atPath: inputURL.path)[.size] as? Int64) ?? 0
+            if fileSize > 0 && fileSize <= 6_000_000_000 {
+                let remuxFile = tempDir.appendingPathComponent("remux.mp4")
+                var remuxArgs = [
+                    "-nostdin", "-y",
+                    "-i", inputURL.path,
+                    "-map", "0:v:0?",
+                    "-map", audioMap,
+                    "-c:v", "copy"
+                ]
+                if isHEVC {
+                    remuxArgs.append(contentsOf: ["-tag:v", "hvc1"])
+                }
+                remuxArgs.append(contentsOf: [
+                    "-c:a", "copy",
+                    "-movflags", "+faststart",
+                    remuxFile.path
+                ])
+                onLogLine?("Fast-remuxing local file to native MP4...")
+                if let res = try? await ProcessRunner.run(executablePath: ffmpegPath, arguments: remuxArgs),
+                   res.exitCode == 0,
+                   FileManager.default.fileExists(atPath: remuxFile.path) {
+                    onLogLine?("Native MP4 remux ready at \(remuxFile.path)")
+                    return PipelineSession(url: remuxFile, actualStartTime: 0.0)
+                }
+                try? FileManager.default.removeItem(at: remuxFile)
+            }
+        }
+
         // Attempt starting local HTTP server (falls back seamlessly to native file:// HLS)
         _ = try? streamingServer.start(serving: tempDir)
         let playlistFile = tempDir.appendingPathComponent("playlist.m3u8")
@@ -125,14 +161,11 @@ public final class FFmpegPipeline: @unchecked Sendable {
             "-i", inputURL.isFileURL ? inputURL.path : inputURL.absoluteString
         ])
 
-        let audioMap = (audioStreamIndex != nil) ? "0:\(audioStreamIndex!)" : "0:a:0?"
-
         // Continuous audio/video synchronization filter:
         // 1. first_pts=0 pads or aligns initial audio packets to match video presentation timestamp.
         // 2. async=1000 dynamically stretches/squeezes/resamples audio up to 1000 samples/sec to lock onto video clock.
         // 3. Optional dialogue enhancement speech normalization.
         var audioFilters = ["aresample=async=1000:first_pts=0"]
-        let isDialogueActive = await AudioManager.shared.isEnhanceDialogueEnabled
         if isDialogueActive {
             audioFilters.insert("speechnorm=e=4:r=0.0001:l=1", at: 0)
         }
