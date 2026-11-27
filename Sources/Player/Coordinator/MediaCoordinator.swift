@@ -293,7 +293,7 @@ public final class MediaCoordinator: ObservableObject {
                 }
             }
         } catch {
-            log("⚠️ FFprobe inspection warning: \(error.localizedDescription). Proceeding with extension heuristics.", level: .warning)
+            log("FFprobe inspection warning: \(error.localizedDescription). Proceeding with extension heuristics.", level: .warning)
         }
 
         // Determine Strategy

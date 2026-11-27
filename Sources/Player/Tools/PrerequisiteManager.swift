@@ -106,13 +106,13 @@ public final class PrerequisiteManager: ObservableObject {
             try? await Task.sleep(nanoseconds: 600_000_000)
 
             isDownloading = false
-            MediaCoordinator.shared.log("🚀 Helper media engines successfully installed and verified in \(binDir.path).", level: .success)
+            MediaCoordinator.shared.log("Helper media engines installed and verified in \(binDir.path).", level: .success)
         } catch {
             refreshStatus()
             lastError = error.localizedDescription
             isDownloading = false
             currentStepText = "Installation failed: \(error.localizedDescription)"
-            MediaCoordinator.shared.log("❌ Failed to install helper engines: \(error.localizedDescription)", level: .error)
+            MediaCoordinator.shared.log("Failed to install helper engines: \(error.localizedDescription)", level: .error)
         }
     }
 

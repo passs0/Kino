@@ -241,7 +241,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
             playlistFile.path
         ])
 
-        onLogLine?("🚀 Launching FFmpeg [\(mode)] pipeline: \(ffmpegPath)")
+        onLogLine?("Launching FFmpeg [\(mode)] pipeline: \(ffmpegPath)")
 
         let proc = try ProcessRunner.spawnStreaming(
             executablePath: ffmpegPath,
@@ -268,7 +268,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
         }
 
         let playbackURL = streamingServer.serverURL?.appendingPathComponent("playlist.m3u8") ?? playlistFile
-        onLogLine?("✅ Local stream ready at \(playbackURL.absoluteString) (aligned at \(effectiveSeekTime)s)")
+        onLogLine?("Local stream ready at \(playbackURL.absoluteString) (aligned at \(effectiveSeekTime)s)")
         return PipelineSession(url: playbackURL, actualStartTime: effectiveSeekTime)
     }
 
@@ -422,7 +422,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
             }
         }
 
-        onLogLine?("🚀 Spawning yt-dlp ➔ FFmpeg streaming bridge for \(webURL.host ?? "stream")...")
+        onLogLine?("Spawning yt-dlp -> FFmpeg streaming bridge for \(webURL.host ?? "stream")...")
 
         do {
             try ytProc.run()
@@ -446,7 +446,7 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         let playbackURL = streamingServer.serverURL?.appendingPathComponent("playlist.m3u8") ?? playlistFile
         let actualStart = seekTime ?? 0.0
-        onLogLine?("✅ Online stream bridged successfully at \(playbackURL.absoluteString) (offset \(actualStart)s)")
+        onLogLine?("Online stream bridged at \(playbackURL.absoluteString) (offset \(actualStart)s)")
         return PipelineSession(url: playbackURL, actualStartTime: actualStart)
     }
 
