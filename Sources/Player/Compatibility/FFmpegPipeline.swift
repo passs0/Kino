@@ -65,6 +65,39 @@ public final class FFmpegPipeline: @unchecked Sendable {
         sessionDir
     }
 
+    /// Zero-decode container packet scan to find the exact keyframe timestamp at or before `targetSeconds`.
+    /// Keeps `streamTimeOffset` (and therefore subtitles) frame-accurate when using `-noaccurate_seek`.
+    private static func findPreviousKeyframe(fileURL: URL, targetSeconds: Double) async -> Double? {
+        guard let ffprobePath = ToolLocator.shared.path(for: "ffprobe"), fileURL.isFileURL, targetSeconds > 0.5 else {
+            return nil
+        }
+        let searchStart = max(0, targetSeconds - 10.0)
+        let interval = String(format: "%.2f%%+12", searchStart)
+        let args = [
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-read_intervals", interval,
+            "-show_entries", "packet=pts_time,flags",
+            "-of", "compact",
+            fileURL.path
+        ]
+        guard let output = try? await ProcessRunner.run(executablePath: ffprobePath, arguments: args) else {
+            return nil
+        }
+        var bestKeyframe: Double? = nil
+        for line in output.stdout.components(separatedBy: .newlines) {
+            guard line.contains("flags=K"), let ptsRange = line.range(of: "pts_time=") else { continue }
+            let sub = line[ptsRange.upperBound...]
+            let valStr = sub.prefix(while: { $0 != "|" && $0 != "\n" && $0 != "\r" })
+            if let val = Double(valStr), val <= targetSeconds + 0.05 {
+                if bestKeyframe == nil || val > bestKeyframe! {
+                    bestKeyframe = val
+                }
+            }
+        }
+        return bestKeyframe
+    }
+
     /// Prepares and starts the FFmpeg streaming session, returning the active PipelineSession with aligned start time.
     public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil, isHEVC: Bool = false) async throws -> PipelineSession {
         stop()
@@ -136,7 +169,11 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         var effectiveSeekTime: Double = 0.0
         if let sTime = seekTime, sTime > 0.5 {
-            effectiveSeekTime = sTime
+            if inputURL.isFileURL, let kf = await Self.findPreviousKeyframe(fileURL: inputURL, targetSeconds: sTime) {
+                effectiveSeekTime = kf
+            } else {
+                effectiveSeekTime = sTime
+            }
             args.append(contentsOf: [
                 "-noaccurate_seek",
                 "-ss", String(format: "%.3f", effectiveSeekTime)
