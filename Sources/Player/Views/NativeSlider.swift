@@ -101,13 +101,12 @@ public final class NativeAppKitSlider: NSSlider {
     }
 
     public override func mouseDown(with event: NSEvent) {
+        guard isEnabled, maxValue > minValue, bounds.width > 0 else { return }
         isTrackingMouse = true
         onEditingChanged?(true)
 
-        // Jump immediately to the clicked spot on the track (QuickTime / Apple Music behavior),
-        // regardless of macOS's system-wide AppleScrollerPagingBehavior default.
-        if maxValue > minValue, bounds.width > 0 {
-            let point = convert(event.locationInWindow, from: nil)
+        func updateValue(for ev: NSEvent) {
+            let point = convert(ev.locationInWindow, from: nil)
             let knobInset: CGFloat = 6.0
             let usableWidth = max(1.0, bounds.width - knobInset * 2.0)
             let fraction = max(0.0, min(1.0, (point.x - knobInset) / usableWidth))
@@ -115,7 +114,15 @@ public final class NativeAppKitSlider: NSSlider {
             sendAction(action, to: target)
         }
 
-        super.mouseDown(with: event)
+        updateValue(for: event)
+
+        while let next = window?.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            updateValue(for: next)
+            if next.type == .leftMouseUp {
+                break
+            }
+        }
+
         isTrackingMouse = false
         onEditingChanged?(false)
     }

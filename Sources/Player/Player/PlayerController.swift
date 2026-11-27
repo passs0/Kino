@@ -260,12 +260,16 @@ public final class PlayerController: ObservableObject {
             self?.seekTargetTime = nil
         }
 
-        // Check if the target timestamp is already buffered in AVPlayer.
-        // If targetSec < streamTimeOffset (rawRelativeSec < -0.5), it lies before the current stream start
-        // and MUST re-seek the FFmpeg pipeline.
-        let isLoaded = rawRelativeSec >= -0.5 && isTimestampBuffered(relativeSec)
+        // Check if we must re-seek the FFmpeg pipeline:
+        // 1. Target is earlier than the current stream segment start (rawRelativeSec < -0.5)
+        // 2. FFmpeg is still actively remuxing/transcoding and the target isn't buffered yet.
+        // If FFmpeg already finished remuxing to the end of the file, AVPlayer can seek directly in the completed HLS.
+        let beforeStreamStart = rawRelativeSec < -0.5
+        let needsPipelineSeek = MediaCoordinator.shared.isPipelineActive && (
+            beforeStreamStart || (MediaCoordinator.shared.isFFmpegRunning && !isTimestampBuffered(relativeSec))
+        )
 
-        if !isLoaded && MediaCoordinator.shared.isPipelineActive {
+        if needsPipelineSeek {
             // Seeking to an unloaded timestamp in an active transcoding / HLS stream:
             streamSeekTask?.cancel()
             streamSeekTask = Task { @MainActor in

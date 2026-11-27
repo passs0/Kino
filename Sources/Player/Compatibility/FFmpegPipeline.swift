@@ -65,36 +65,6 @@ public final class FFmpegPipeline: @unchecked Sendable {
         sessionDir
     }
 
-    /// Rapidly probes the nearest keyframe at or prior to targetSeconds using ffprobe demuxer seek.
-    public static func findNearestKeyframe(fileURL: URL, targetSeconds: Double) async -> Double? {
-        guard let ffprobePath = ToolLocator.shared.path(for: "ffprobe"), fileURL.isFileURL, targetSeconds > 0.5 else {
-            return nil
-        }
-        let searchStart = max(0, targetSeconds - 2.0)
-        let interval = String(format: "%.2f%%+8", searchStart)
-        let args = [
-            "-v", "error",
-            "-read_intervals", interval,
-            "-select_streams", "v:0",
-            "-show_entries", "frame=pkt_dts_time,key_frame",
-            "-of", "compact",
-            fileURL.path
-        ]
-        guard let output = try? await ProcessRunner.run(executablePath: ffprobePath, arguments: args) else {
-            return nil
-        }
-        for line in output.stdout.components(separatedBy: .newlines) {
-            if line.contains("key_frame=1"), let dtsRange = line.range(of: "pkt_dts_time=") {
-                let sub = line[dtsRange.upperBound...]
-                let valStr = sub.prefix(while: { $0 != "|" && $0 != "\n" && $0 != "\r" })
-                if let val = Double(valStr) {
-                    return val
-                }
-            }
-        }
-        return nil
-    }
-
     /// Prepares and starts the FFmpeg streaming session, returning the active PipelineSession with aligned start time.
     public func startSession(inputURL: URL, mode: PipelineMode, audioStreamIndex: Int? = nil, seekTime: Double? = nil, isHEVC: Bool = false) async throws -> PipelineSession {
         stop()
@@ -127,15 +97,8 @@ public final class FFmpegPipeline: @unchecked Sendable {
 
         var effectiveSeekTime: Double = 0.0
         if let sTime = seekTime, sTime > 0.5 {
-            if inputURL.isFileURL, let keyframe = await Self.findNearestKeyframe(fileURL: inputURL, targetSeconds: sTime) {
-                effectiveSeekTime = keyframe
-            } else {
-                effectiveSeekTime = sTime
-            }
-            // Use -noaccurate_seek so FFmpeg aligns BOTH demuxed video and audio streams
-            // exactly at the keyframe boundary rather than discarding audio until sTime.
+            effectiveSeekTime = sTime
             args.append(contentsOf: [
-                "-noaccurate_seek",
                 "-ss", String(format: "%.3f", effectiveSeekTime)
             ])
         }

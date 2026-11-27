@@ -134,7 +134,16 @@ public final class MediaCoordinator: ObservableObject {
         }
     }
 
+    private var lastOpenedLocalURL: URL?
+    private var lastOpenedLocalAt: Date = .distantPast
+
     public func openLocalFile(url: URL) {
+        let now = Date()
+        if lastOpenedLocalURL == url && now.timeIntervalSince(lastOpenedLocalAt) < 1.0 {
+            return
+        }
+        lastOpenedLocalURL = url
+        lastOpenedLocalAt = now
         NSDocumentController.shared.noteNewRecentDocumentURL(url)
         openSource(.local(url))
     }
@@ -730,6 +739,10 @@ public final class MediaCoordinator: ObservableObject {
         }
     }
 
+    public var isFFmpegRunning: Bool {
+        ffmpegPipeline.isRunning
+    }
+
     public var isPipelineActive: Bool {
         if ffmpegPipeline.isRunning { return true }
         switch activeStrategy {
@@ -768,8 +781,8 @@ public final class MediaCoordinator: ObservableObject {
                     seekTime: targetSeconds,
                     isHEVC: isHEVC
                 )
-                self.activePlayableURL = session.url
                 PlayerController.shared.loadStreamFromSeek(url: session.url, expectedDuration: knownD, timeOffset: session.actualStartTime)
+                self.activePlayableURL = session.url
                 log("✨ Pipeline fast-forwarded to \(formatSeconds(session.actualStartTime)).", level: .success)
             } catch {
                 log("❌ Seek pipeline failed: \(error.localizedDescription)", level: .error)
