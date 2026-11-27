@@ -170,7 +170,14 @@ private struct WindowGlassAccessor: NSViewRepresentable {
             window.titlebarSeparatorStyle = .none
             window.titleVisibility = isIdle ? .hidden : .visible
             window.tabbingMode = .disallowed
-            window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+            window.styleMask.insert([.titled, .closable, .miniaturizable, .fullSizeContentView])
+            if isIdle {
+                window.styleMask.remove(.resizable)
+                window.standardWindowButton(.zoomButton)?.isEnabled = false
+            } else {
+                window.styleMask.insert(.resizable)
+                window.standardWindowButton(.zoomButton)?.isEnabled = true
+            }
             window.isMovableByWindowBackground = isIdle
 
             // Do not alter layers or titlebars during Full Screen transitions

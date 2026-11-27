@@ -41,13 +41,15 @@ public final class WindowManager: NSObject, ObservableObject {
         setupWindowNotifications(for: window)
 
         window.tabbingMode = .disallowed
-        window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+        window.styleMask.insert([.titled, .closable, .miniaturizable, .fullSizeContentView])
         window.collectionBehavior = [.fullScreenPrimary, .managed]
         window.isMovableByWindowBackground = true
         window.titlebarAppearsTransparent = true
         window.title = "Kino"
         if MediaCoordinator.shared.state == .idle {
             transitionToWelcome(animated: false)
+        } else {
+            window.styleMask.insert(.resizable)
         }
     }
 
@@ -166,6 +168,7 @@ public final class WindowManager: NSObject, ObservableObject {
             window.contentMaxSize = CGSize(width: 10000, height: 10000)
             window.tabbingMode = .disallowed
         window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+        window.standardWindowButton(.zoomButton)?.isEnabled = true
             window.backgroundColor = .black
             window.appearance = NSAppearance(named: .darkAqua)
 
@@ -238,12 +241,15 @@ public final class WindowManager: NSObject, ObservableObject {
         }
 
         currentNaturalSize = nil
-        window.minSize = CGSize(width: 320, height: 180)
-        window.contentMinSize = CGSize(width: 320, height: 180)
-        window.maxSize = CGSize(width: 10000, height: 10000)
-        window.contentMaxSize = CGSize(width: 10000, height: 10000)
+        window.minSize = Self.welcomeDefaultSize
+        window.contentMinSize = Self.welcomeDefaultSize
+        window.maxSize = Self.welcomeDefaultSize
+        window.contentMaxSize = Self.welcomeDefaultSize
         window.tabbingMode = .disallowed
-        window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+        window.styleMask.insert([.titled, .closable, .miniaturizable, .fullSizeContentView])
+        window.styleMask.remove(.resizable)
+        window.standardWindowButton(.zoomButton)?.isEnabled = false
+        window.standardWindowButton(.zoomButton)?.isEnabled = true
         window.backgroundColor = .windowBackgroundColor
         window.appearance = nil
         window.representedURL = nil
