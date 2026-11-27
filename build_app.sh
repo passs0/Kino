@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-APP_NAME="Kino"
+APP_NAME="Player"
 BUILD_DIR="$SCRIPT_DIR/build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
@@ -22,7 +22,7 @@ SDK_PATH="$(xcrun --show-sdk-path)"
 SWIFT_FILES=()
 while IFS= read -r file; do
     SWIFT_FILES+=("$file")
-done < <(find Sources/Kino -name "*.swift")
+done < <(find Sources/Player -name "*.swift")
 
 echo "📦 Compiling ${#SWIFT_FILES[@]} Swift source files..."
 rm -rf "$APP_BUNDLE"
@@ -44,15 +44,15 @@ strip -rSTx "$MACOS_DIR/$APP_NAME"
 
 echo "📄 Copying Info.plist and AppIcon.icns..."
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
-if [ -d "assets/Kino.icon" ]; then
+if [ -d "assets/Player.icon" ]; then
     if xcrun --find actool >/dev/null 2>&1; then
         echo "🎨 Compiling the Light, Dark, Clear, and Tinted app icon variants..."
         PARTIAL_PLIST="$(mktemp "$BUILD_DIR/icon-partial.XXXXXX")"
-        xcrun actool "assets/Kino.icon" \
+        xcrun actool "assets/Player.icon" \
             --compile "$RESOURCES_DIR" \
             --platform macosx \
             --minimum-deployment-target 13.0 \
-            --app-icon Kino \
+            --app-icon Player \
             --enable-on-demand-resources NO \
             --development-region en \
             --target-device mac \
@@ -79,7 +79,7 @@ PY
 import plistlib, sys
 with open(sys.argv[1], "rb") as f:
     info = plistlib.load(f)
-info["CFBundleIconName"] = "Kino"
+info["CFBundleIconName"] = "Player"
 with open(sys.argv[1], "wb") as f:
     plistlib.dump(info, f)
 PY
@@ -92,7 +92,7 @@ PY
 fi
 
 # Assets.car carries the four appearance variants; keep the legacy ICNS only when Assets.car is absent.
-if [ ! -f "$RESOURCES_DIR/Assets.car" ] && [ ! -f "$RESOURCES_DIR/Kino.icns" ] && [ -f "Resources/AppIcon.icns" ]; then
+if [ ! -f "$RESOURCES_DIR/Assets.car" ] && [ ! -f "$RESOURCES_DIR/Player.icns" ] && [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 

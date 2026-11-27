@@ -1,0 +1,207 @@
+import SwiftUI
+import AppKit
+
+/// Minimalist Liquid Glass Main Window (macOS 26+)
+public struct MainWindowView: View {
+    public static var idleNSBackgroundColor: NSColor {
+        .windowBackgroundColor
+    }
+    public static var idleBackgroundColor: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
+
+    @StateObject private var coordinator = MediaCoordinator.shared
+    @StateObject private var playerController = PlayerController.shared
+    @StateObject private var windowManager = WindowManager.shared
+
+    @State private var showURLSheet = false
+    @State private var showPrerequisitesSheet = false
+    @State private var showSubtitleSearchSheet = false
+    @State private var isFullScreen = false
+
+    public init() {}
+
+    public var body: some View {
+        mainContent
+            .ignoresSafeArea()
+            .frame(minWidth: 320, minHeight: 180)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(WindowGlassAccessor(isIdle: coordinator.state == .idle))
+            .sheet(isPresented: $showURLSheet) {
+                URLInputSheet(coordinator: coordinator)
+            }
+            .sheet(isPresented: $showPrerequisitesSheet) {
+                PrerequisiteInstallSheet()
+            }
+            .sheet(isPresented: $showSubtitleSearchSheet) {
+                SubtitleSearchSheet()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isFullScreen = true
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isFullScreen = false
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openURLSheetNotification)) { _ in
+                showURLSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openPrerequisitesSheetNotification)) { _ in
+                showPrerequisitesSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openSubtitleSearchSheetNotification)) { _ in
+                showSubtitleSearchSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .closeMediaNotification)) { _ in
+                handleCloseMedia()
+            }
+            .onChange(of: coordinator.currentSource) { newSource in
+                handleSourceChange(newSource)
+            }
+            .onChange(of: coordinator.activePlayableURL) { newURL in
+                handlePlayableURLChange(newURL)
+            }
+            .onChange(of: coordinator.probeResult) { newProbe in
+                handleProbeChange(newProbe)
+            }
+            .onChange(of: coordinator.extractedOnlineInfo?.duration) { newDuration in
+                if let d = newDuration, d > 0 {
+                    playerController.setKnownDuration(d)
+                }
+            }
+            .onChange(of: coordinator.extractedOnlineInfo?.title) { newTitle in
+                if let t = newTitle, !t.isEmpty {
+                    windowManager.setMediaDocument(url: nil, title: t)
+                }
+            }
+            .onChange(of: coordinator.isInspectorPresented) { isPresented in
+                InspectorPanelController.shared.setVisible(isPresented, relativeTo: windowManager.mainWindow)
+            }
+    }
+
+    private var mainContent: some View {
+        ZStack(alignment: .center) {
+            (coordinator.state == .idle ? MainWindowView.idleBackgroundColor : Color.black)
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.25), value: coordinator.state == .idle)
+
+            VideoPlayerView(
+                coordinator: coordinator,
+                playerController: playerController,
+                onOpenFile: { PlayerCommands.openFileDialog() },
+                onOpenURL: { showURLSheet = true }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .ignoresSafeArea()
+        }
+        .preferredColorScheme(coordinator.state == .idle ? nil : .dark)
+    }
+
+    private func handleCloseMedia() {
+        if coordinator.state != .idle {
+            playerController.saveCurrentPosition()
+            playerController.pause()
+            playerController.reset()
+            coordinator.stop()
+            windowManager.transitionToWelcome()
+        } else {
+            WindowManager.shared.mainWindow?.close()
+        }
+    }
+
+    private func handleSourceChange(_ source: MediaSource?) {
+        if let s = source {
+            if case .local(let url) = s {
+                windowManager.setMediaDocument(url: url, title: s.displayName)
+            } else {
+                let streamTitle = coordinator.extractedOnlineInfo?.title ?? s.displayName
+                windowManager.setMediaDocument(url: nil, title: streamTitle)
+            }
+        } else {
+            windowManager.setMediaDocument(url: nil, title: "Player")
+        }
+    }
+
+    private func handlePlayableURLChange(_ newURL: URL?) {
+        if let url = newURL {
+            if !playerController.isSeeking {
+                let expDuration = coordinator.knownDuration
+                let initTime = coordinator.pendingInitialTime
+                coordinator.pendingInitialTime = nil
+                playerController.load(url: url, expectedDuration: expDuration, initialTime: initTime)
+            }
+        } else {
+            playerController.reset()
+        }
+    }
+
+    private func handleProbeChange(_ probe: MediaProbeResult?) {
+        if let d = probe?.duration, d > 0 {
+            playerController.setKnownDuration(d)
+        }
+        if let video = probe?.primaryVideo, let w = video.width, let h = video.height, w > 0, h > 0 {
+            let size = CGSize(width: w, height: h)
+            windowManager.transitionToMedia(isAudio: false, videoSize: size)
+        }
+    }
+}
+
+/// Helper that configures the parent NSWindow for native window background and insets traffic lights.
+private struct WindowGlassAccessor: NSViewRepresentable {
+    var isIdle: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeNSView(context: Context) -> NSView {
+        NSView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            WindowManager.shared.register(window: window)
+            window.isOpaque = true
+            window.backgroundColor = isIdle ? MainWindowView.idleNSBackgroundColor : .black
+            window.appearance = isIdle ? nil : NSAppearance(named: .darkAqua)
+            window.hasShadow = true
+            window.titlebarAppearsTransparent = true
+            window.titlebarSeparatorStyle = .none
+            window.titleVisibility = isIdle ? .hidden : .visible
+            window.tabbingMode = .disallowed
+            window.styleMask.insert([.titled, .closable, .miniaturizable, .fullSizeContentView])
+            if isIdle {
+                window.styleMask.remove(.resizable)
+                window.standardWindowButton(.zoomButton)?.isEnabled = false
+            } else {
+                window.styleMask.insert(.resizable)
+                window.standardWindowButton(.zoomButton)?.isEnabled = true
+            }
+            window.isMovableByWindowBackground = isIdle
+
+            // Do not alter layers or titlebars during Full Screen transitions
+            guard !WindowManager.shared.isTransitioningFullScreen else { return }
+
+            let isFS = window.styleMask.contains(.fullScreen)
+            window.contentView?.wantsLayer = true
+            window.contentView?.layer?.masksToBounds = true
+
+            // Clear any AppKit titlebar materials or visual effect backdrops so the window is 100% unified
+            if !isFS, let titlebar = window.standardWindowButton(.closeButton)?.superview {
+                titlebar.wantsLayer = true
+                titlebar.layer?.backgroundColor = NSColor.clear.cgColor
+                if let container = titlebar.superview {
+                    container.wantsLayer = true
+                    container.layer?.backgroundColor = NSColor.clear.cgColor
+                    for sub in container.subviews {
+                        if let effect = sub as? NSVisualEffectView {
+                            effect.isHidden = true
+                            effect.alphaValue = 0.0
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

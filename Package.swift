@@ -2,20 +2,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "Kino",
+    name: "Player",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .executable(
-            name: "Kino",
-            targets: ["Kino"]
+            name: "Player",
+            targets: ["Player"]
         )
     ],
     targets: [
         .executableTarget(
-            name: "Kino",
-            path: "Sources/Kino"
+            name: "Player",
+            path: "Sources/Player"
         )
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

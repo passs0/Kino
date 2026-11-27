@@ -1,21 +1,21 @@
 <p align="center">
-  <img src="assets/icon_mac.png" width="160" height="160" alt="Kino Icon" />
+  <img src="assets/icon_mac.png" width="160" height="160" alt="Player Icon" />
 </p>
 
-<h1 align="center">Kino</h1>
+<h1 align="center">Player</h1>
 
 <p align="center">
   A lightweight macOS media player with QuickTime ergonomics and support for MKV, WebM, AV1, VP9, FLAC, and web streams.
 </p>
 
 <p align="center">
-  <a href="https://github.com/passs0/Kino/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Kino?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
+  <a href="https://github.com/passs0/Player/releases/latest"><img src="https://img.shields.io/github/v/release/passs0/Player?label=Latest%20Release&color=007AFF" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/macOS-13.0%2B%20%7C%20Apple%20Silicon-black?logo=apple" alt="macOS 13.0+" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
 <p align="center">
-  <img src="assets/preview.png" width="640" alt="Kino" />
+  <img src="assets/preview.png" width="640" alt="Player" />
 </p>
 
 ---
@@ -29,7 +29,7 @@
 
 ## How it compares
 
-| | Kino | QuickTime Player | IINA | VLC | Infuse |
+| | Player | QuickTime Player | IINA | VLC | Infuse |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **App size** | ~3 MB | Built-in | ~140 MB | ~140 MB | ~80 MB |
 | **Price / License** | Free (MIT) | Free | Free (GPL) | Free (GPL) | Freemium / Sub |
@@ -42,26 +42,26 @@
 | **Playlists & video editing** | No | Trim / Split | Playlists | Playlists | Library |
 | **Intel Mac support** | No (Apple Silicon) | Yes | Yes | Yes | Yes |
 
-**Where Kino falls short:**
-- **No media library or network shares:** Unlike Infuse or VLC, Kino doesn't browse SMB/NFS shares, Plex, or Jellyfin libraries—it's a single-file/URL player.
+**Where Player falls short:**
+- **No media library or network shares:** Unlike Infuse or VLC, Player doesn't browse SMB/NFS shares, Plex, or Jellyfin libraries—it's a single-file/URL player.
 - **No playlists or trim/export tools:** QuickTime handles quick trimming and screen recording; IINA and VLC support playlists and deeper `mpv`/shader scripting.
-- **Depends on `ffmpeg`/`yt-dlp` for non-native formats:** `.mkv`, VP9, AV1, and web streams require Kino's user-space helper download on first use, and seeking on heavy software-decoded streams isn't as instant as `mpv` in IINA.
+- **Depends on `ffmpeg`/`yt-dlp` for non-native formats:** `.mkv`, VP9, AV1, and web streams require Player's user-space helper download on first use, and seeking on heavy software-decoded streams isn't as instant as `mpv` in IINA.
 - **Apple Silicon & macOS 13+ only:** No Intel Mac, iOS, or tvOS builds.
 
 ## Install
 
-Download **`Kino-v1.1.3.dmg`** from [Releases](https://github.com/passs0/Kino/releases/latest) and drag `Kino.app` to `/Applications`.
+Download **`Player-v1.2.0.dmg`** from [Releases](https://github.com/passs0/Player/releases/latest) and drag `Player.app` to `/Applications`.
 
 If Gatekeeper blocks the first launch:
 ```zsh
-xattr -cr /Applications/Kino.app
+xattr -cr /Applications/Player.app
 ```
 
 Or build from source:
 ```zsh
-git clone https://github.com/passs0/Kino.git && cd Kino
+git clone https://github.com/passs0/Player.git && cd Player
 ./build_app.sh
-cp -R build/Kino.app /Applications/
+cp -R build/Player.app /Applications/
 ```
 
 ## Credits
