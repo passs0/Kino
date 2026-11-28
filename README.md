@@ -50,7 +50,7 @@
 
 ## Install
 
-Download **`Player-v1.2.3.dmg`** from [Releases](https://github.com/passs0/Player/releases/latest) and drag `Player.app` to `/Applications`.
+Download **`Player-v1.2.4.dmg`** from [Releases](https://github.com/passs0/Player/releases/latest) and drag `Player.app` to `/Applications`.
 
 If Gatekeeper blocks the first launch:
 ```zsh
