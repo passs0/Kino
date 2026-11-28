@@ -502,6 +502,11 @@ public final class OpenSubtitlesService: ObservableObject {
 
     // MARK: - Helper Cleaners & Metadata
 
+    private static let releaseTagsRegex = try? NSRegularExpression(
+        pattern: #"(?i)\b(1080p|720p|2160p|4k|uhd|bluray|blu-ray|bdrip|brrip|web-dl|webrip|web|hdtv|dvdrip|x264|x265|hevc|h264|h265|aac|ac3|dts|remux|hdr|10bit)\b.*$"#
+    )
+    private static let bracketsRegex = try? NSRegularExpression(pattern: #"\[.*?\]|\(.*?\)"#)
+
     /// Cleans scene release tags (1080p, BluRay, x264, etc.) to extract a pristine movie or series search query.
     public static func cleanTitle(from raw: String) -> String {
         // Strip extension if present
@@ -511,15 +516,13 @@ public final class OpenSubtitlesService: ObservableObject {
             .replacingOccurrences(of: "_", with: " ")
 
         // Remove release tags and anything following them
-        let pattern = #"(?i)\b(1080p|720p|2160p|4k|uhd|bluray|blu-ray|bdrip|brrip|web-dl|webrip|web|hdtv|dvdrip|x264|x265|hevc|h264|h265|aac|ac3|dts|remux|hdr|10bit)\b.*$"#
-        if let regex = try? NSRegularExpression(pattern: pattern) {
+        if let regex = releaseTagsRegex {
             let range = NSRange(s.startIndex..., in: s)
             s = regex.stringByReplacingMatches(in: s, options: [], range: range, withTemplate: "")
         }
 
         // Remove square and round brackets
-        let bracketPattern = #"\[.*?\]|\(.*?\)"#
-        if let regex = try? NSRegularExpression(pattern: bracketPattern) {
+        if let regex = bracketsRegex {
             let range = NSRange(s.startIndex..., in: s)
             s = regex.stringByReplacingMatches(in: s, options: [], range: range, withTemplate: "")
         }
