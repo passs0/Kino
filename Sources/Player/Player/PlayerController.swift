@@ -366,15 +366,29 @@ public final class PlayerController: ObservableObject {
         seekRelative(seconds: Double(count) * frameDuration)
     }
 
-    /// Captures the current video frame (preserving 10-bit+ HDR color when present) and saves it to Desktop.
+    /// Captures the current video frame (preserving 10-bit+ HDR color when present) and saves it to Desktop (or Pictures fallback).
     public func takeScreenshot() {
         guard let item = player.currentItem,
               case .ready = MediaCoordinator.shared.state,
               !MediaCoordinator.shared.isAudioMode else { return }
 
         let itemTime = item.currentTime()
-        let pixelBuffer = videoOutput?.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: nil)
+        let effectiveTime = PlayerTimeState.shared.currentTime
+        var pixelBuffer: CVPixelBuffer? = nil
+        if let output = videoOutput {
+            let hostTime = output.itemTime(forHostTime: CACurrentMediaTime())
+            if hostTime.isValid && !hostTime.isIndefinite {
+                pixelBuffer = output.copyPixelBuffer(forItemTime: hostTime, itemTimeForDisplay: nil)
+            }
+            if pixelBuffer == nil {
+                pixelBuffer = output.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: nil)
+            }
+        }
         let asset = item.asset
+        let localSourceURL: URL? = {
+            if case .local(let url) = MediaCoordinator.shared.currentSource { return url }
+            return nil
+        }()
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
@@ -388,28 +402,40 @@ public final class PlayerController: ObservableObject {
             if pixelBuffer == nil {
                 let generator = AVAssetImageGenerator(asset: asset)
                 generator.appliesPreferredTrackTransform = true
-                generator.requestedTimeToleranceBefore = .zero
-                generator.requestedTimeToleranceAfter = .zero
+                generator.requestedTimeToleranceBefore = CMTime(seconds: 0.25, preferredTimescale: 600)
+                generator.requestedTimeToleranceAfter = CMTime(seconds: 0.25, preferredTimescale: 600)
                 fallbackCGImage = try? await generator.image(at: itemTime).image
             }
 
             let capturedBuffer = pixelBuffer.map { SendableBox($0) }
             let capturedCG = fallbackCGImage.map { SendableBox($0) }
+            let ffmpegPath = ToolLocator.shared.path(for: "ffmpeg")
 
-            let result: (url: URL, isHDR: Bool)? = await Task.detached(priority: .userInitiated) {
-                Self.renderAndSaveScreenshot(
+            let result: (url: URL, isHDR: Bool, folderName: String)? = await Task.detached(priority: .userInitiated) {
+                if let saved = Self.renderAndSaveScreenshot(
                     pixelBuffer: capturedBuffer?.value,
                     fallbackCGImage: capturedCG?.value,
                     preferredTransform: preferredTransform,
                     trackIsHDR: trackIsHDR
-                )
+                ) {
+                    return saved
+                }
+                // Final fallback for paused HLS-remuxed local files: extract exact frame with FFmpeg
+                if let localURL = localSourceURL, let ff = ffmpegPath {
+                    return Self.extractAndSaveWithFFmpeg(
+                        ffmpegPath: ff,
+                        fileURL: localURL,
+                        timestamp: effectiveTime,
+                        isHDR: trackIsHDR
+                    )
+                }
+                return nil
             }.value
 
             if let result = result {
-                self.showHUD(
-                    message: result.isHDR ? "HDR Screenshot Saved" : "Screenshot Saved",
-                    iconName: "camera.fill"
-                )
+                let prefix = result.isHDR ? "HDR Screenshot" : "Screenshot"
+                let suffix = result.folderName == "Desktop" ? "Saved" : "Saved to \(result.folderName)"
+                self.showHUD(message: "\(prefix) \(suffix)", iconName: "camera.fill")
             } else {
                 self.showHUD(message: "Screenshot Failed", iconName: "exclamationmark.triangle")
             }
@@ -421,7 +447,7 @@ public final class PlayerController: ObservableObject {
         fallbackCGImage: CGImage?,
         preferredTransform: CGAffineTransform,
         trackIsHDR: Bool
-    ) -> (url: URL, isHDR: Bool)? {
+    ) -> (url: URL, isHDR: Bool, folderName: String)? {
         var ciImage: CIImage
         var isHDR = trackIsHDR
 
@@ -454,21 +480,52 @@ public final class PlayerController: ObservableObject {
             return nil
         }
 
+        guard !ciImage.extent.isEmpty else { return nil }
+
         let workingSpace = CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020)
         let ciContext = CIContext(options: workingSpace.map { [.workingColorSpace: $0] } ?? [:])
 
-        let pngData: Data?
+        var pngData: Data?
         if isHDR, let pqSpace = CGColorSpace(name: CGColorSpace.itur_2100_PQ) {
             pngData = ciContext.pngRepresentation(of: ciImage, format: .RGBA16, colorSpace: pqSpace)
-        } else {
+        }
+        if pngData == nil {
             let sdrSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
             pngData = ciContext.pngRepresentation(of: ciImage, format: .RGBA8, colorSpace: sdrSpace)
+            isHDR = false
         }
 
-        guard let data = pngData, let destURL = nextScreenshotURL() else { return nil }
+        guard let data = pngData else { return nil }
+        return saveScreenshotData(data, isHDR: isHDR)
+    }
+
+    private nonisolated static func extractAndSaveWithFFmpeg(
+        ffmpegPath: String,
+        fileURL: URL,
+        timestamp: Double,
+        isHDR: Bool
+    ) -> (url: URL, isHDR: Bool, folderName: String)? {
+        let tmpFile = URL(fileURLWithPath: "/tmp/player_shot_\(UUID().uuidString.prefix(8)).png")
+        defer { try? FileManager.default.removeItem(at: tmpFile) }
+
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: ffmpegPath)
+        proc.arguments = [
+            "-v", "error",
+            "-nostdin",
+            "-y",
+            "-ss", String(format: "%.3f", max(0, timestamp)),
+            "-i", fileURL.path,
+            "-frames:v", "1",
+            tmpFile.path
+        ]
         do {
-            try data.write(to: destURL, options: .atomic)
-            return (destURL, isHDR)
+            try proc.run()
+            proc.waitUntilExit()
+            guard proc.terminationStatus == 0, let data = try? Data(contentsOf: tmpFile), !data.isEmpty else {
+                return nil
+            }
+            return saveScreenshotData(data, isHDR: isHDR)
         } catch {
             return nil
         }
@@ -484,25 +541,36 @@ public final class PlayerController: ObservableObject {
         return .up
     }
 
-    private nonisolated static func nextScreenshotURL() -> URL? {
+    private nonisolated static func saveScreenshotData(_ data: Data, isHDR: Bool) -> (url: URL, isHDR: Bool, folderName: String)? {
         let fm = FileManager.default
-        let baseDir = fm.urls(for: .desktopDirectory, in: .userDomainMask).first
-            ?? fm.urls(for: .picturesDirectory, in: .userDomainMask).first
-        guard let dir = baseDir else { return nil }
-
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
         df.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        let stamp = df.string(from: Date())
-        let baseName = "Player Screenshot \(stamp)"
+        let baseName = "Player Screenshot \(df.string(from: Date()))"
 
-        var candidate = dir.appendingPathComponent("\(baseName).png")
-        var counter = 2
-        while fm.fileExists(atPath: candidate.path) {
-            candidate = dir.appendingPathComponent("\(baseName) (\(counter)).png")
-            counter += 1
+        let candidates: [(FileManager.SearchPathDirectory, String)] = [
+            (.desktopDirectory, "Desktop"),
+            (.picturesDirectory, "Pictures"),
+            (.downloadsDirectory, "Downloads")
+        ]
+
+        for (searchDir, folderName) in candidates {
+            guard let dir = fm.urls(for: searchDir, in: .userDomainMask).first else { continue }
+            var destURL = dir.appendingPathComponent("\(baseName).png")
+            var counter = 2
+            while fm.fileExists(atPath: destURL.path) {
+                destURL = dir.appendingPathComponent("\(baseName) (\(counter)).png")
+                counter += 1
+            }
+            do {
+                try data.write(to: destURL, options: .atomic)
+                return (destURL, isHDR, folderName)
+            } catch {
+                NSLog("⚠️ Screenshot write failed for %@: %@", destURL.path, error.localizedDescription)
+                continue
+            }
         }
-        return candidate
+        return nil
     }
 
     /// Updates available chapter markers for the active media.
@@ -650,7 +718,9 @@ public final class PlayerController: ObservableObject {
         item.add(output)
         self.legibleOutput = output
 
-        let vOutput = AVPlayerItemVideoOutput(pixelBufferAttributes: nil)
+        let vOutput = AVPlayerItemVideoOutput(pixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_64RGBAHalf
+        ])
         vOutput.suppressesPlayerRendering = false
         item.add(vOutput)
         self.videoOutput = vOutput
