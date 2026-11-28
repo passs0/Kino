@@ -131,10 +131,6 @@ public final class NativePlayerNSView: NSView, AVPictureInPictureControllerDeleg
         CATransaction.commit()
     }
 
-    public func updateCornerRadius() {
-        // Corner radius is managed natively by macOS NSWindow boundaries.
-    }
-
     public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let win = window else {
@@ -263,8 +259,6 @@ public final class NativePlayerNSView: NSView, AVPictureInPictureControllerDeleg
         pipSubtitleHostingView?.removeFromSuperview()
         pipSubtitleHostingView = nil
     }
-
-    public func repositionTrafficLights() {}
 
     // MARK: - Drag and Drop
 

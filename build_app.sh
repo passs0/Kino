@@ -31,7 +31,7 @@ swiftc \
     -target arm64-apple-macos13.0 \
     -sdk "$SDK_PATH" \
     -module-cache-path "$MODULE_CACHE" \
-    -O \
+    -Osize \
     -Xlinker -dead_strip \
     "${SWIFT_FILES[@]}" \
     -o "$MACOS_DIR/$APP_NAME"

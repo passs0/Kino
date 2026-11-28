@@ -379,11 +379,4 @@ public final class OptionsMenuPresenter: NSObject {
     @objc private func handleOpenEngines() {
         NotificationCenter.default.post(name: .openPrerequisitesSheetNotification, object: nil)
     }
-
-    private func formatRate(_ rate: Double) -> String {
-        if rate == floor(rate) {
-            return String(format: "%.0f", rate)
-        }
-        return String(format: "%g", rate)
-    }
 }

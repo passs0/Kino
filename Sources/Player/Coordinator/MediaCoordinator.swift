@@ -50,13 +50,6 @@ public final class MediaCoordinator: ObservableObject {
 
     @Published public var isInspectorPresented: Bool = false
 
-    /// Debug and preview helper to populate inspector state
-    public func setDebugInspectorData(strategy: PlaybackStrategy?, onlineInfo: ExtractedMediaInfo?, probe: MediaProbeResult? = nil) {
-        self.activeStrategy = strategy
-        self.extractedOnlineInfo = onlineInfo
-        self.probeResult = probe
-    }
-
     public var knownDuration: Double? {
         if let p = probeResult, p.duration > 0 {
             return p.duration
@@ -99,10 +92,6 @@ public final class MediaCoordinator: ObservableObject {
         if logs.count > 1000 {
             logs.removeFirst(100)
         }
-    }
-
-    public func clearLogs() {
-        logs.removeAll()
     }
 
     // MARK: - Main Coordination Workflow
@@ -853,18 +842,6 @@ public final class MediaCoordinator: ObservableObject {
                 self.state = .error("Stream playback failed: \(error)")
                 self.log("❌ Stream recovery failed: \(error.localizedDescription)", level: .error)
             }
-        }
-    }
-
-    private func formatSeconds(_ seconds: Double) -> String {
-        let total = Int(seconds)
-        let m = (total % 3600) / 60
-        let s = total % 60
-        let h = total / 3600
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        } else {
-            return String(format: "%02d:%02d", m, s)
         }
     }
 

@@ -601,35 +601,6 @@ public final class PlayerController: ObservableObject {
         PlayerTimeState.shared.reset()
     }
 
-    /// Smoothly fades out audio to zero before pausing and tearing down the player item to prevent CoreAudio clicks/pops on quit.
-    public func shutdownAudioCleanly() async {
-        if let src = MediaCoordinator.shared.currentSource {
-            PlaybackResumeManager.shared.savePosition(
-                PlayerTimeState.shared.currentTime,
-                duration: PlayerTimeState.shared.duration,
-                for: src
-            )
-        }
-        let startVol = player.volume
-        if isPlaying && !isMuted && startVol > 0 {
-            let steps = 5
-            for step in 1...steps {
-                let fraction = Float(steps - step) / Float(steps)
-                player.volume = startVol * fraction
-                try? await Task.sleep(nanoseconds: 12_000_000) // 12ms per step (~60ms total ramp)
-            }
-        }
-        player.volume = 0
-        player.isMuted = true
-        player.pause()
-        try? await Task.sleep(nanoseconds: 25_000_000) // Allow CoreAudio hardware output buffer to drain zero-crossing samples
-        cleanupItemObservers()
-        player.replaceCurrentItem(with: nil)
-        isPlaying = false
-        naturalVideoSize = nil
-        NowPlayingManager.shared.clear()
-    }
-
     // MARK: - Internal Observers
 
     private func setupTimeObserver() {
@@ -1019,18 +990,18 @@ public final class PlayerController: ObservableObject {
         let rem = max(0, duration - currentTime)
         return "-\(formatSeconds(rem))"
     }
+}
 
-    private func formatSeconds(_ seconds: Double) -> String {
-        guard seconds.isFinite && !seconds.isNaN && seconds >= 0 else { return "00:00" }
-        let total = Int(seconds)
-        let s = total % 60
-        let m = (total % 3600) / 60
-        let h = total / 3600
-        if h > 0 {
-            return String(format: "%02d:%02d:%02d", h, m, s)
-        } else {
-            return String(format: "%02d:%02d", m, s)
-        }
+internal func formatSeconds(_ seconds: Double) -> String {
+    guard seconds.isFinite && !seconds.isNaN && seconds >= 0 else { return "00:00" }
+    let total = Int(seconds)
+    let s = total % 60
+    let m = (total % 3600) / 60
+    let h = total / 3600
+    if h > 0 {
+        return String(format: "%02d:%02d:%02d", h, m, s)
+    } else {
+        return String(format: "%02d:%02d", m, s)
     }
 }
 
